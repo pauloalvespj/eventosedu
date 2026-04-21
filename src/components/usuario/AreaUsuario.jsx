@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload, faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue } from "../../utils/helpers";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit } from "../base/index";
@@ -21,7 +23,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
   const presencaCalc = calcPresenca(user.id, atividades, presencas, event);
 
   // Dados palestrante
-  const minhasPalestras = isPalestrante ? atividades.filter(a => a.palestrante_id === user.id) : [];
+  const minhasPalestras = isPalestrante ? atividades.filter(a => (a.palestrantes_ids || []).includes(user.id)) : [];
   const totalCH_pal = minhasPalestras.reduce((s, a) => s + a.carga_horaria, 0);
   const totalPresentes_pal = minhasPalestras.reduce((s, a) => s + presencas.filter(p => p.atividade_id === a.id).length, 0);
 
@@ -354,8 +356,9 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                 </div>
                 {atividades.filter(a=>a.dia===dia).sort((a,b)=>a.horario.localeCompare(b.horario)).map(a => {
                   const temPres = minasPresencas.some(p => p.atividade_id === a.id);
-                  const ehMinha = isPalestrante && a.palestrante_id === user.id;
-                  const pal = palestrantes.find(p=>p.id===a.palestrante_id);
+                  const ehMinha = isPalestrante && (a.palestrantes_ids || []).includes(user.id);
+                  const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
+                  const mats = a.materiais || [];
                   if (a.tipo==="intervalo") return (
                     <div key={a.id} style={{ padding:"0.5rem 1rem", fontSize:"0.8rem", color:"var(--text3)", display:"flex", gap:"1rem", marginBottom:"0.25rem" }}>
                       <span style={{ fontWeight:600 }}>{a.horario}</span><span>☕ Intervalo</span>
@@ -371,9 +374,26 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                       <div>
                         <div style={{ marginBottom:4 }}><TipoBadge tipo={a.tipo}/></div>
                         <div className="prog-titulo">{a.titulo}</div>
-                        {pal && <div className="prog-palestrante">🎤 {pal.nome} · <span style={{ color:"var(--text3)" }}>{pal.instituicao}</span></div>}
+                        {pals.length > 0 && (
+                          <div className="prog-palestrante">
+                            <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:4, fontSize:"0.75rem" }} />
+                            {pals.map((p,i) => (
+                              <span key={p.id}>{p.nome}{pals[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}</span>
+                            ))}
+                          </div>
+                        )}
                         {ehMinha && <span className="badge badge-teal" style={{ marginTop:4, display:"inline-flex" }}>✓ Sua palestra</span>}
                         {temPres && <span className="badge badge-success" style={{ marginTop:4, display:"inline-flex" }}>✓ Presença confirmada</span>}
+                        {mats.length > 0 && (
+                          <div style={{ marginTop:6, display:"flex", flexWrap:"wrap", gap:4 }}>
+                            {mats.map(m => (
+                              <a key={m.id} href={m.url} target="_blank" rel="noreferrer"
+                                style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"0.18rem 0.55rem", background:"rgba(29,106,106,0.1)", border:"1px solid rgba(29,106,106,0.3)", borderRadius:4, fontSize:"0.7rem", color:"var(--teal)", fontWeight:600, textDecoration:"none" }}>
+                                <FontAwesomeIcon icon={faDownload} />{m.nome}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div style={{ textAlign:"right", flexShrink:0 }}>
                         {a.carga_horaria>0&&<span className="prog-ch">{a.carga_horaria}h</span>}

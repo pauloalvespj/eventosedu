@@ -6,6 +6,14 @@
 -- Extensões
 create extension if not exists "uuid-ossp";
 
+-- ── INSTITUIÇÕES ─────────────────────────────────────────────
+create table if not exists instituicoes (
+  id    serial primary key,
+  sigla text not null,
+  nome  text not null,
+  ativo boolean not null default true
+);
+
 -- ── PROFILES ─────────────────────────────────────────────────
 -- Unifica participantes, palestrantes e admins.
 -- PK = auth.users.id (UUID do Supabase Auth)
@@ -55,13 +63,18 @@ create table if not exists atividades (
   tipo             text not null,
   titulo           text not null,
   descricao        text,
-  palestrante_id   uuid references profiles(id) on delete set null,
   palestrantes_ids uuid[] not null default '{}',
   convidados       text,
   local            text,
   carga_horaria    numeric not null default 0,
-  conta_certificado boolean not null default true
+  conta_certificado boolean not null default true,
+  materiais        jsonb not null default '[]'::jsonb
 );
+
+-- ── STORAGE BUCKET: materiais ─────────────────────────────────
+-- Execute via Supabase Dashboard → Storage → New Bucket: "materiais" (public)
+-- Ou via SQL (Supabase storage API):
+-- insert into storage.buckets (id, name, public) values ('materiais', 'materiais', true) on conflict do nothing;
 
 -- ── PRESENÇAS ────────────────────────────────────────────────
 create table if not exists presencas (
@@ -130,6 +143,7 @@ create table if not exists pontuacoes (
 -- ROW LEVEL SECURITY
 -- ============================================================
 
+alter table instituicoes enable row level security;
 alter table profiles    enable row level security;
 alter table events      enable row level security;
 alter table atividades  enable row level security;
@@ -145,6 +159,14 @@ create or replace function current_user_role()
 returns text language sql stable security definer as $$
   select role from profiles where id = auth.uid()
 $$;
+
+-- ── instituicoes ─────────────────────────────────────────────
+create policy "Público lê instituições"
+  on instituicoes for select using (true);
+
+create policy "Admin gerencia instituições"
+  on instituicoes for all to authenticated
+  using (current_user_role() in ('super_admin','admin'));
 
 -- ── profiles ─────────────────────────────────────────────────
 create policy "Qualquer autenticado lê profiles"

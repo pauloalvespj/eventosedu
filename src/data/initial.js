@@ -19,6 +19,17 @@ export const INITIAL_EVENT = {
   carga_horaria_total: 16,
 };
 
+export const INITIAL_INSTITUICOES = [
+  { id: 1, sigla: "UFC",    nome: "Universidade Federal do Ceará",                                             ativo: true },
+  { id: 2, sigla: "IFCE",   nome: "Instituto Federal de Educação, Ciência e Tecnologia do Ceará",             ativo: true },
+  { id: 3, sigla: "UFCA",   nome: "Universidade Federal do Cariri",                                           ativo: true },
+  { id: 4, sigla: "Unilab", nome: "Universidade da Integração Internacional da Lusofonia Afro-Brasileira",   ativo: true },
+  { id: 5, sigla: "CGU",    nome: "Controladoria-Geral da União",                                             ativo: true },
+  { id: 6, sigla: "TCU",    nome: "Tribunal de Contas da União",                                              ativo: true },
+  { id: 7, sigla: "TRE",    nome: "Tribunal Regional Eleitoral",                                              ativo: true },
+  { id: 8, sigla: "CGE-CE", nome: "Controladoria e Ouvidoria Geral do Estado do Ceará",                      ativo: true },
+];
+
 export const INITIAL_PALESTRANTES = [
   { id: 1,  nome: "Dr. Eduardo Vasconcelos",  titulo: "Auditor Federal de Finanças e Controle",  foto_iniciais: "EV", area: "Auditoria Governamental", email: "eduardo@exemplo.com", senha: "123456", instituicao: "CGU – Brasília", mini_bio: "Especialista em controle interno governamental e geração de valor público pela CGU." },
   { id: 2,  nome: "Marina Albuquerque",        titulo: "Auditora-Chefe",                          foto_iniciais: "MA", area: "Planejamento e Riscos",   email: "marina@exemplo.com",  senha: "123456", instituicao: "UFPE", mini_bio: "Referência nacional em PAINT e planejamento baseado em riscos nas IFEs." },
@@ -37,89 +48,89 @@ export const INITIAL_ATIVIDADES = [
   // ── DIA 15/09 ──
   { id: 1,  dia: "2026-09-15", horario: "09:00", horario_fim: "09:45", tipo: "solenidade",    titulo: "Solenidade de Abertura",
     descricao: "Abertura oficial do III ENAUDIN com autoridades das instituições realizadoras e órgãos de controle.",
-    palestrante_id: null, palestrantes_ids: [],
+    palestrantes_ids: [],
     convidados: "Reitores da UFC, IFCE, UFCA e Unilab\nSuperintendente da CGU no Ceará\nSecretário do TCU no Ceará\nControladora e Ouvidora Geral do Município de Fortaleza",
     local: "Auditório da Reitoria – UFC", carga_horaria: 0.75, conta_certificado: false },
 
   { id: 2,  dia: "2026-09-15", horario: "09:45", horario_fim: "10:00", tipo: "intervalo",     titulo: "Intervalo",
-    descricao: "", palestrante_id: null, palestrantes_ids: [], convidados: "",
+    descricao: "", palestrantes_ids: [], convidados: "",
     local: "Foyer", carga_horaria: 0, conta_certificado: false },
 
   { id: 3,  dia: "2026-09-15", horario: "10:00", horario_fim: "12:00", tipo: "palestra",      titulo: "Palestra Magna: O novo papel da Auditoria Interna na geração de valor público",
     descricao: "Conferência de abertura abordando as transformações do papel da auditoria interna no contexto de geração de valor público e alinhamento às normas globais.",
-    palestrante_id: 1, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [1], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 2, conta_certificado: true },
 
   { id: 4,  dia: "2026-09-15", horario: "14:00", horario_fim: "15:15", tipo: "palestra",      titulo: "Planejamento baseado em riscos: evolução do PAINT na prática",
     descricao: "Apresentação de experiências práticas na evolução do Plano Anual de Auditoria Interna com abordagem baseada em riscos.",
-    palestrante_id: 2, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [2], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 5,  dia: "2026-09-15", horario: "15:15", horario_fim: "16:30", tipo: "palestra",      titulo: "Integração entre Auditoria, Governança e Gestão de Riscos",
     descricao: "Discussão sobre a sinergia entre as três linhas de defesa e o papel da auditoria interna no fortalecimento da governança institucional.",
-    palestrante_id: 3, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [3], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   // ── DIA 16/09 ──
   { id: 6,  dia: "2026-09-16", horario: "08:30", horario_fim: "09:45", tipo: "palestra",      titulo: "Uso de dados e BI na auditoria interna: da análise à decisão",
     descricao: "Como ferramentas de Business Intelligence e análise de dados estão transformando a capacidade analítica das auditorias internas.",
-    palestrante_id: 4, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [4], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 7,  dia: "2026-09-16", horario: "09:45", horario_fim: "10:00", tipo: "intervalo",     titulo: "Intervalo",
-    descricao: "", palestrante_id: null, palestrantes_ids: [], convidados: "",
+    descricao: "", palestrantes_ids: [], convidados: "",
     local: "Foyer", carga_horaria: 0, conta_certificado: false },
 
   { id: 8,  dia: "2026-09-16", horario: "10:00", horario_fim: "11:15", tipo: "palestra",      titulo: "Auditoria em ambientes digitais: sistemas, logs e rastreabilidade",
     descricao: "Técnicas e práticas para auditoria em sistemas informatizados, análise de logs e garantia de rastreabilidade em ambientes digitais.",
-    palestrante_id: 5, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [5], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 9,  dia: "2026-09-16", horario: "11:15", horario_fim: "12:30", tipo: "palestra",      titulo: "IA aplicada à auditoria: oportunidades e limites",
     descricao: "Panorama das aplicações de inteligência artificial na auditoria governamental, com análise crítica das oportunidades e limitações éticas e técnicas.",
-    palestrante_id: 6, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [6], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 10, dia: "2026-09-16", horario: "14:00", horario_fim: "15:15", tipo: "palestra",      titulo: "Monitoramento de recomendações: boas práticas e automação",
     descricao: "Estratégias e ferramentas para o monitoramento sistemático das recomendações emitidas pela auditoria interna.",
-    palestrante_id: 7, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [7], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 11, dia: "2026-09-16", horario: "15:15", horario_fim: "16:30", tipo: "palestra",      titulo: "Comunicação estratégica da auditoria com a alta gestão",
     descricao: "Como estruturar a comunicação da auditoria interna para maximizar impacto junto à alta gestão e ao conselho.",
-    palestrante_id: 8, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [8], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   // ── DIA 17/09 ──
   { id: 12, dia: "2026-09-17", horario: "08:30", horario_fim: "09:45", tipo: "palestra",      titulo: "Maturidade da Auditoria Interna: IA-CM na prática",
     descricao: "Aplicação prática do Internal Audit Capability Model (IA-CM) para diagnóstico e desenvolvimento da maturidade das UAIGs.",
-    palestrante_id: 9, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [9], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 13, dia: "2026-09-17", horario: "09:45", horario_fim: "10:00", tipo: "intervalo",     titulo: "Intervalo",
-    descricao: "", palestrante_id: null, palestrantes_ids: [], convidados: "",
+    descricao: "", palestrantes_ids: [], convidados: "",
     local: "Foyer", carga_horaria: 0, conta_certificado: false },
 
   { id: 14, dia: "2026-09-17", horario: "10:00", horario_fim: "11:15", tipo: "mesa_redonda",  titulo: "Mesa Redonda: Desafios atuais das UAIGs nas Instituições Federais de Ensino",
     descricao: "Debate entre os coordenadores de auditoria das IFEs do Ceará sobre os principais desafios operacionais, normativos e estratégicos das UAIGs.",
-    palestrante_id: null, palestrantes_ids: [],
+    palestrantes_ids: [],
     convidados: "Coordenadores de Auditoria: UFC, IFCE, UFCA e Unilab",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 15, dia: "2026-09-17", horario: "11:15", horario_fim: "12:30", tipo: "palestra",      titulo: "Auditoria e accountability: relação com órgãos de controle externo",
     descricao: "Análise da relação entre auditoria interna e controle externo (TCU, CGU) e o papel da accountability na administração pública federal.",
-    palestrante_id: 10, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [10], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.25, conta_certificado: true },
 
   { id: 16, dia: "2026-09-17", horario: "14:00", horario_fim: "15:30", tipo: "painel",        titulo: "Painel Final: O futuro da Auditoria Interna Governamental",
     descricao: "Painel de encerramento com representantes dos principais órgãos de controle e coordenadores das UAIGs para debater o futuro da profissão.",
-    palestrante_id: null, palestrantes_ids: [],
+    palestrantes_ids: [],
     convidados: "CGU\nTCU\nCGE/CE\nRepresentantes das UAIGs",
     local: "Auditório da Reitoria – UFC", carga_horaria: 1.5, conta_certificado: true },
 
   { id: 17, dia: "2026-09-17", horario: "15:30", horario_fim: "16:00", tipo: "encerramento",  titulo: "Encerramento Oficial",
     descricao: "Cerimônia de encerramento do III ENAUDIN com agradecimentos e entrega de certificados.",
-    palestrante_id: null, palestrantes_ids: [], convidados: "",
+    palestrantes_ids: [], convidados: "",
     local: "Auditório da Reitoria – UFC", carga_horaria: 0.5, conta_certificado: false },
 ];
 

@@ -5,7 +5,9 @@
       "Bash(jobs -l)",
       "Bash(curl -s http://localhost:5174/)",
       "Bash(kill %1)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

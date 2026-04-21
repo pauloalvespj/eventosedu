@@ -2,8 +2,8 @@ import { useState } from "react";
 import { formatCPF, validateCPF } from "../../utils/helpers";
 import { supabase } from "../../lib/supabase";
 
-export function FormInscricao({ onClose, showToast }) {
-  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", cargo: "", sexo: "", email: "", senha: "", confirmSenha: "" });
+export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
+  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", sexo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -14,7 +14,9 @@ export function FormInscricao({ onClose, showToast }) {
     const e = {};
     if (!validateCPF(form.cpf)) e.cpf = "CPF inválido";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
-    if (!form.instituicao.trim()) e.instituicao = "Instituição obrigatória";
+    const instValor = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
+    if (!instValor) e.instituicao = "Instituição obrigatória";
+    if (form.instituicao === "Outra" && !form.instituicaoOutra.trim()) e.instituicao = "Informe o nome da instituição";
     if (!form.cargo.trim()) e.cargo = "Cargo obrigatório";
     if (!form.sexo) e.sexo = "Selecione o sexo";
     if (!form.email.includes("@")) e.email = "E-mail inválido";
@@ -45,13 +47,14 @@ export function FormInscricao({ onClose, showToast }) {
     }
 
     // 2. Inserir profile
+    const instituicaoFinal = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
     const { error: profileError } = await supabase.from("profiles").insert({
       id: data.user.id,
       role: "participante",
       nome: form.nome,
       email: form.email,
       cpf: formatCPF(form.cpf.replace(/\D/g, "")),
-      instituicao: form.instituicao,
+      instituicao: instituicaoFinal,
       cargo: form.cargo,
       sexo: form.sexo,
       credenciado: false,
@@ -99,8 +102,17 @@ export function FormInscricao({ onClose, showToast }) {
         </div>
         <div className="form-group">
           <label className="form-label">Instituição *</label>
-          <input className={`form-input${erros.instituicao ? " error" : ""}`} placeholder="UFC, IFCE..."
-            value={form.instituicao} onChange={e => set("instituicao", e.target.value)} />
+          <select className={`form-input${erros.instituicao ? " error" : ""}`} value={form.instituicao} onChange={e => set("instituicao", e.target.value)}>
+            <option value="">Selecione a instituição</option>
+            {instituicoes.filter(i => i.ativo).map(i => (
+              <option key={i.id} value={i.sigla}>{i.sigla} – {i.nome}</option>
+            ))}
+            <option value="Outra">Outra</option>
+          </select>
+          {form.instituicao === "Outra" && (
+            <input className="form-input" style={{ marginTop: "0.4rem" }} placeholder="Digite o nome da sua instituição"
+              value={form.instituicaoOutra} onChange={e => set("instituicaoOutra", e.target.value)} />
+          )}
           {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
         </div>
         <div className="form-group">

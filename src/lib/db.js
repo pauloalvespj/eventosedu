@@ -10,6 +10,39 @@ import { supabase } from "./supabase";
 
 // ── LEITURA INICIAL ───────────────────────────────────────────
 
+export async function fetchInstituicoes() {
+  const { data, error } = await supabase
+    .from("instituicoes")
+    .select("*")
+    .order("sigla");
+  return { data: data ?? [], error };
+}
+
+export async function inserirInstituicao({ sigla, nome, ativo = true }) {
+  const { data, error } = await supabase
+    .from("instituicoes")
+    .insert({ sigla, nome, ativo })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function atualizarInstituicao(id, updates) {
+  const { error } = await supabase
+    .from("instituicoes")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarInstituicao(id) {
+  const { error } = await supabase
+    .from("instituicoes")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
 export async function fetchEvent() {
   const { data, error } = await supabase
     .from("events")
@@ -23,7 +56,7 @@ export async function fetchEvent() {
 export async function fetchAtividades() {
   const { data, error } = await supabase
     .from("atividades")
-    .select("*, palestrante:profiles!palestrante_id(id,nome,titulo,foto_iniciais,instituicao,mini_bio,area)")
+    .select("*")
     .order("dia")
     .order("horario");
   return { data: data ?? [], error };
@@ -255,6 +288,30 @@ export async function atualizarAtividade(id, updates) {
     .update(updates)
     .eq("id", id);
   return { error };
+}
+
+// ── MATERIAIS (Storage) ──────────────────────────────────────
+
+export async function uploadMaterial(atvId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const path = `atividade-${atvId}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("materiais").upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("materiais").getPublicUrl(path);
+  return {
+    id: Date.now(),
+    nome: file.name,
+    url: publicUrl,
+    tamanho: file.size,
+    tipo: file.type,
+    path,
+    criado_em: new Date().toISOString(),
+  };
+}
+
+export async function deletarMaterial(path) {
+  const { error } = await supabase.storage.from("materiais").remove([path]);
+  if (error) throw error;
 }
 
 export async function deletarAtividade(id) {

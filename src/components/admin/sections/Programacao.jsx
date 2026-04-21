@@ -1,0 +1,277 @@
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
+  faDownload, faClock, faFileAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { useAdmin } from "./AdminContext";
+import { Modal, TipoBadge, QRCodeCanvas } from "../../base/index";
+import { formatData, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue } from "../../../utils/helpers";
+import {
+  inserirAtividade, atualizarAtividade, deletarAtividade,
+  inserirPresenca, uploadMaterial, deletarMaterial,
+} from "../../../lib/db";
+
+function formatBytes(b) {
+  if (!b) return "";
+  if (b < 1024) return `${b}B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)}KB`;
+  return `${(b / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+export function Programacao() {
+  const { atividades, setAtividades, palestrantes, participantes, presencas, setPresencas, showToast } = useAdmin();
+
+  const [busca, setBusca]                       = useState("");
+  const [modalAtv, setModalAtv]                 = useState(false);
+  const [formAtv, setFormAtv]                   = useState({});
+  const [modalQR, setModalQR]                   = useState(null);
+  const [modalPresManual, setModalPresManual]   = useState(null);
+  const [presencaCPF, setPresencaCPF]           = useState("");
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+
+  function getPalestrantes(atv) {
+    return (atv.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
+  }
+
+  async function salvarAtividade() {
+    if (!formAtv.titulo || !formAtv.dia || !formAtv.horario) { showToast("Preencha os campos obrigatórios", "error"); return; }
+    const dados = { ...formAtv, carga_horaria: Number(formAtv.carga_horaria) || 1, conta_certificado: formAtv.conta_certificado === "true" || formAtv.conta_certificado === true, palestrantes_ids: formAtv.palestrantes_ids || [], materiais: formAtv.materiais || [] };
+    if (formAtv.id) {
+      setAtividades(prev => prev.map(a => a.id === formAtv.id ? { ...dados } : a));
+      atualizarAtividade(formAtv.id, dados);
+    } else {
+      const tempId = Date.now();
+      setAtividades(prev => [...prev, { ...dados, id: tempId }]);
+      const { data } = await inserirAtividade({ ...dados, event_id: 1 });
+      if (data) setAtividades(prev => prev.map(a => a.id === tempId ? data : a));
+    }
+    setModalAtv(false);
+    showToast("Atividade salva!", "success");
+  }
+
+  async function excluirAtividade(id) {
+    if (!confirm("Excluir atividade?")) return;
+    setAtividades(prev => prev.filter(a => a.id !== id));
+    deletarAtividade(id);
+    showToast("Atividade excluída", "info");
+  }
+
+  async function registrarPresencaManual() {
+    const cpf = presencaCPF.replace(/\D/g, "");
+    const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
+    if (!part) { showToast("Participante não encontrado", "error"); return; }
+    if (presencas.find(p => p.participante_id === part.id && p.atividade_id === modalPresManual.id)) { showToast("Presença já registrada", "error"); return; }
+    const nova = { id: Date.now(), participante_id: part.id, atividade_id: modalPresManual.id, data_hora: new Date().toISOString() };
+    setPresencas(prev => [...prev, nova]);
+    setPresencaCPF("");
+    showToast(`Presença de ${part.nome} registrada!`, "success");
+    inserirPresenca(part.id, modalPresManual.id);
+  }
+
+  const filtradas = atividades.filter(a => a.titulo.toLowerCase().includes(busca.toLowerCase()));
+
+  return (
+    <div>
+      <div className="admin-topbar">
+        <div><h1>Programação</h1><p>Atividades e palestras</p></div>
+        <button className="btn btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+      </div>
+
+      <div className="table-wrap">
+        <div className="table-header">
+          <span className="table-title">Atividades ({atividades.length})</span>
+          <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
+        </div>
+        <table style={{ width: "100%", tableLayout: "auto", fontSize: "0.82rem" }}>
+          <thead><tr>
+            <th style={{ whiteSpace:"nowrap" }}>Tipo</th>
+            <th style={{ width:"40%" }}>Título</th>
+            <th style={{ width: 82 }}>Dia</th>
+            <th style={{ width: 100 }}>Horário</th>
+            <th style={{ width: 44 }}>CH</th>
+            <th style={{ width: 52 }}>Cert.</th>
+            <th style={{ width: 52 }}>Pres.</th>
+            <th style={{ width: 112 }}>Ações</th>
+          </tr></thead>
+          <tbody>
+            {filtradas.map(a => (
+              <tr key={a.id}>
+                <td><span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"0.15rem 0.5rem", borderRadius:50, fontSize:"0.7rem", fontWeight:700, background: TIPO_BG[a.tipo]||"#eee", color: TIPO_COLOR[a.tipo]||"#333", whiteSpace:"nowrap" }}>{TIPO_ICON[a.tipo]} {TIPO_LABEL[a.tipo]||a.tipo}</span></td>
+                <td title={a.titulo} style={{ maxWidth: 0 }}>
+                  <div style={{ fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.titulo}</div>
+                  {getPalestrantes(a).length > 0 && (
+                    <div style={{ fontSize:"0.7rem", color:"var(--text3)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:3, fontSize:"0.65rem" }} />
+                      {getPalestrantes(a).map(p => p.nome.split(" ").slice(0,2).join(" ")).join(", ")}
+                    </div>
+                  )}
+                  {(a.materiais || []).length > 0 && (
+                    <span style={{ fontSize:"0.65rem", color:"var(--teal)", fontWeight:600 }}>
+                      <FontAwesomeIcon icon={faDownload} style={{ marginRight:2 }} />{a.materiais.length} material(is)
+                    </span>
+                  )}
+                </td>
+                <td style={{ fontSize:"0.78rem" }}>{formatData(a.dia)}</td>
+                <td style={{ whiteSpace:"nowrap", fontSize:"0.78rem" }}>{a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</td>
+                <td style={{ fontSize:"0.78rem" }}>{a.carga_horaria}h</td>
+                <td><span className={`badge badge-${a.conta_certificado ? "success" : "warn"}`} style={{ fontSize:"0.68rem" }}>{a.conta_certificado ? "Sim" : "Não"}</span></td>
+                <td style={{ textAlign:"center" }}>{presencas.filter(p => p.atividade_id === a.id).length}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "0.2rem" }}>
+                    <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManual(a); setPresencaCPF(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setFormAtv({ ...a, conta_certificado: a.conta_certificado ? "true" : "false", palestrantes_ids: a.palestrantes_ids || [], materiais: a.materiais || [] }); setModalAtv(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                    <button className="btn btn-sm btn-danger" onClick={() => excluirAtividade(a.id)}><FontAwesomeIcon icon={faTrash} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL ATIVIDADE */}
+      <Modal show={modalAtv} onClose={() => setModalAtv(false)} title={formAtv.id ? "Editar Atividade" : "Nova Atividade"}>
+        <div className="form-group">
+          <label className="form-label">Tipo de Atividade</label>
+          <select className="form-input" value={formAtv.tipo || "palestra"} onChange={e => setFormAtv(f => ({ ...f, tipo: e.target.value }))}>
+            <option value="palestra">Palestra</option>
+            <option value="mesa_redonda">Mesa Redonda</option>
+            <option value="painel">Painel</option>
+            <option value="solenidade">Solenidade</option>
+            <option value="encerramento">Encerramento</option>
+            <option value="intervalo">Intervalo</option>
+          </select>
+        </div>
+        <div className="form-group"><label className="form-label">Título *</label><input className="form-input" value={formAtv.titulo || ""} onChange={e => setFormAtv(f => ({ ...f, titulo: e.target.value }))} /></div>
+        <div className="form-group"><label className="form-label">Descrição</label><textarea className="form-input" rows={2} value={formAtv.descricao || ""} onChange={e => setFormAtv(f => ({ ...f, descricao: e.target.value }))} /></div>
+        <div className="form-grid">
+          <div className="form-group"><label className="form-label">Dia *</label><input type="date" className="form-input" value={formAtv.dia || ""} onChange={e => setFormAtv(f => ({ ...f, dia: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Horário início *</label><input type="time" className="form-input" value={formAtv.horario || ""} onChange={e => setFormAtv(f => ({ ...f, horario: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Horário fim</label><input type="time" className="form-input" value={formAtv.horario_fim || ""} onChange={e => setFormAtv(f => ({ ...f, horario_fim: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Local</label><input className="form-input" value={formAtv.local || ""} onChange={e => setFormAtv(f => ({ ...f, local: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Carga Horária (h)</label><input type="number" min={0} step={0.25} className="form-input" value={formAtv.carga_horaria || 0} onChange={e => setFormAtv(f => ({ ...f, carga_horaria: e.target.value }))} /></div>
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <label className="form-label">Palestrantes</label>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem", padding:"0.5rem", border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", minHeight:40 }}>
+              {palestrantes.length === 0 && <span style={{ fontSize:"0.8rem", color:"var(--text3)" }}>Nenhum palestrante cadastrado</span>}
+              {palestrantes.map(p => {
+                const sel = (formAtv.palestrantes_ids || []).includes(p.id);
+                return (
+                  <button key={p.id} type="button" onClick={() => {
+                    const cur = formAtv.palestrantes_ids || [];
+                    const next = sel ? cur.filter(id => id !== p.id) : [...cur, p.id];
+                    setFormAtv(f => ({ ...f, palestrantes_ids: next }));
+                  }} style={{ padding:"0.25rem 0.65rem", borderRadius:50, border:`1.5px solid ${sel?"var(--teal)":"var(--border)"}`, background:sel?"var(--teal)":"var(--surface2)", color:sel?"#fff":"var(--text)", fontSize:"0.8rem", cursor:"pointer", fontWeight:sel?600:400, display:"inline-flex", alignItems:"center", gap:5 }}>
+                    {sel && <FontAwesomeIcon icon={faCheck} style={{ fontSize:"0.65rem" }} />}
+                    {p.nome.split(" ").slice(0,2).join(" ")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="form-group"><label className="form-label">Conta para certificado</label>
+            <select className="form-input" value={formAtv.conta_certificado} onChange={e => setFormAtv(f => ({ ...f, conta_certificado: e.target.value }))}>
+              <option value="true">Sim</option><option value="false">Não</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Convidados / Participantes (um por linha)</label>
+          <textarea className="form-input" rows={2} placeholder={"Ex:\nReitor da UFC\nSuperintendente da CGU"} value={formAtv.convidados || ""} onChange={e => setFormAtv(f => ({ ...f, convidados: e.target.value }))} />
+        </div>
+
+        {/* MATERIAIS */}
+        <div style={{ borderTop:"1px solid var(--border)", paddingTop:"1rem", marginTop:"0.25rem" }}>
+          <div style={{ fontWeight:700, color:"var(--navy)", marginBottom:"0.75rem", fontSize:"0.88rem", display:"flex", alignItems:"center", gap:8 }}>
+            <FontAwesomeIcon icon={faDownload} />Materiais para Download
+            <span style={{ fontSize:"0.72rem", color:"var(--text3)", fontWeight:400 }}>arquivos disponíveis aos participantes</span>
+          </div>
+          {(formAtv.materiais || []).length === 0 && <div style={{ fontSize:"0.82rem", color:"var(--text3)", marginBottom:"0.75rem" }}>Nenhum arquivo adicionado.</div>}
+          {(formAtv.materiais || []).map(m => (
+            <div key={m.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"0.4rem 0.6rem", background:"var(--surface2)", borderRadius:"var(--radius-sm)", marginBottom:"0.4rem" }}>
+              <FontAwesomeIcon icon={faFileAlt} style={{ color:"var(--teal)", flexShrink:0 }} />
+              <span style={{ flex:1, fontSize:"0.82rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.nome}</span>
+              <span style={{ fontSize:"0.72rem", color:"var(--text3)", flexShrink:0 }}>{formatBytes(m.tamanho)}</span>
+              <a href={m.url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline" style={{ padding:"0.15rem 0.5rem", fontSize:"0.72rem" }}><FontAwesomeIcon icon={faDownload} /></a>
+              <button className="btn btn-sm btn-danger" style={{ padding:"0.15rem 0.5rem", fontSize:"0.72rem" }}
+                onClick={() => { setFormAtv(f => ({ ...f, materiais: f.materiais.filter(x => x.id !== m.id) })); deletarMaterial(m.path).catch(() => {}); }}>
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            </div>
+          ))}
+          <label style={{ cursor: uploadingMaterial ? "wait" : "pointer" }}>
+            <input type="file" multiple style={{ display:"none" }} disabled={uploadingMaterial}
+              onChange={async e => {
+                const files = Array.from(e.target.files);
+                if (!files.length) return;
+                setUploadingMaterial(true);
+                try {
+                  for (const file of files) {
+                    const mat = await uploadMaterial(formAtv.id || `new-${Date.now()}`, file);
+                    setFormAtv(f => ({ ...f, materiais: [...(f.materiais || []), mat] }));
+                  }
+                } catch (err) { showToast("Erro ao enviar: " + err.message, "error"); }
+                finally { setUploadingMaterial(false); e.target.value = ""; }
+              }} />
+            <span className="btn btn-sm btn-outline" style={{ pointerEvents:"none" }}>
+              <FontAwesomeIcon icon={uploadingMaterial ? faClock : faDownload} style={{ marginRight:6 }} />
+              {uploadingMaterial ? "Enviando..." : "Adicionar arquivo"}
+            </span>
+          </label>
+        </div>
+        <button className="btn btn-primary btn-block" onClick={salvarAtividade} style={{ marginTop:"1rem" }}>Salvar</button>
+      </Modal>
+
+      {/* MODAL QR CODE */}
+      <Modal show={!!modalQR} onClose={() => setModalQR(null)} title="QR Code de Presença">
+        {modalQR && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ marginBottom: "1rem", color: "var(--text2)", fontSize: "0.9rem", fontWeight: 600 }}>{modalQR.titulo}</p>
+            <p style={{ marginBottom: "1.25rem", fontSize: "0.8rem", color: "var(--text3)" }}>{formatData(modalQR.dia)} · {modalQR.horario} · {modalQR.local}</p>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+              <QRCodeCanvas value={qrPresencaValue(modalQR.id)} size={200} />
+            </div>
+            <div style={{ padding: "0.5rem 0.75rem", background: "var(--gold-pale)", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--warn)", fontFamily: "monospace", marginBottom: "1rem" }}>
+              {qrPresencaValue(modalQR.id)}
+            </div>
+            <button className="btn btn-sm btn-outline" onClick={() => {
+              const canvas = document.querySelector("canvas");
+              if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-atividade-${modalQR.id}.png`; a.click(); }
+            }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar PNG</button>
+          </div>
+        )}
+      </Modal>
+
+      {/* MODAL PRESENÇA MANUAL */}
+      <Modal show={!!modalPresManual} onClose={() => setModalPresManual(null)} title="Registrar Presença Manual">
+        {modalPresManual && (
+          <div>
+            <p style={{ color: "var(--text2)", marginBottom: "1rem" }}>{modalPresManual.titulo}</p>
+            <div className="form-group">
+              <label className="form-label">CPF do Participante</label>
+              <input className="form-input" placeholder="000.000.000-00" value={presencaCPF}
+                onChange={e => setPresencaCPF(formatCPF(e.target.value))} maxLength={14} />
+            </div>
+            <button className="btn btn-success btn-block" onClick={registrarPresencaManual}>Registrar Presença</button>
+            <div style={{ marginTop: "1.5rem" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text2)", marginBottom: "0.5rem" }}>
+                Presenças nesta atividade ({presencas.filter(p => p.atividade_id === modalPresManual.id).length})
+              </div>
+              {presencas.filter(p => p.atividade_id === modalPresManual.id).map(p => {
+                const part = participantes.find(x => x.id === p.participante_id);
+                return part ? (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                    <span>{part.nome}</span>
+                    <span style={{ color: "var(--text3)" }}>{p.data_hora}</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}

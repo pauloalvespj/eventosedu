@@ -110,7 +110,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
             ))}
           </div>
           {atividadesDia.map(a => {
-            const pal = palestrantes.find(p => p.id === a.palestrante_id);
+            const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
             const isIntervalo = a.tipo === "intervalo";
             if (isIntervalo) return (
               <div key={a.id} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.6rem 1rem", margin:"0.4rem 0", background:"var(--surface2)", borderRadius:"var(--radius-sm)", opacity:0.7 }}>
@@ -129,7 +129,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
                   <div style={{ marginBottom:6 }}><TipoBadge tipo={a.tipo} /></div>
                   <div className="prog-titulo">{a.titulo}</div>
                   {a.descricao && <div className="prog-desc">{a.descricao}</div>}
-                  {pal && <div className="prog-palestrante">🎤 {pal.nome} · <span style={{color:"var(--text3)"}}>{pal.instituicao}</span></div>}
+                  {pals.length > 0 && <div className="prog-palestrante">🎤 {pals.map(p => p.nome).join(" · ")}</div>}
                   {a.convidados && a.convidados.trim() && (
                     <div style={{ marginTop:6 }}>
                       {a.convidados.split("\n").filter(Boolean).map((c,i) => (
