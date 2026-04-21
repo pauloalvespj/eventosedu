@@ -1,17 +1,52 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faComments, faRotateLeft, faStar, faListCheck, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faComments, faRotateLeft, faStar, faListCheck, faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
+import { Modal } from "../../base/index";
 import { CATEGORIAS_FORUM } from "../../../config/gamificacao";
 import { RoleBadge } from "../../base/index";
 import { forumAberto } from "../../../utils/helpers";
-import { atualizarForumConfig, fixarTopico, bloquearTopico, deletarTopico } from "../../../lib/db";
+import { atualizarForumConfig, fixarTopico, deletarTopico, criarTopico } from "../../../lib/db";
 
 export function ForumAdmin() {
-  const { topicos, setTopicos, forumConfig, setForumConfig, showToast } = useAdmin();
+  const { user, topicos, setTopicos, forumConfig, setForumConfig, showToast } = useAdmin();
+
+  const [modalTopico, setModalTopico] = useState(false);
+  const [form, setForm] = useState({ categoria: "geral", titulo: "", corpo: "" });
+
+  async function salvarTopico() {
+    if (!form.titulo.trim() || !form.corpo.trim()) { showToast("Título e conteúdo obrigatórios", "error"); return; }
+    const novoTopico = {
+      id: `local-${Date.now()}`,
+      event_id: forumConfig.event_id || 1,
+      user_id: user?.id,
+      autor_nome: user?.nome || "Admin",
+      autor_role: user?.role || "admin",
+      categoria: form.categoria,
+      titulo: form.titulo.trim(),
+      corpo: form.corpo.trim(),
+      curtidas: [],
+      respostas: [],
+      fixado: false,
+      destaque: false,
+      removido: false,
+      criado_em: new Date().toISOString(),
+    };
+    setTopicos(prev => [novoTopico, ...prev]);
+    criarTopico({ event_id: novoTopico.event_id, user_id: user?.id, categoria: form.categoria, titulo: form.titulo.trim(), corpo: form.corpo.trim() });
+    showToast("Tópico criado!", "success");
+    setModalTopico(false);
+    setForm({ categoria: "geral", titulo: "", corpo: "" });
+  }
 
   return (
     <div>
-      <div className="admin-topbar"><div><h1>Gestão do Fórum</h1><p>Configuração, moderação e conteúdo</p></div></div>
+      <div className="admin-topbar">
+        <div><h1>Gestão do Fórum</h1><p>Configuração, moderação e conteúdo</p></div>
+        <button className="btn btn-primary" onClick={() => setModalTopico(true)}>
+          <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Novo Tópico
+        </button>
+      </div>
 
       {/* Configurações */}
       <div className="table-wrap" style={{ padding:"1.5rem", marginBottom:"1.5rem" }}>
@@ -110,6 +145,25 @@ export function ForumAdmin() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal novo tópico */}
+      <Modal show={modalTopico} onClose={() => setModalTopico(false)} title="Novo Tópico">
+        <div className="form-group">
+          <label className="form-label">Categoria</label>
+          <select className="form-input" value={form.categoria} onChange={e => setForm(f=>({...f, categoria: e.target.value}))}>
+            {CATEGORIAS_FORUM.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Título *</label>
+          <input className="form-input" value={form.titulo} onChange={e => setForm(f=>({...f, titulo: e.target.value}))} placeholder="Título do tópico" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Conteúdo *</label>
+          <textarea className="form-input" rows={5} value={form.corpo} onChange={e => setForm(f=>({...f, corpo: e.target.value}))} placeholder="Escreva o conteúdo do tópico..." />
+        </div>
+        <button className="btn btn-primary btn-block" onClick={salvarTopico}>Publicar Tópico</button>
+      </Modal>
     </div>
   );
 }

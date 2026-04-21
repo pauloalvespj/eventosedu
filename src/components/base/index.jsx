@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { PONTOS } from "../../config/gamificacao";
 import { TIPO_BG, TIPO_COLOR, TIPO_ICON, TIPO_LABEL, ROLE_LABEL } from "../../utils/helpers";
+export { AvatarUpload } from "./AvatarUpload";
 
 // ── Toast ─────────────────────────────────────────────────────
 export function Toast({ toast }) {

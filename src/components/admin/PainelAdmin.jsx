@@ -24,7 +24,7 @@ import { Usuarios }       from "./sections/Usuarios";
 import { Instituicoes }   from "./sections/Instituicoes";
 
 const MENU = [
-  { path: "dashboard",      icon: faChartBar,    label: "Dashboard",       roles: ["super_admin","admin","credenciador"] },
+  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["super_admin","admin","credenciador"] },
   { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["super_admin","admin"] },
   { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["super_admin","admin"] },
   { path: "palestrantes",   icon: faMicrophone,   label: "Palestrantes",    roles: ["super_admin","admin"] },
@@ -42,8 +42,8 @@ const MENU = [
 
 function AdminRoutes() {
   return useRoutes([
-    { index: true,               element: <Navigate to="dashboard" replace /> },
-    { path: "dashboard",         element: <Dashboard /> },
+    { index: true,               element: <Dashboard /> },
+    { path: "dashboard",         element: <Navigate to="/admin" replace /> },
     { path: "evento",            element: <Evento /> },
     { path: "programacao",       element: <Programacao /> },
     { path: "palestrantes",      element: <Palestrantes /> },
@@ -57,7 +57,7 @@ function AdminRoutes() {
     { path: "gamificacao",       element: <Gamificacao /> },
     { path: "usuarios",          element: <Usuarios /> },
     { path: "instituicoes",      element: <Instituicoes /> },
-    { path: "*",                 element: <Navigate to="dashboard" replace /> },
+    { path: "*",                 element: <Navigate to="/admin" replace /> },
   ]);
 }
 
@@ -77,8 +77,9 @@ export function PainelAdmin(props) {
           <nav className="admin-nav">
             {menu.map(m => (
               <NavLink
-                key={m.path}
-                to={`/admin/${m.path}`}
+                key={m.path || "dashboard"}
+                to={m.path ? `/admin/${m.path}` : "/admin"}
+                end={!m.path}
                 className={({ isActive }) => `admin-nav-item${isActive ? " active" : ""}`}
               >
                 <span className="admin-nav-icon"><FontAwesomeIcon icon={m.icon} fixedWidth /></span>

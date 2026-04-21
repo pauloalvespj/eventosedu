@@ -29,8 +29,10 @@ create table if not exists profiles (
   area          text,
   mini_bio      text,
   foto_iniciais text,
+  foto_url      text,
   sexo          text,
   credenciado   boolean not null default false,
+  credenciado_em timestamptz,
   ativo         boolean not null default true,
   created_at    timestamptz not null default now()
 );
@@ -53,6 +55,36 @@ create table if not exists events (
   carga_horaria_total int not null default 16
 );
 
+-- ── CONFIGURAÇÕES DE GAMIFICAÇÃO ─────────────────────────────
+create table if not exists configuracoes_gamificacao (
+  id                serial primary key,
+  presenca          int not null default 10,
+  avaliacao         int not null default 5,
+  topico            int not null default 15,
+  resposta          int not null default 8,
+  curtida_recebida  int not null default 3,
+  primeiro_dia      int not null default 5,
+  topico_destaque   int not null default 20,
+  seguir            int not null default 5
+);
+
+-- ── FOLLOWS ───────────────────────────────────────────────────
+create table if not exists follows (
+  id           bigserial primary key,
+  follower_id  uuid not null references profiles(id) on delete cascade,
+  following_id uuid not null references profiles(id) on delete cascade,
+  criado_em    timestamptz not null default now(),
+  unique(follower_id, following_id)
+);
+alter table follows enable row level security;
+create policy "Público lê follows" on follows for select using (true);
+create policy "Usuário gerencia próprios follows" on follows for all to authenticated
+  using (follower_id = auth.uid()) with check (follower_id = auth.uid());
+alter table configuracoes_gamificacao enable row level security;
+create policy "Público lê gamificação" on configuracoes_gamificacao for select using (true);
+create policy "Admin gerencia gamificação" on configuracoes_gamificacao for all to authenticated
+  using (exists (select 1 from profiles where id = auth.uid() and role in ('super_admin','admin')));
+
 -- ── ATIVIDADES ────────────────────────────────────────────────
 create table if not exists atividades (
   id               serial primary key,
@@ -71,10 +103,55 @@ create table if not exists atividades (
   materiais        jsonb not null default '[]'::jsonb
 );
 
+-- ── STORAGE BUCKET: avatares ─────────────────────────────────
+-- insert into storage.buckets (id, name, public) values ('avatares', 'avatares', true) on conflict do nothing;
+
+create policy "Público lê avatares"
+  on storage.objects for select using (bucket_id = 'avatares');
+
+create policy "Usuário envia próprio avatar"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'avatares');
+
+create policy "Usuário atualiza próprio avatar"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'avatares');
+
 -- ── STORAGE BUCKET: materiais ─────────────────────────────────
 -- Execute via Supabase Dashboard → Storage → New Bucket: "materiais" (public)
 -- Ou via SQL (Supabase storage API):
 -- insert into storage.buckets (id, name, public) values ('materiais', 'materiais', true) on conflict do nothing;
+
+-- Políticas RLS do bucket materiais (rodar no SQL Editor):
+create policy "Público lê materiais"
+  on storage.objects for select
+  using (bucket_id = 'materiais');
+
+create policy "Admin upload materiais"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'materiais'
+    and exists (
+      select 1 from profiles
+      where id = auth.uid()
+      and role in ('super_admin', 'admin')
+    )
+  );
+
+create policy "Admin deleta materiais"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'materiais'
+    and exists (
+      select 1 from profiles
+      where id = auth.uid()
+      and role in ('super_admin', 'admin')
+    )
+  );
 
 -- ── PRESENÇAS ────────────────────────────────────────────────
 create table if not exists presencas (

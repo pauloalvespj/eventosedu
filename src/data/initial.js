@@ -172,6 +172,20 @@ export const INITIAL_PRESENCAS = [
   { id: 19, participante_id: 4, atividade_id: 3,  data_hora: "2026-09-15 10:05" },
 ];
 
+export const INITIAL_GAMIFICACAO_CONFIG = {
+  id: 1,
+  presenca:         10,
+  avaliacao:         5,
+  topico:           15,
+  resposta:          8,
+  curtida_recebida:  3,
+  primeiro_dia:      5,
+  topico_destaque:  20,
+  seguir:            5,
+};
+
+export const INITIAL_FOLLOWS = [];
+
 export const INITIAL_FORUM_CONFIG = {
   ativo: true,
   data_inicio: "2026-09-14T08:00",

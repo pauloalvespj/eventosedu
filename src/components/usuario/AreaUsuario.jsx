@@ -3,11 +3,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue } from "../../utils/helpers";
 import { TIPO_COLOR } from "../../utils/helpers";
-import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit } from "../base/index";
+import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit, AvatarUpload } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
+import { RedeView } from "./RedeView";
 
-export function AreaUsuario({ user, setUser, event, atividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, avaliacoes, setAvaliacoes, registrarPresencaComPontos, onLogout }) {
+export function AreaUsuario({ user, setUser, event, atividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout }) {
   const isPalestrante = user.role === "palestrante";
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
@@ -45,6 +46,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
     ["credencial",   "🪪 Credencial"],
     ["forum",        "💬 Fórum"],
     ["ranking",      "🏅 Ranking"],
+    ["rede",         "🤝 Rede"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
     ["minhas_palestras", "🎙 Minhas Palestras"],
@@ -65,9 +67,13 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
       <div className="part-sidebar" style={{ background: isPalestrante ? "linear-gradient(180deg,#0a2040 0%,#0d3350 60%,#1a4a4a 100%)" : "var(--navy-dark)" }}>
         <div className="part-sidebar-header">
           <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"0.75rem" }}>
-            <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(201,168,76,0.2)", border:"2px solid var(--gold)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Playfair Display',serif", fontWeight:700, color:"var(--gold-light)", fontSize:"0.85rem", flexShrink:0 }}>
-              {(user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join(""))}
-            </div>
+            <AvatarUpload
+              userId={user.id}
+              fotoUrl={user.foto_url}
+              iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
+              size={36}
+              onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
+            />
             <div style={{ overflow:"hidden" }}>
               <div style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.85)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome.split(" ")[0]}</div>
               <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.4)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
@@ -102,9 +108,13 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
           <div>
             {/* Banner boas-vindas */}
             <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
-              <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(201,168,76,0.2)", border:"3px solid var(--gold)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", fontWeight:700, color:"var(--gold-light)", flexShrink:0 }}>
-                {user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
-              </div>
+              <AvatarUpload
+                userId={user.id}
+                fotoUrl={user.foto_url}
+                iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
+                size={56}
+                onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
+              />
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Bem-vindo(a){isPalestrante?" · Palestrante":""}</div>
                 <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", marginBottom:"0.15rem" }}>{user.nome}</div>
@@ -615,6 +625,18 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
             admins={admins}
             pontuacoes={pontuacoes}
             user={user}
+          />
+        )}
+
+        {/* ════════════ REDE ════════════ */}
+        {aba === "rede" && (
+          <RedeView
+            user={user}
+            participantes={participantes}
+            follows={follows}
+            pontosConfig={pontosConfig}
+            onSeguir={onSeguir}
+            onDesseguir={onDesseguir}
           />
         )}
 

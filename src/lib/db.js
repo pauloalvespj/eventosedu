@@ -8,6 +8,55 @@
 
 import { supabase } from "./supabase";
 
+// ── AVATARES ─────────────────────────────────────────────────
+
+export async function uploadAvatar(userId, file) {
+  const ext = file.name.split(".").pop();
+  const path = `${userId}.${ext}`;
+  const { error } = await supabase.storage.from("avatares").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("avatares").getPublicUrl(path);
+  await supabase.from("profiles").update({ foto_url: publicUrl }).eq("id", userId);
+  return publicUrl;
+}
+
+// ── FOLLOWS ───────────────────────────────────────────────────
+
+export async function fetchFollows() {
+  const { data, error } = await supabase.from("follows").select("*");
+  return { data, error };
+}
+
+export async function seguirUsuario(follower_id, following_id) {
+  const { error } = await supabase.from("follows").insert({ follower_id, following_id });
+  return { error };
+}
+
+export async function desseguirUsuario(follower_id, following_id) {
+  const { error } = await supabase.from("follows")
+    .delete().eq("follower_id", follower_id).eq("following_id", following_id);
+  return { error };
+}
+
+// ── GAMIFICAÇÃO CONFIG ────────────────────────────────────────
+
+export async function fetchGamificacaoConfig() {
+  const { data, error } = await supabase
+    .from("configuracoes_gamificacao")
+    .select("*")
+    .limit(1)
+    .single();
+  return { data, error };
+}
+
+export async function salvarGamificacaoConfig(id, updates) {
+  const { error } = await supabase
+    .from("configuracoes_gamificacao")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
 // ── LEITURA INICIAL ───────────────────────────────────────────
 
 export async function fetchInstituicoes() {
@@ -333,9 +382,10 @@ export async function atualizarProfile(id, updates) {
 }
 
 export async function atualizarCredenciamento(participante_id, credenciado) {
+  const credenciado_em = credenciado ? new Date().toISOString() : null;
   const { error } = await supabase
     .from("profiles")
-    .update({ credenciado })
+    .update({ credenciado, credenciado_em })
     .eq("id", participante_id);
   return { error };
 }

@@ -1,14 +1,42 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMedal, faDownload, faTrophy } from "@fortawesome/free-solid-svg-icons";
+import { faMedal, faDownload, faTrophy, faGear, faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { PONTOS, NIVEL_LABELS } from "../../../config/gamificacao";
+import { NIVEL_LABELS } from "../../../config/gamificacao";
 import { getRanking, getNivel, ROLE_LABEL } from "../../../utils/helpers";
 import { RoleBadge } from "../../base/index";
+import { salvarGamificacaoConfig } from "../../../lib/db";
+
+const PONTOS_LABELS = {
+  presenca:          "Confirmar presença em atividade",
+  avaliacao:         "Avaliar uma palestra",
+  topico:            "Criar tópico no fórum",
+  resposta:          "Responder tópico",
+  curtida_recebida:  "Receber curtida",
+  primeiro_dia:      "Bônus primeiros 10 a confirmar",
+  topico_destaque:   "Tópico marcado como destaque",
+  seguir:            "Seguir outro participante",
+};
 
 export function Gamificacao() {
-  const { participantes, palestrantes, admins, pontuacoes, showToast } = useAdmin();
+  const { participantes, palestrantes, admins, pontuacoes, pontosConfig, setPontosConfig, showToast } = useAdmin();
+  const [editandoConfig, setEditandoConfig] = useState(false);
+  const [formConfig, setFormConfig] = useState({});
 
   const ranking = getRanking(participantes, palestrantes, admins, pontuacoes);
+
+  function iniciarEdicao() {
+    setFormConfig({ ...pontosConfig });
+    setEditandoConfig(true);
+  }
+
+  async function salvarConfig() {
+    const { id, ...campos } = formConfig;
+    setPontosConfig({ ...formConfig });
+    setEditandoConfig(false);
+    await salvarGamificacaoConfig(pontosConfig.id, campos);
+    showToast("Configurações de gamificação salvas!", "success");
+  }
 
   function exportarRanking() {
     const header = "Pos,Nome,Instituição,Role,Pontos,Nível\n";
@@ -30,29 +58,40 @@ export function Gamificacao() {
         </button>
       </div>
 
-      {/* Pontos por ação */}
+      {/* Configuração de pontos */}
       <div className="table-wrap" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-        <div style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "1rem", fontSize: "0.95rem" }}>
-          <FontAwesomeIcon icon={faMedal} style={{ marginRight: 6 }} />Pontos por Ação
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: "0.75rem" }}>
-          {Object.entries(PONTOS).map(([acao, pts]) => {
-            const labels = {
-              presenca: "Confirmar presença",
-              avaliacao: "Avaliar palestra",
-              topico: "Criar tópico no fórum",
-              resposta: "Responder tópico",
-              curtida_recebida: "Receber curtida",
-              primeiro_dia: "Bônus primeiros 10",
-              topico_destaque: "Tópico em destaque",
-            };
-            return (
-              <div key={acao} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 1rem", background: "var(--surface2)", borderRadius: "var(--radius-sm)", fontSize: "0.85rem" }}>
-                <span style={{ color: "var(--text2)" }}>{labels[acao] || acao}</span>
-                <span style={{ fontWeight: 700, color: "var(--gold)", fontSize: "1rem" }}>+{pts}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <div style={{ fontWeight: 700, color: "var(--navy)", fontSize: "0.95rem" }}>
+            <FontAwesomeIcon icon={faGear} style={{ marginRight: 6 }} />Pontos por Ação
+          </div>
+          {!editandoConfig
+            ? <button className="btn btn-sm btn-outline" onClick={iniciarEdicao}>
+                <FontAwesomeIcon icon={faGear} style={{ marginRight: 6 }} />Editar
+              </button>
+            : <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-sm btn-outline" onClick={() => setEditandoConfig(false)}>Cancelar</button>
+                <button className="btn btn-sm btn-primary" onClick={salvarConfig}>
+                  <FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight: 6 }} />Salvar
+                </button>
               </div>
-            );
-          })}
+          }
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "0.75rem" }}>
+          {Object.entries(pontosConfig).filter(([acao]) => acao !== "id").map(([acao, pts]) => (
+            <div key={acao} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 1rem", background: "var(--surface2)", borderRadius: "var(--radius-sm)", fontSize: "0.85rem" }}>
+              <span style={{ color: "var(--text2)" }}>{PONTOS_LABELS[acao] || acao}</span>
+              {editandoConfig
+                ? <input
+                    type="number"
+                    min={0}
+                    value={formConfig[acao] ?? pts}
+                    onChange={e => setFormConfig(f => ({ ...f, [acao]: Number(e.target.value) }))}
+                    style={{ width: 60, padding: "0.25rem 0.5rem", border: "1.5px solid var(--border2)", borderRadius: "var(--radius-sm)", textAlign: "center", fontWeight: 700, color: "var(--gold)", fontSize: "0.95rem" }}
+                  />
+                : <span style={{ fontWeight: 700, color: "var(--gold)", fontSize: "1rem" }}>+{pts}</span>
+              }
+            </div>
+          ))}
         </div>
       </div>
 
@@ -103,14 +142,8 @@ export function Gamificacao() {
                   </td>
                   <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{u.inst || "–"}</td>
                   <td><RoleBadge role={u.role} /></td>
-                  <td>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: nivel.cor }}>
-                      {nivel.icon} {nivel.label}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 700, color: "var(--gold)", fontSize: "1rem" }}>{u.pts}</span>
-                  </td>
+                  <td><span style={{ fontSize: "0.78rem", fontWeight: 600, color: nivel.cor }}>{nivel.icon} {nivel.label}</span></td>
+                  <td><span style={{ fontWeight: 700, color: "var(--gold)", fontSize: "1rem" }}>{u.pts}</span></td>
                 </tr>
               );
             })}

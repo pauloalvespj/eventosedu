@@ -25,16 +25,14 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           <a href="#palestrantes" className="navbar-link">Palestrantes</a>
           <a href="#realizacao" className="navbar-link">Realização</a>
           <a href="#local" className="navbar-link">Local</a>
-          <button className="navbar-link" onClick={onLoginClick} style={{ background: "transparent" }}>Área do Participante</button>
-          <button className="btn-inscricao" onClick={onInscricaoClick}>Inscrever-se</button>
+          <button className="btn-inscricao btn-login-mobile" onClick={onLoginClick} style={{ background: "var(--gold)", color: "var(--navy-dark)" }}>Login</button>
         </div>
       </nav>
 
       {/* HERO */}
       <section className="hero" id="home">
         <div style={{ position: "relative", zIndex: 1, maxWidth: 860, margin: "0 auto" }}>
-          <div className="hero-badge">🏛 Auditoria Interna Governamental</div>
-          <h1 style={{ fontSize: "clamp(1.6rem,4vw,2.8rem)", marginBottom: "0.5rem" }}>
+          <h1 style={{ fontSize: "clamp(2.8rem,7vw,5rem)", marginBottom: "0.5rem" }}>
             <em>{event.nome}</em>
           </h1>
           <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(0.95rem,2vw,1.15rem)", color: "rgba(255,255,255,0.75)", marginBottom: "1.25rem", lineHeight: 1.5 }}>
@@ -45,9 +43,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           </div>
           <div className="hero-meta">
             <div className="hero-meta-item"><div className="hero-meta-icon">📍</div><span>{event.local}</span></div>
-            <div className="hero-meta-item"><div className="hero-meta-icon">🗓</div><span>{formatData(event.data_inicio)} a {formatData(event.data_fim)}</span></div>
-            <div className="hero-meta-item"><div className="hero-meta-icon">⏱</div><span>{chTotal}h de conteúdo certificável</span></div>
-            <div className="hero-meta-item"><div className="hero-meta-icon">🎤</div><span>{palestrantes.length} palestrantes</span></div>
+            <div className="hero-meta-item"><div className="hero-meta-icon">📅</div><span>{formatData(event.data_inicio)} a {formatData(event.data_fim)}</span></div>
           </div>
           <div className="hero-btns">
             <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
@@ -159,7 +155,10 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           <div className="palestrantes-grid">
             {palestrantes.map(p => (
               <div key={p.id} className="palestrante-card">
-                <div className="palestrante-avatar">{p.foto_iniciais}</div>
+                {p.foto_url
+                  ? <img src={p.foto_url} alt={p.nome} className="palestrante-avatar" style={{ objectFit:"cover", fontSize:0 }} />
+                  : <div className="palestrante-avatar">{p.foto_iniciais}</div>
+                }
                 <div className="palestrante-nome">{p.nome}</div>
                 <div className="palestrante-titulo">{p.titulo}</div>
                 {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginBottom:"0.4rem" }}>{p.instituicao}</div>}
@@ -179,9 +178,9 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
               <div style={{ color: "var(--gold)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Instituições</div>
               <h2 className="section-title">Realização</h2>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
               {event.realizacao.split(",").map((r,i) => (
-                <div key={i} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)" }}>
+                <div key={i} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240 }}>
                   <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🏛</div>
                   <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{r.trim().split("(")[0].trim()}</div>
                   {r.includes("(") && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.25rem" }}>({r.split("(")[1].replace(")","").trim()})</div>}
@@ -200,12 +199,16 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
             <h2 className="section-title">Local do Evento</h2>
           </div>
           <div className="local-card">
-            <div className="local-map">
-              <div>
-                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺</div>
-                <div style={{ fontWeight:700 }}>{event.local}</div>
-                <div style={{ fontSize: "0.8rem", opacity: 0.7, marginTop: "0.25rem" }}>{event.endereco}</div>
-              </div>
+            <div className="local-map" style={{ padding: 0, overflow: "hidden", borderRadius: "var(--radius)" }}>
+              <iframe
+                title="Localização do evento"
+                width="100%"
+                height="100%"
+                style={{ border: 0, display: "block", minHeight: 220 }}
+                loading="lazy"
+                allowFullScreen
+                src={`https://www.google.com/maps?q=${encodeURIComponent(event.endereco || event.local)}&output=embed`}
+              />
             </div>
             <div className="local-info">
               <h3>{event.local}</h3>
@@ -216,14 +219,6 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
               <div className="local-detail">
                 <div className="local-icon">📅</div>
                 <p style={{ color: "var(--text2)", fontSize: "0.9rem" }}>{formatData(event.data_inicio)} a {formatData(event.data_fim)}</p>
-              </div>
-              <div className="local-detail">
-                <div className="local-icon">🕐</div>
-                <p style={{ color: "var(--text2)", fontSize: "0.9rem" }}>Início: 09h00 · Encerramento no dia 17/09 às {event.horario_encerramento || "13h"}</p>
-              </div>
-              <div className="local-detail">
-                <div className="local-icon">🚗</div>
-                <p style={{ color: "var(--text2)", fontSize: "0.9rem" }}>Estacionamento disponível no campus. Acesso pela Av. da Universidade.</p>
               </div>
             </div>
           </div>

@@ -38,19 +38,19 @@ export function Usuarios() {
   async function salvar() {
     if (!form.nome) { showToast("Nome obrigatório", "error"); return; }
     if (form.id) {
-      setAdmins(prev => prev.map(u => u.id === form.id ? { ...u, ...form } : u));
+      setAdmins(admins.map(u => u.id === form.id ? { ...u, ...form } : u));
       await atualizarProfile(form.id, { nome: form.nome, role: form.role, instituicao: form.instituicao, ativo: form.ativo });
       showToast("Usuário atualizado!", "success");
     } else {
       const iniciais = form.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
-      setAdmins(prev => [...prev, { ...form, id: `local-${Date.now()}`, foto_iniciais: iniciais }]);
+      setAdmins([...admins, { ...form, id: `local-${Date.now()}`, foto_iniciais: iniciais }]);
       showToast("Usuário criado localmente — use setup-users.js para persistir no Supabase.", "info");
     }
     setModal(false);
   }
 
   function toggleAtivo(u) {
-    setAdmins(prev => prev.map(x => x.id === u.id ? { ...x, ativo: !x.ativo } : x));
+    setAdmins(admins.map(x => x.id === u.id ? { ...x, ativo: !x.ativo } : x));
     atualizarProfile(u.id, { ativo: !u.ativo });
     showToast(u.ativo ? "Usuário desativado" : "Usuário ativado", "info");
   }
