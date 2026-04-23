@@ -17,6 +17,8 @@ export const INITIAL_EVENT = {
   banner_cor: "#0f3460",
   percentual_minimo: 75,
   carga_horaria_total: 16,
+  inscricao_inicio: "2026-07-01",
+  inscricao_fim: "2026-09-14",
 };
 
 export const INITIAL_INSTITUICOES = [
@@ -185,6 +187,8 @@ export const INITIAL_GAMIFICACAO_CONFIG = {
 };
 
 export const INITIAL_FOLLOWS = [];
+
+export const INITIAL_CONVIDADOS = [];
 
 export const INITIAL_FORUM_CONFIG = {
   ativo: true,

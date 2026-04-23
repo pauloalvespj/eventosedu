@@ -20,6 +20,64 @@ export async function uploadAvatar(userId, file) {
   return publicUrl;
 }
 
+// ── CONVIDADOS PROSPECÇÃO ────────────────────────────────────
+
+export async function fetchConvidados() {
+  const { data, error } = await supabase
+    .from("convidados_prospeccao")
+    .select("*")
+    .order("nome");
+  return { data: data ?? [], error };
+}
+
+export async function inserirConvidado({ nome, email, instituicao, event_id = 1 }) {
+  const { data, error } = await supabase
+    .from("convidados_prospeccao")
+    .insert({ nome, email: email.toLowerCase().trim(), instituicao, event_id, status: "pendente" })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function inserirConvidadosLote(rows) {
+  const normalized = rows.map(r => ({
+    nome: r.nome,
+    email: r.email.toLowerCase().trim(),
+    instituicao: r.instituicao || null,
+    event_id: r.event_id ?? 1,
+    status: "pendente",
+  }));
+  const { data, error } = await supabase
+    .from("convidados_prospeccao")
+    .upsert(normalized, { onConflict: "email,event_id", ignoreDuplicates: true })
+    .select();
+  return { data, error };
+}
+
+export async function atualizarConvidado(id, updates) {
+  const { error } = await supabase
+    .from("convidados_prospeccao")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarConvidado(id) {
+  const { error } = await supabase
+    .from("convidados_prospeccao")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+export async function marcarEmailEnviado(ids) {
+  const { error } = await supabase
+    .from("convidados_prospeccao")
+    .update({ email_enviado: true })
+    .in("id", ids);
+  return { error };
+}
+
 // ── FOLLOWS ───────────────────────────────────────────────────
 
 export async function fetchFollows() {

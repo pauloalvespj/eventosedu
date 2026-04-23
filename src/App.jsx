@@ -6,7 +6,7 @@ import { supabase } from "./lib/supabase";
 import {
   fetchEvent, fetchAtividades, fetchProfiles, fetchPresencas,
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
-  fetchInstituicoes, fetchGamificacaoConfig, fetchFollows,
+  fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
   seguirUsuario, desseguirUsuario,
   inserirPontuacao,
 } from "./lib/db";
@@ -14,7 +14,7 @@ import {
   INITIAL_EVENT, INITIAL_ATIVIDADES, INITIAL_PALESTRANTES, INITIAL_PARTICIPANTES,
   INITIAL_PRESENCAS, INITIAL_ADMINS, INITIAL_TOPICOS, INITIAL_PONTUACOES,
   INITIAL_FORUM_CONFIG, INITIAL_AVALIACOES, INITIAL_INSTITUICOES,
-  INITIAL_GAMIFICACAO_CONFIG, INITIAL_FOLLOWS,
+  INITIAL_GAMIFICACAO_CONFIG, INITIAL_FOLLOWS, INITIAL_CONVIDADOS,
 } from "./data/initial";
 import { PONTOS } from "./config/gamificacao";
 import { TIPO_ICON } from "./utils/helpers";
@@ -52,6 +52,7 @@ export default function App() {
   const [instituicoes, setInstituicoes] = useState(INITIAL_INSTITUICOES);
   const [pontosConfig, setPontosConfig] = useState(INITIAL_GAMIFICACAO_CONFIG);
   const [follows, setFollows] = useState(INITIAL_FOLLOWS);
+  const [convidados, setConvidados] = useState(INITIAL_CONVIDADOS);
 
   // ── Auth ─────────────────────────────────────────────────────
   const [user, setUser] = useState(null);         // profile do usuário logado
@@ -99,7 +100,8 @@ export default function App() {
       fetchInstituicoes(),
       fetchGamificacaoConfig(),
       fetchFollows(),
-    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes]) => {
+      fetchConvidados(),
+    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes]) => {
       if (get(presRes)) setPresencas(get(presRes));
       if (get(avalRes)) setAvaliacoes(get(avalRes));
       if (get(fcRes))   setForumConfig(get(fcRes));
@@ -108,6 +110,7 @@ export default function App() {
       if (get(instRes)) setInstituicoes(get(instRes));
       if (get(gamRes))  setPontosConfig(get(gamRes));
       if (get(folRes))  setFollows(get(folRes));
+      if (get(convRes)) setConvidados(get(convRes));
     });
   }
 
@@ -224,6 +227,7 @@ export default function App() {
     forumConfig, setForumConfig,
     avaliacoes, setAvaliacoes,
     instituicoes, setInstituicoes,
+    convidados, setConvidados,
     onLogout: handleLogout,
     showToast,
   };

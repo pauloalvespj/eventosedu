@@ -3,7 +3,7 @@ import { formatCPF, validateCPF } from "../../utils/helpers";
 import { supabase } from "../../lib/supabase";
 
 export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
-  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", sexo: "", email: "", senha: "", confirmSenha: "" });
+  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -18,7 +18,6 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     if (!instValor) e.instituicao = "Instituição obrigatória";
     if (form.instituicao === "Outra" && !form.instituicaoOutra.trim()) e.instituicao = "Informe o nome da instituição";
     if (!form.cargo.trim()) e.cargo = "Cargo obrigatório";
-    if (!form.sexo) e.sexo = "Selecione o sexo";
     if (!form.email.includes("@")) e.email = "E-mail inválido";
     if (form.senha.length < 6) e.senha = "Senha mínima de 6 caracteres";
     if (form.senha !== form.confirmSenha) e.confirmSenha = "Senhas não conferem";
@@ -56,7 +55,6 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
       cpf: formatCPF(form.cpf.replace(/\D/g, "")),
       instituicao: instituicaoFinal,
       cargo: form.cargo,
-      sexo: form.sexo,
       credenciado: false,
       ativo: true,
     });
@@ -116,22 +114,12 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
         </div>
         <div className="form-group">
-          <label className="form-label">Cargo *</label>
-          <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Professor, Técnico..."
+          <label className="form-label">Cargo / Função *</label>
+          <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Auditor(a), Analista..."
             value={form.cargo} onChange={e => set("cargo", e.target.value)} />
           {erros.cargo && <div className="form-error">{erros.cargo}</div>}
         </div>
-        <div className="form-group">
-          <label className="form-label">Sexo *</label>
-          <select className={`form-input${erros.sexo ? " error" : ""}`} value={form.sexo} onChange={e => set("sexo", e.target.value)}>
-            <option value="">Selecione</option>
-            <option value="M">Masculino</option>
-            <option value="F">Feminino</option>
-            <option value="O">Outro</option>
-          </select>
-          {erros.sexo && <div className="form-error">{erros.sexo}</div>}
-        </div>
-        <div className="form-group">
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
           <label className="form-label">E-mail *</label>
           <input className={`form-input${erros.email ? " error" : ""}`} placeholder="seu@email.com" type="email"
             value={form.email} onChange={e => set("email", e.target.value)} />

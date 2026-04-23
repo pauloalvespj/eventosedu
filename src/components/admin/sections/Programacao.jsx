@@ -5,7 +5,7 @@ import {
   faDownload, faClock, faFileAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { Modal, TipoBadge, QRCodeCanvas } from "../../base/index";
+import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
 import { formatData, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
@@ -147,7 +147,7 @@ export function Programacao() {
         <div className="form-group"><label className="form-label">Título *</label><input className="form-input" value={formAtv.titulo || ""} onChange={e => setFormAtv(f => ({ ...f, titulo: e.target.value }))} /></div>
         <div className="form-group"><label className="form-label">Descrição</label><textarea className="form-input" rows={2} value={formAtv.descricao || ""} onChange={e => setFormAtv(f => ({ ...f, descricao: e.target.value }))} /></div>
         <div className="form-grid">
-          <div className="form-group"><label className="form-label">Dia *</label><input type="date" className="form-input" value={formAtv.dia || ""} onChange={e => setFormAtv(f => ({ ...f, dia: e.target.value }))} /></div>
+          <DatePickerInput label="Dia *" value={formAtv.dia || ""} onChange={v => setFormAtv(f => ({ ...f, dia: v }))} />
           <div className="form-group"><label className="form-label">Horário início *</label><input type="time" className="form-input" value={formAtv.horario || ""} onChange={e => setFormAtv(f => ({ ...f, horario: e.target.value }))} /></div>
           <div className="form-group"><label className="form-label">Horário fim</label><input type="time" className="form-input" value={formAtv.horario_fim || ""} onChange={e => setFormAtv(f => ({ ...f, horario_fim: e.target.value }))} /></div>
           <div className="form-group"><label className="form-label">Local</label><input className="form-input" value={formAtv.local || ""} onChange={e => setFormAtv(f => ({ ...f, local: e.target.value }))} /></div>

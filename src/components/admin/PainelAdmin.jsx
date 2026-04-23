@@ -1,19 +1,18 @@
 import { useRoutes, NavLink, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faChartBar, faGear, faCalendarDays, faMicrophone, faUsers, faIdBadge,
+  faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
   faArrowRightFromBracket, faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext } from "./sections/AdminContext";
 
-import { Dashboard }      from "./sections/Dashboard";
-import { Evento }         from "./sections/Evento";
-import { Programacao }    from "./sections/Programacao";
-import { Palestrantes }   from "./sections/Palestrantes";
-import { Inscricoes }     from "./sections/Inscricoes";
-import { Credenciamento } from "./sections/Credenciamento";
+import { Dashboard }            from "./sections/Dashboard";
+import { Evento }               from "./sections/Evento";
+import { Programacao }          from "./sections/Programacao";
+import { GestaoParticipantes }  from "./sections/GestaoParticipantes";
+import { Credenciamento }       from "./sections/Credenciamento";
 import { Presencas }      from "./sections/Presencas";
 import { Certificados }   from "./sections/Certificados";
 import { Relatorios }     from "./sections/Relatorios";
@@ -27,8 +26,7 @@ const MENU = [
   { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["super_admin","admin","credenciador"] },
   { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["super_admin","admin"] },
   { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["super_admin","admin"] },
-  { path: "palestrantes",   icon: faMicrophone,   label: "Palestrantes",    roles: ["super_admin","admin"] },
-  { path: "inscricoes",     icon: faUsers,        label: "Inscrições",      roles: ["super_admin","admin"] },
+  { path: "participantes",  icon: faUsers,        label: "Participantes",   roles: ["super_admin","admin"] },
   { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["super_admin","admin","credenciador"] },
   { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["super_admin","admin"] },
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["super_admin","admin"] },
@@ -46,8 +44,9 @@ function AdminRoutes() {
     { path: "dashboard",         element: <Navigate to="/admin" replace /> },
     { path: "evento",            element: <Evento /> },
     { path: "programacao",       element: <Programacao /> },
-    { path: "palestrantes",      element: <Palestrantes /> },
-    { path: "inscricoes",        element: <Inscricoes /> },
+    { path: "participantes",     element: <GestaoParticipantes /> },
+    { path: "inscricoes",        element: <Navigate to="/admin/participantes" replace /> },
+    { path: "palestrantes",      element: <Navigate to="/admin/participantes" replace /> },
     { path: "credenciamento",    element: <Credenciamento /> },
     { path: "presencas",         element: <Presencas /> },
     { path: "certificados",      element: <Certificados /> },

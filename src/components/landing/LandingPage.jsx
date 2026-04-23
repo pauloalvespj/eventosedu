@@ -4,9 +4,20 @@ import { TIPO_COLOR } from "../../utils/helpers";
 import { formatData, diaSemana } from "../../utils/helpers";
 import { TipoBadge } from "../base/index";
 
+function inscricoesAbertas(event) {
+  const hoje = new Date().toISOString().split("T")[0];
+  if (!event.inscricao_inicio && !event.inscricao_fim) return { aberta: true };
+  if (event.inscricao_inicio && hoje < event.inscricao_inicio)
+    return { aberta: false, msg: `Inscrições abertas a partir de ${formatData(event.inscricao_inicio)}` };
+  if (event.inscricao_fim && hoje > event.inscricao_fim)
+    return { aberta: false, msg: "Inscrições encerradas" };
+  return { aberta: true };
+}
+
 export function LandingPage({ event, atividades, palestrantes, onInscricaoClick, onLoginClick }) {
   const [diaAtivo, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
+  const inscStatus = inscricoesAbertas(event);
 
   const dias = [...new Set(atividades.map(a => a.dia))].sort();
   useEffect(() => { if (dias.length) setDiaAtivo(dias[0]); }, []);
@@ -46,7 +57,10 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
             <div className="hero-meta-item"><div className="hero-meta-icon">📅</div><span>{formatData(event.data_inicio)} a {formatData(event.data_fim)}</span></div>
           </div>
           <div className="hero-btns">
-            <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
+            {inscStatus.aberta
+              ? <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
+              : <div style={{ display:"inline-block", background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.2)", color:"rgba(255,255,255,0.55)", padding:"0.85rem 2rem", borderRadius:50, fontSize:"0.95rem", fontWeight:600 }}>{inscStatus.msg}</div>
+            }
             <a href="#programacao" className="btn-hero-outline">Ver Programação</a>
           </div>
         </div>
@@ -71,7 +85,10 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
                   ))}
                 </div>
               )}
-              <button className="btn btn-primary" onClick={onInscricaoClick}>Participar do Evento</button>
+              {inscStatus.aberta
+                ? <button className="btn btn-primary" onClick={onInscricaoClick}>Participar do Evento</button>
+                : <div style={{ display:"inline-block", background:"var(--surface2)", border:"1px solid var(--border)", color:"var(--text3)", padding:"0.6rem 1.25rem", borderRadius:"var(--radius-sm)", fontSize:"0.88rem", fontWeight:600 }}>{inscStatus.msg}</div>
+              }
             </div>
             <div className="sobre-stats">
               {[
@@ -253,7 +270,10 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "2rem", fontSize: "1rem" }}>
             Evento gratuito · {formatData(event.data_inicio)} a {formatData(event.data_fim)} · {event.local}
           </p>
-          <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
+          {inscStatus.aberta
+            ? <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
+            : <div style={{ display:"inline-block", background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.25)", color:"rgba(255,255,255,0.55)", padding:"0.9rem 2.5rem", borderRadius:50, fontSize:"1rem", fontWeight:600 }}>{inscStatus.msg}</div>
+          }
         </div>
       </section>
 

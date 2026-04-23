@@ -2,8 +2,18 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, faFileAlt } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
+import { DatePickerInput } from "../../base/index";
 import { formatData } from "../../../utils/helpers";
 import { atualizarEvento } from "../../../lib/db";
+
+function InscricoesStatusBadge({ event }) {
+  const hoje = new Date().toISOString().split("T")[0];
+  const { inscricao_inicio: ini, inscricao_fim: fim } = event;
+  if (!ini && !fim) return null;
+  if (ini && hoje < ini) return <span style={{ fontSize:"0.7rem", color:"var(--gold)", marginTop:2, display:"block" }}>Abre em {formatData(ini)}</span>;
+  if (fim && hoje > fim) return <span style={{ fontSize:"0.7rem", color:"#f87171", marginTop:2, display:"block" }}>Encerradas</span>;
+  return <span style={{ fontSize:"0.7rem", color:"#4ade80", marginTop:2, display:"block" }}>Abertas</span>;
+}
 
 export function Evento() {
   const { event, setEvent, showToast } = useAdmin();
@@ -35,10 +45,17 @@ export function Evento() {
             <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.6rem", color:"var(--gold-light)", marginBottom:"0.35rem" }}>{event.nome}</h2>
             <p style={{ fontSize:"0.95rem", color:"rgba(255,255,255,0.7)", marginBottom:"1rem", lineHeight:1.5 }}>{event.subtitulo}</p>
             <div style={{ display:"flex", gap:"2rem", flexWrap:"wrap" }}>
-              <div><div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Período</div><div style={{ fontWeight:600 }}>{formatData(event.data_inicio)} – {formatData(event.data_fim)}</div></div>
+              <div><div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Período do Evento</div><div style={{ fontWeight:600 }}>{formatData(event.data_inicio)} – {formatData(event.data_fim)}</div></div>
               <div><div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Local</div><div style={{ fontWeight:600 }}>{event.local}</div></div>
               <div><div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Mín. presença</div><div style={{ fontWeight:600 }}>{event.percentual_minimo}%</div></div>
               <div><div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Carga horária</div><div style={{ fontWeight:600 }}>{event.carga_horaria_total}h</div></div>
+              <div>
+                <div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.4)", marginBottom:2 }}>Inscrições</div>
+                <div style={{ fontWeight:600 }}>
+                  {event.inscricao_inicio ? formatData(event.inscricao_inicio) : "–"} até {event.inscricao_fim ? formatData(event.inscricao_fim) : "–"}
+                </div>
+                <InscricoesStatusBadge event={event} />
+              </div>
             </div>
           </div>
           {[
@@ -52,33 +69,64 @@ export function Evento() {
             </div>
           ))}
           <div style={{ gridColumn:"1/-1", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.25rem" }}>
-            <div style={{ fontSize:"0.72rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.5rem" }}><FontAwesomeIcon icon={faFileAlt} style={{ marginRight: 6 }} />Descrição / Objetivo</div>
+            <div style={{ fontSize:"0.72rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.5rem" }}><FontAwesomeIcon icon={faFileAlt} style={{ marginRight: 6 }} />Descrição</div>
             <div style={{ color:"var(--text2)", fontSize:"0.9rem", lineHeight:1.75 }}>{event.descricao}</div>
           </div>
         </div>
       ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
-          {[
-            ["Nome curto", "nome", "text"],
-            ["Nome Completo", "nome_completo", "text"],
-          ].map(([l, k]) => (
-            <div key={k} className="form-group" style={{ gridColumn:"1/-1" }}>
-              <label className="form-label">{l}</label>
-              <input className="form-input" value={form[k]||""} onChange={e => set(k, e.target.value)} />
-            </div>
-          ))}
+        <div className="form-grid-4">
+          {/* Nome curto (1 col) + Nome completo (3 cols) */}
+          <div className="form-group">
+            <label className="form-label">Nome curto</label>
+            <input className="form-input" value={form.nome||""} onChange={e => set("nome", e.target.value)} />
+          </div>
+          <div className="form-group" style={{ gridColumn:"span 3" }}>
+            <label className="form-label">Nome Completo</label>
+            <input className="form-input" value={form.nome_completo||""} onChange={e => set("nome_completo", e.target.value)} />
+          </div>
+
+          {/* Subtítulo — linha inteira */}
           <div className="form-group" style={{ gridColumn:"1/-1" }}>
             <label className="form-label">Subtítulo / Tema</label>
             <input className="form-input" value={form.subtitulo||""} onChange={e => set("subtitulo", e.target.value)} />
           </div>
-          <div className="form-group"><label className="form-label">Data Início</label><input type="date" className="form-input" value={form.data_inicio||""} onChange={e => set("data_inicio", e.target.value)} /></div>
-          <div className="form-group"><label className="form-label">Data Fim</label><input type="date" className="form-input" value={form.data_fim||""} onChange={e => set("data_fim", e.target.value)} /></div>
-          <div className="form-group"><label className="form-label">Percentual Mínimo (%)</label><input type="number" className="form-input" min={0} max={100} value={form.percentual_minimo||""} onChange={e => set("percentual_minimo", Number(e.target.value))} /></div>
-          <div className="form-group"><label className="form-label">Carga Horária Total (h)</label><input type="number" className="form-input" min={1} value={form.carga_horaria_total||""} onChange={e => set("carga_horaria_total", Number(e.target.value))} /></div>
-          <div className="form-group" style={{ gridColumn:"1/-1" }}><label className="form-label">Local</label><input className="form-input" value={form.local||""} onChange={e => set("local", e.target.value)} /></div>
-          <div className="form-group" style={{ gridColumn:"1/-1" }}><label className="form-label">Endereço</label><input className="form-input" value={form.endereco||""} onChange={e => set("endereco", e.target.value)} /></div>
-          <div className="form-group" style={{ gridColumn:"1/-1" }}><label className="form-label">Realização</label><textarea className="form-input" rows={2} value={form.realizacao||""} onChange={e => set("realizacao", e.target.value)} /></div>
-          <div className="form-group" style={{ gridColumn:"1/-1" }}><label className="form-label">Descrição / Objetivo</label><textarea className="form-input" rows={4} value={form.descricao||""} onChange={e => set("descricao", e.target.value)} /></div>
+
+          {/* Descrição logo após o subtítulo */}
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <label className="form-label">Descrição</label>
+            <textarea className="form-input" rows={8} value={form.descricao||""} onChange={e => set("descricao", e.target.value)} />
+          </div>
+
+          {/* 4 datas na mesma linha com calendário popup */}
+          <DatePickerInput label="Início do Evento"      value={form.data_inicio||""}      onChange={v => set("data_inicio", v)} />
+          <DatePickerInput label="Fim do Evento"         value={form.data_fim||""}         onChange={v => set("data_fim", v)} />
+          <DatePickerInput label="Início das Inscrições" value={form.inscricao_inicio||""} onChange={v => set("inscricao_inicio", v)} />
+          <DatePickerInput label="Fim das Inscrições"    value={form.inscricao_fim||""}    onChange={v => set("inscricao_fim", v)} />
+
+          {/* Percentual e Carga horária */}
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Percentual Mínimo (%)</label>
+            <input type="number" className="form-input" min={0} max={100} value={form.percentual_minimo||""} onChange={e => set("percentual_minimo", Number(e.target.value))} />
+          </div>
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Carga Horária Total (h)</label>
+            <input type="number" className="form-input" min={1} value={form.carga_horaria_total||""} onChange={e => set("carga_horaria_total", Number(e.target.value))} />
+          </div>
+
+          {/* Local (2 cols) + Endereço (2 cols) na mesma linha */}
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Local</label>
+            <input className="form-input" value={form.local||""} onChange={e => set("local", e.target.value)} />
+          </div>
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Endereço</label>
+            <input className="form-input" value={form.endereco||""} onChange={e => set("endereco", e.target.value)} />
+          </div>
+
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <label className="form-label">Realização</label>
+            <textarea className="form-input" rows={2} value={form.realizacao||""} onChange={e => set("realizacao", e.target.value)} />
+          </div>
         </div>
       )}
     </div>
