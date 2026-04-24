@@ -6,7 +6,6 @@ import { calcPresenca } from "../../../utils/helpers";
 export function Dashboard() {
   const { user, event, atividades, participantes, presencas } = useAdmin();
 
-  const cargaHorariaTotal = atividades.filter(a => a.conta_certificado).reduce((s, a) => s + a.carga_horaria, 0);
   const totalInscritos    = participantes.length;
   const totalCredenciados = participantes.filter(p => p.credenciado).length;
   const aptos             = participantes.filter(p => calcPresenca(p.id, atividades, presencas, event).apto);
@@ -28,7 +27,7 @@ export function Dashboard() {
           { n: presencas.length,    l: "Registros de Presença",    ic: faCircleCheck, c: "success" },
           { n: aptos.length,        l: "Aptos ao Certificado",     ic: faTrophy,      c: "gold" },
           { n: atividades.length,   l: "Atividades Cadastradas",   ic: faCalendarDays,c: "navy" },
-          { n: `${cargaHorariaTotal}h`, l: "Carga Horária (Cert.)",ic: faClock,       c: "teal" },
+          { n: `${event.carga_horaria_total ?? "–"}h`, l: "Carga Horária do Evento", ic: faClock, c: "teal" },
         ].map((c, i) => (
           <div key={i} className="dash-card">
             <div className={`dash-card-icon ${c.c}`}><FontAwesomeIcon icon={c.ic} /></div>
