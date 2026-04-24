@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from "react-router-dom";
 import "./styles/global.css";
 
 import { supabase } from "./lib/supabase";
@@ -34,6 +34,35 @@ const INITIAL_PROFILES = [
   ...INITIAL_PALESTRANTES.map(p => ({ ...p, role: "palestrante" })),
   ...INITIAL_ADMINS,
 ];
+
+function PresencaRoute({ atividades, participantes, presencas, setPresencas, user, onLoginClick, registrarPresencaComPontos }) {
+  const { atividadeId } = useParams();
+  const navigate = useNavigate();
+
+  function handleSetPresencas(newPresencas) {
+    if (Array.isArray(newPresencas)) {
+      const ultima = newPresencas[newPresencas.length - 1];
+      if (ultima && !presencas.find(p => p.id === ultima.id)) {
+        const uid = user?.id ?? ultima.participante_id;
+        if (uid) registrarPresencaComPontos(uid);
+      }
+    }
+    setPresencas(newPresencas);
+  }
+
+  return (
+    <PaginaPresenca
+      atividadeId={atividadeId}
+      atividades={atividades}
+      participantes={participantes}
+      presencas={presencas}
+      setPresencas={handleSetPresencas}
+      user={user}
+      onVoltar={() => navigate("/")}
+      onLoginClick={onLoginClick}
+    />
+  );
+}
 
 export default function App() {
   const navigate = useNavigate();
@@ -243,6 +272,19 @@ export default function App() {
         } />
         <Route path="/admin/*" element={
           user ? <PainelAdmin {...adminProps} /> : <AdminLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
+        } />
+
+        {/* Rota de presença via QR Code */}
+        <Route path="/presenca/:atividadeId" element={
+          <PresencaRoute
+            atividades={atividades}
+            participantes={participantes}
+            presencas={presencas}
+            setPresencas={setPresencas}
+            user={user}
+            onLoginClick={() => setShowLogin(true)}
+            registrarPresencaComPontos={registrarPresencaComPontos}
+          />
         } />
 
         {/* Todas as demais views (landing, participante, presença) */}

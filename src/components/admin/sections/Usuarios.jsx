@@ -5,7 +5,7 @@ import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
 import { InstSelect } from "./InstSelect";
 import { RoleBadge } from "../../base/index";
-import { atualizarProfile } from "../../../lib/db";
+import { atualizarProfile, atualizarEmailAuth } from "../../../lib/db";
 import { ROLE_LABEL } from "../../../utils/helpers";
 
 const ROLES = ["super_admin", "admin", "credenciador", "palestrante", "participante"];
@@ -38,8 +38,21 @@ export function Usuarios() {
   async function salvar() {
     if (!form.nome) { showToast("Nome obrigatório", "error"); return; }
     if (form.id) {
+      const original = admins.find(u => u.id === form.id);
+      const emailMudou = form.email && form.email.toLowerCase().trim() !== original?.email?.toLowerCase().trim();
+
       setAdmins(admins.map(u => u.id === form.id ? { ...u, ...form } : u));
-      await atualizarProfile(form.id, { nome: form.nome, role: form.role, instituicao: form.instituicao, ativo: form.ativo });
+      await atualizarProfile(form.id, { nome: form.nome, email: form.email, role: form.role, instituicao: form.instituicao, ativo: form.ativo });
+
+      if (emailMudou) {
+        const { error: authError } = await atualizarEmailAuth(form.id, form.email);
+        if (authError) {
+          showToast(`Perfil salvo, mas erro ao atualizar e-mail de login: ${authError.message}`, "error");
+          setModal(false);
+          return;
+        }
+      }
+
       showToast("Usuário atualizado!", "success");
     } else {
       const iniciais = form.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();

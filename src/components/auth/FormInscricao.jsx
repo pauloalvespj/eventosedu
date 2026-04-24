@@ -6,7 +6,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
   const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [sucesso, setSucesso] = useState(false); // "confirmacao" | "logado" | false
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -62,22 +62,28 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     setEnviando(false);
 
     if (profileError) {
-      // Auth user foi criado mas profile falhou — incomum, mas loga
       console.error("Erro ao salvar profile:", profileError.message);
     }
 
-    setSucesso(true);
+    // Se o Supabase já criou sessão (confirmação de e-mail desativada),
+    // o onAuthStateChange no App.jsx vai logar o usuário automaticamente.
+    if (data.session) {
+      showToast(`Bem-vindo(a), ${form.nome.split(" ")[0]}!`, "success");
+      onClose();
+    } else {
+      setSucesso("confirmacao");
+    }
   }
 
-  if (sucesso) return (
+  if (sucesso === "confirmacao") return (
     <div style={{ textAlign: "center", padding: "1rem 0" }}>
-      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎉</div>
-      <h3 style={{ fontFamily: "'Playfair Display',serif", color: "var(--navy)", marginBottom: "0.5rem" }}>Inscrição realizada!</h3>
+      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📧</div>
+      <h3 style={{ fontFamily: "'Playfair Display',serif", color: "var(--navy)", marginBottom: "0.5rem" }}>Confirme seu e-mail</h3>
       <p style={{ color: "var(--text2)", marginBottom: "0.75rem" }}>
-        Bem-vindo ao evento, <strong>{form.nome.split(" ")[0]}</strong>!
+        Enviamos um link de confirmação para <strong>{form.email}</strong>.
       </p>
       <p style={{ color: "var(--text3)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
-        Verifique seu e-mail para confirmar o cadastro, depois faça login.
+        Clique no link recebido e depois faça login com seu e-mail e senha.
       </p>
       <button className="btn btn-primary btn-block" onClick={onClose}>Fechar</button>
     </div>

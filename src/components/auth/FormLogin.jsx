@@ -22,19 +22,33 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     setEtapa("email"); setErro("");
   }
 
+  const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false);
+  const [reenvioOk, setReenvioOk] = useState(false);
+
   async function handleLoginSenha() {
     setErro("");
+    setEmailNaoConfirmado(false);
     setEnviando(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setEnviando(false);
     if (error) {
-      setErro(error.message === "Invalid login credentials"
-        ? "E-mail ou senha incorretos."
-        : error.message);
+      if (error.message === "Email not confirmed") {
+        setEmailNaoConfirmado(true);
+      } else {
+        setErro(error.message === "Invalid login credentials"
+          ? "E-mail ou senha incorretos."
+          : error.message);
+      }
       return;
     }
-    // profile é carregado pelo onAuthStateChange no App.jsx
     onLogin(data.user);
+  }
+
+  async function reenviarConfirmacao() {
+    setEnviando(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setEnviando(false);
+    if (!error) setReenvioOk(true);
   }
 
   async function handleEnviarCodigo() {
@@ -103,6 +117,20 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
               onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
           </div>
           {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
+          {emailNaoConfirmado && (
+            <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "0.85rem 1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+              <div style={{ fontWeight: 700, color: "var(--warn)", marginBottom: "0.35rem" }}>⚠️ E-mail ainda não confirmado</div>
+              <div style={{ color: "var(--text2)", marginBottom: "0.65rem" }}>
+                Verifique sua caixa de entrada (e o spam) para o e-mail enviado para <strong>{email}</strong>.
+              </div>
+              {reenvioOk
+                ? <div style={{ color: "var(--success)", fontWeight: 600 }}>✅ E-mail reenviado com sucesso!</div>
+                : <button className="btn btn-sm btn-outline" onClick={reenviarConfirmacao} disabled={enviando}>
+                    {enviando ? "Enviando…" : "Reenviar e-mail de confirmação"}
+                  </button>
+              }
+            </div>
+          )}
           <button className="btn btn-primary btn-block" onClick={handleLoginSenha} disabled={enviando}>
             {enviando ? "Entrando…" : "Entrar"}
           </button>

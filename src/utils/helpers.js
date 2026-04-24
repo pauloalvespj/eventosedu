@@ -60,7 +60,7 @@ export function calcPresenca(participante_id, atividades, presencas, event) {
 
 // ── QR Code ───────────────────────────────────────────────────
 export function qrPresencaValue(atividadeId) {
-  return `ENAUDIN:PRESENCA:${atividadeId}`;
+  return `${window.location.origin}/presenca/${atividadeId}`;
 }
 
 // ── Gamificação ───────────────────────────────────────────────

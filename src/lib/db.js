@@ -439,6 +439,17 @@ export async function atualizarProfile(id, updates) {
   return { error };
 }
 
+// Atualiza o e-mail de login via Admin API (sem e-mail de confirmação).
+// Requer a Edge Function "update-auth-email" deployada no Supabase.
+export async function atualizarEmailAuth(userId, email) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke("update-auth-email", {
+    body: { user_id: userId, email },
+    headers: { Authorization: `Bearer ${session?.access_token}` },
+  });
+  return { data, error };
+}
+
 export async function atualizarCredenciamento(participante_id, credenciado) {
   const credenciado_em = credenciado ? new Date().toISOString() : null;
   const { error } = await supabase
