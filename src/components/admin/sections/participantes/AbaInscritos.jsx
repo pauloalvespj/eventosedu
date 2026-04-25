@@ -4,7 +4,7 @@ import { faUsers, faPenToSquare, faTrash, faFloppyDisk } from "@fortawesome/free
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile } from "../../../../lib/db";
+import { atualizarProfile, deletarParticipante } from "../../../../lib/db";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -109,11 +109,16 @@ export function AbaInscritos() {
                       onClick={() => { setFormPart({ ...p }); setModalPart(p.id); }}>
                       <FontAwesomeIcon icon={faPenToSquare} />
                     </button>
-                    <button className="btn btn-sm btn-danger" title="Remover" onClick={() => {
-                      if (!confirm(`Remover "${p.nome}" das inscrições?`)) return;
+                    <button className="btn btn-sm btn-danger" title="Remover" onClick={async () => {
+                      if (!confirm(`Remover "${p.nome}" permanentemente? Isso apaga o acesso ao sistema.`)) return;
                       setParticipantes(participantes.filter(x => x.id !== p.id));
-                      atualizarProfile(p.id, { ativo: false });
-                      showToast("Participante removido.", "info");
+                      const { error } = await deletarParticipante(p.id);
+                      if (error) {
+                        setParticipantes(participantes); // reverte
+                        showToast("Erro ao remover: " + error.message, "error");
+                      } else {
+                        showToast("Participante removido.", "info");
+                      }
                     }}>
                       <FontAwesomeIcon icon={faTrash} />
                     </button>

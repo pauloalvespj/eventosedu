@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from "react-router-dom";
 import "./styles/global.css";
 
+// Captura o hash ANTES de qualquer código assíncrono (Supabase limpa o hash via replaceState)
+const INITIAL_HASH = window.location.hash;
+
 import { supabase } from "./lib/supabase";
 import {
   fetchEvent, fetchAtividades, fetchProfiles, fetchPresencas,
@@ -64,6 +67,59 @@ function PresencaRoute({ atividades, participantes, presencas, setPresencas, use
   );
 }
 
+function LinkExpiradoModal({ email, onClose, onLogin }) {
+  const [enviando, setEnviando] = useState(false);
+  const [reenvioOk, setReenvioOk] = useState(false);
+  const [emailInput, setEmailInput] = useState(email || "");
+
+  async function reenviar() {
+    if (!emailInput.includes("@")) return;
+    setEnviando(true);
+    await supabase.auth.resend({ type: "signup", email: emailInput });
+    setEnviando(false);
+    setReenvioOk(true);
+  }
+
+  return (
+    <div style={{ textAlign: "center", padding: "0.5rem 0" }}>
+      <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔗</div>
+      <p style={{ color: "var(--text2)", marginBottom: "0.5rem", lineHeight: 1.6 }}>
+        Este link de confirmação <strong>já foi utilizado ou expirou</strong>.
+      </p>
+      <p style={{ color: "var(--text3)", fontSize: "0.85rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+        Se você já confirmou seu e-mail anteriormente, basta fazer login normalmente.<br />
+        Caso contrário, solicite um novo link abaixo.
+      </p>
+      {!reenvioOk ? (
+        <>
+          <div className="form-group" style={{ textAlign: "left" }}>
+            <label className="form-label">Seu e-mail cadastrado</label>
+            <input className="form-input" type="email" value={emailInput}
+              onChange={e => setEmailInput(e.target.value)} placeholder="seu@email.com" />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={reenviar} disabled={enviando || !emailInput.includes("@")}>
+              {enviando ? "Enviando…" : "↩ Reenviar link de confirmação"}
+            </button>
+            <button className="btn btn-outline" onClick={onClose}>Fechar</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ background: "var(--success-bg)", border: "1px solid var(--success)", borderRadius: "var(--radius-sm)", padding: "0.85rem 1rem", marginBottom: "1.25rem", color: "var(--success)", fontWeight: 600 }}>
+            ✅ Novo link enviado para <strong>{emailInput}</strong>!<br />
+            <span style={{ fontSize: "0.82rem", fontWeight: 400 }}>Verifique também a pasta de spam.</span>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={onLogin}>Ir para o login</button>
+            <button className="btn btn-outline" onClick={onClose}>Fechar</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,12 +149,34 @@ export default function App() {
   const [presencaAtv, setPresencaAtv] = useState(null);
   const [showInscricao, setShowInscricao] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [linkExpirado, setLinkExpirado] = useState(null); // { email } quando link de confirmação expirou
+  const [confirmandoEmail, setConfirmandoEmail] = useState(false); // true quando veio de link de confirmação válido
+  const criandoProfile = useRef(false); // guarda contra criação duplicada de profile
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((msg, type = "info") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
+
+  // ── Detecta hash da URL ao carregar (usa INITIAL_HASH capturado antes do Supabase limpar) ─────
+  useEffect(() => {
+    if (!INITIAL_HASH) return;
+    const params = new URLSearchParams(INITIAL_HASH.replace(/^#/, ""));
+
+    if (params.get("error")) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      const errorCode = params.get("error_code");
+      const email     = params.get("email") || "";
+      if (errorCode === "otp_expired" || params.get("error") === "access_denied") {
+        setLinkExpirado({ email });
+      }
+    } else if (params.get("type") === "signup" && params.get("access_token")) {
+      // Confirmação de e-mail bem-sucedida — mostra o modal de boas-vindas
+      // Não limpa o hash aqui: o Supabase precisa ler os tokens para criar a sessão
+      setConfirmandoEmail(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Views derivadas por role ──────────────────────────────────
   function viewParaRole(role) {
@@ -175,12 +253,13 @@ export default function App() {
       const v = viewParaRole(prof.role);
       setUser(prof);
       setView(v);
+      setConfirmandoEmail(false);
       if (loginExplicito.current && v === "admin") {
         loginExplicito.current = false;
         navigate("/admin", { replace: true });
       }
-    } else if (!loading) {
-      fetchProfiles().then(({ data }) => {
+    } else if (!loading && !criandoProfile.current) {
+      fetchProfiles().then(async ({ data }) => {
         if (data) {
           setProfiles(data);
           const found = data.find(p => p.id === authUser.id);
@@ -188,10 +267,46 @@ export default function App() {
             const v = viewParaRole(found.role);
             setUser(found);
             setView(v);
+            setConfirmandoEmail(false);
             showToast(`Bem-vindo(a), ${found.nome.split(" ")[0]}!`, "success");
             if (loginExplicito.current && v === "admin") {
               loginExplicito.current = false;
               navigate("/admin", { replace: true });
+            }
+          } else {
+            // Profile não encontrado — cria a partir do user_metadata (caso em que
+            // a confirmação de e-mail estava ativada e o insert no signUp foi bloqueado pelo RLS)
+            if (criandoProfile.current) return; // evita criação duplicada
+            criandoProfile.current = true;
+            const meta = authUser.user_metadata || {};
+            if (meta.nome) {
+              const novoProfile = {
+                id:          authUser.id,
+                role:        "participante",
+                email:       authUser.email,
+                nome:        meta.nome,
+                cpf:         meta.cpf || "",
+                instituicao: meta.instituicao || "",
+                cargo:       meta.cargo || "",
+                credenciado: false,
+                ativo:       true,
+                foto_iniciais: meta.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase(),
+              };
+              const { error } = await supabase.from("profiles").insert(novoProfile);
+              if (!error) {
+                setProfiles(prev => [...prev, novoProfile]);
+                setUser(novoProfile);
+                setView("participante");
+                setConfirmandoEmail(false);
+                showToast(`E-mail confirmado! Bem-vindo(a), ${meta.nome.split(" ")[0]}!`, "success");
+              } else {
+                criandoProfile.current = false;
+                console.error("Erro ao criar profile:", error.message);
+              }
+            } else {
+              // Sem metadata — usuário antigo ou sem dados; apenas loga
+              criandoProfile.current = false;
+              setConfirmandoEmail(false);
             }
           }
         }
@@ -381,6 +496,28 @@ export default function App() {
           onClose={() => setShowLogin(false)}
           onInscricaoClick={() => { setShowLogin(false); setShowInscricao(true); }}
         />
+      </Modal>
+
+      <Modal show={!!linkExpirado} onClose={() => setLinkExpirado(null)} title="Link de confirmação expirado">
+        <LinkExpiradoModal
+          email={linkExpirado?.email}
+          onClose={() => setLinkExpirado(null)}
+          onLogin={() => { setLinkExpirado(null); setShowLogin(true); }}
+        />
+      </Modal>
+
+      <Modal show={confirmandoEmail && !user} onClose={() => setConfirmandoEmail(false)} title="Inscrição confirmada!">
+        <div style={{ textAlign: "center", padding: "1rem 0" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎉</div>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", color: "var(--navy)", marginBottom: "0.5rem" }}>
+            Inscrição confirmada com sucesso!
+          </h3>
+          <p style={{ color: "var(--text2)", marginBottom: "0.75rem", lineHeight: 1.6 }}>
+            Seu e-mail foi verificado e você já está inscrito(a) no evento.<br />
+            Preparando sua área de participante...
+          </p>
+          <div style={{ display: "inline-block", width: 32, height: 32, border: "3px solid var(--navy)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        </div>
       </Modal>
     </>
   );

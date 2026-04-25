@@ -29,10 +29,41 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     if (Object.keys(e).length) { setErros(e); return; }
     setEnviando(true);
 
-    // 1. Criar usuário no Supabase Auth
+    const cpfFormatado = formatCPF(form.cpf.replace(/\D/g, ""));
+    const emailNorm    = form.email.trim().toLowerCase();
+
+    // Verifica duplicidade no banco antes de tentar o signUp
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id, email, cpf")
+      .or(`email.eq.${emailNorm},cpf.eq.${cpfFormatado}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      setEnviando(false);
+      if (existing.email?.toLowerCase() === emailNorm) {
+        setErros({ email: "E-mail já cadastrado. Faça login ou recupere sua senha." });
+      } else {
+        setErros({ cpf: "CPF já cadastrado neste evento." });
+      }
+      return;
+    }
+
+    const instituicaoFinal = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
+    const profileData = {
+      nome:        form.nome.trim(),
+      cpf:         cpfFormatado,
+      instituicao: instituicaoFinal,
+      cargo:       form.cargo.trim(),
+    };
+
+    // 1. Criar usuário — salva dados do perfil em user_metadata como fallback
+    //    para quando a confirmação de e-mail está ativada (session vem null).
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
+      email: emailNorm,
       password: form.senha,
+      options: { data: profileData },
     });
 
     if (signUpError) {
@@ -45,30 +76,25 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
       return;
     }
 
-    // 2. Inserir profile
-    const instituicaoFinal = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      role: "participante",
-      nome: form.nome,
-      email: form.email,
-      cpf: formatCPF(form.cpf.replace(/\D/g, "")),
-      instituicao: instituicaoFinal,
-      cargo: form.cargo,
-      credenciado: false,
-      ativo: true,
-    });
+    // 2. Tenta inserir profile imediatamente.
+    //    Funciona quando confirmação de e-mail está DESATIVADA (session existe).
+    //    Quando está ATIVADA, o RLS bloqueia — o App.jsx cria o profile
+    //    a partir do user_metadata após o usuário confirmar e logar.
+    if (data.session) {
+      await supabase.from("profiles").insert({
+        id:          data.user.id,
+        role:        "participante",
+        email:       emailNorm,
+        credenciado: false,
+        ativo:       true,
+        ...profileData,
+      });
+    }
 
     setEnviando(false);
 
-    if (profileError) {
-      console.error("Erro ao salvar profile:", profileError.message);
-    }
-
-    // Se o Supabase já criou sessão (confirmação de e-mail desativada),
-    // o onAuthStateChange no App.jsx vai logar o usuário automaticamente.
     if (data.session) {
-      showToast(`Bem-vindo(a), ${form.nome.split(" ")[0]}!`, "success");
+      showToast(`Bem-vindo(a), ${profileData.nome.split(" ")[0]}!`, "success");
       onClose();
     } else {
       setSucesso("confirmacao");

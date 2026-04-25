@@ -42,7 +42,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
     ["dashboard",    "🏠 Início"],
     ["programacao",  "📅 Programação"],
     ["presencas",    "✅ Presenças"],
-    ["certificado",  "🏆 Certificado"],
+    ...(event.certificado_disponivel ? [["certificado", "🏆 Certificado"]] : []),
     ["credencial",   "🪪 Credencial"],
     ["forum",        "💬 Fórum"],
     ["ranking",      "🏅 Ranking"],
@@ -81,10 +81,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
           </div>
           <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
             <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
-            <div>
-              <div style={{ fontSize:"0.72rem", fontWeight:700, color:nivel.cor }}>{nivel.label}</div>
-              <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.4)" }}>{meusPts} pts</div>
-            </div>
+            <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
           </div>
         </div>
 
@@ -121,9 +118,8 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                 <div style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.6)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
               </div>
               <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.4)", marginBottom:"0.2rem" }}>Nível</div>
-                <div style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--gold-light)" }}>{nivel.icon} {nivel.label}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{meusPts} pts</div>
+                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.4)", marginBottom:"0.2rem" }}>Pontuação</div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
               </div>
             </div>
 
@@ -156,7 +152,9 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                   { n:minasPresencas.length, l:"Presenças registradas", ic:"✅", c:"navy" },
                   { n:`${presencaCalc.chCumprida}h`, l:"Carga horária", ic:"⏱", c:"teal" },
                   { n:`${presencaCalc.pct}%`, l:"% de presença", ic:"📊", c:presencaCalc.apto?"success":"danger" },
-                  { n:presencaCalc.apto?"Apto ✓":"Pendente", l:"Certificado", ic:"🏆", c:presencaCalc.apto?"success":"warn" },
+                  ...(event.certificado_disponivel
+                    ? [{ n:presencaCalc.apto?"Apto ✓":"Pendente", l:"Certificado", ic:"🏆", c:presencaCalc.apto?"success":"warn" }]
+                    : []),
                 ].map((c,i) => (
                   <div key={i} className="dash-card">
                     <div className={`dash-card-icon ${c.c}`}>{c.ic}</div>
@@ -172,12 +170,11 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
               <div className="presenca-card" style={{ marginBottom:"1rem" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem" }}>
                   <h3 style={{ fontWeight:700, color:"var(--navy)" }}>Progresso para certificado</h3>
-                  {presencaCalc.apto && <button className="btn btn-sm btn-gold" onClick={()=>setAba("certificado")}>Ver →</button>}
+                  {presencaCalc.apto && event.certificado_disponivel && <button className="btn btn-sm btn-gold" onClick={()=>setAba("certificado")}>Ver →</button>}
                 </div>
                 <ProgressBar pct={presencaCalc.pct} minimo={event.percentual_minimo} />
                 <p style={{ fontSize:"0.85rem", color:"var(--text2)", marginTop:"0.75rem" }}>
-                  {presencaCalc.chCumprida}h de {presencaCalc.chTotal}h certificáveis.
-                  {presencaCalc.apto?" 🎉 Apto ao certificado!":" Continue participando!"}
+                  {presencaCalc.apto ? "🎉 Apto ao certificado!" : `Mínimo exigido: ${event.percentual_minimo ?? 75}% de presença.`}
                 </p>
               </div>
             )}
@@ -407,7 +404,6 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                       </div>
                       <div style={{ textAlign:"right", flexShrink:0 }}>
                         {a.carga_horaria>0&&<span className="prog-ch">{a.carga_horaria}h</span>}
-                        {a.conta_certificado&&<div style={{ fontSize:"0.7rem",color:"var(--teal)",marginTop:4 }}>cert.</div>}
                       </div>
                     </div>
                   );

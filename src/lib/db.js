@@ -439,6 +439,15 @@ export async function atualizarProfile(id, updates) {
   return { error };
 }
 
+export async function deletarParticipante(id) {
+  // 1. Remove o registro de autenticação (requer função RPC com SECURITY DEFINER)
+  const { error: authError } = await supabase.rpc("admin_delete_auth_user", { user_id: id });
+  if (authError) return { error: authError };
+  // 2. Remove o profile (a deleção em auth.users já faz cascade via FK, mas removemos explicitamente)
+  const { error } = await supabase.from("profiles").delete().eq("id", id);
+  return { error };
+}
+
 // Atualiza o e-mail de login via Admin API (sem e-mail de confirmação).
 // Requer a Edge Function "update-auth-email" deployada no Supabase.
 export async function atualizarEmailAuth(userId, email) {

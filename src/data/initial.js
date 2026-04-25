@@ -19,6 +19,7 @@ export const INITIAL_EVENT = {
   carga_horaria_total: 16,
   inscricao_inicio: "2026-07-01",
   inscricao_fim: "2026-09-14",
+  certificado_disponivel: false,
 };
 
 export const INITIAL_INSTITUICOES = [

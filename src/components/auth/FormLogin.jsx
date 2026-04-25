@@ -32,12 +32,15 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setEnviando(false);
     if (error) {
-      if (error.message === "Email not confirmed") {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
         setEmailNaoConfirmado(true);
+      } else if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
+        setErro("E-mail ou senha incorretos.");
+      } else if (msg.includes("too many requests")) {
+        setErro("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
       } else {
-        setErro(error.message === "Invalid login credentials"
-          ? "E-mail ou senha incorretos."
-          : error.message);
+        setErro("Erro ao entrar. Tente novamente.");
       }
       return;
     }
@@ -118,17 +121,24 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
           </div>
           {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
           {emailNaoConfirmado && (
-            <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "0.85rem 1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
-              <div style={{ fontWeight: 700, color: "var(--warn)", marginBottom: "0.35rem" }}>⚠️ E-mail ainda não confirmado</div>
-              <div style={{ color: "var(--text2)", marginBottom: "0.65rem" }}>
-                Verifique sua caixa de entrada (e o spam) para o e-mail enviado para <strong>{email}</strong>.
+            <div style={{ background: "#fffbeb", border: "1.5px solid #f59e0b", borderRadius: "var(--radius-sm)", padding: "1rem 1.1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+              <div style={{ fontWeight: 700, color: "#b45309", marginBottom: "0.4rem", fontSize: "0.92rem" }}>
+                📧 Confirme seu e-mail para continuar
               </div>
-              {reenvioOk
-                ? <div style={{ color: "var(--success)", fontWeight: 600 }}>✅ E-mail reenviado com sucesso!</div>
-                : <button className="btn btn-sm btn-outline" onClick={reenviarConfirmacao} disabled={enviando}>
-                    {enviando ? "Enviando…" : "Reenviar e-mail de confirmação"}
-                  </button>
-              }
+              <div style={{ color: "var(--text2)", marginBottom: "0.75rem", lineHeight: 1.6 }}>
+                Enviamos um link de confirmação para <strong>{email}</strong>.<br />
+                Verifique sua caixa de entrada e a pasta de spam.
+              </div>
+              {reenvioOk ? (
+                <div style={{ color: "var(--success)", fontWeight: 600, fontSize: "0.85rem" }}>
+                  ✅ Novo e-mail enviado! Verifique sua caixa de entrada.
+                </div>
+              ) : (
+                <button className="btn btn-sm btn-outline" onClick={reenviarConfirmacao} disabled={enviando}
+                  style={{ borderColor: "#f59e0b", color: "#b45309" }}>
+                  {enviando ? "Enviando…" : "↩ Reenviar e-mail de confirmação"}
+                </button>
+              )}
             </div>
           )}
           <button className="btn btn-primary btn-block" onClick={handleLoginSenha} disabled={enviando}>

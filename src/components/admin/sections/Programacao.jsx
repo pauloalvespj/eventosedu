@@ -119,8 +119,8 @@ export function Programacao() {
                 <td style={{ textAlign:"center" }}>{presencas.filter(p => p.atividade_id === a.id).length}</td>
                 <td>
                   <div style={{ display: "flex", gap: "0.2rem" }}>
-                    <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
-                    <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManual(a); setPresencaCPF(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>
+                    {a.conta_certificado && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>}
+                    {a.conta_certificado && <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManual(a); setPresencaCPF(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>}
                     <button className="btn btn-sm btn-outline" onClick={() => { setFormAtv({ ...a, conta_certificado: a.conta_certificado ? "true" : "false", palestrantes_ids: a.palestrantes_ids || [], materiais: a.materiais || [] }); setModalAtv(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
                     <button className="btn btn-sm btn-danger" onClick={() => excluirAtividade(a.id)}><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
