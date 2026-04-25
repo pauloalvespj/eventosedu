@@ -6,7 +6,7 @@ import { Modal } from "../../base/index";
 import { inserirInstituicao, atualizarInstituicao, deletarInstituicao } from "../../../lib/db";
 
 export function Instituicoes() {
-  const { instituicoes, setInstituicoes, showToast } = useAdmin();
+  const { instituicoes, setInstituicoes, participantes, showToast } = useAdmin();
   const [modal, setModal] = useState(false);
   const [form, setForm]   = useState({});
 
@@ -61,9 +61,17 @@ export function Instituicoes() {
       <div className="table-wrap">
         <div className="table-header"><span className="table-title">Lista de Instituições</span></div>
         <table>
-          <thead><tr><th>Sigla</th><th>Nome Completo</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Sigla</th><th>Nome Completo</th><th style={{ textAlign:"center" }}>Inscritos</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
-            {instituicoes.map(inst => (
+            {instituicoes.map(inst => {
+              const inscritos = (participantes || []).filter(p =>
+                p.instituicao && (
+                  p.instituicao === inst.nome ||
+                  p.instituicao === inst.sigla ||
+                  p.instituicao.toLowerCase().includes(inst.sigla.toLowerCase())
+                )
+              ).length;
+              return (
               <tr key={inst.id} style={{ opacity: inst.ativo ? 1 : 0.5 }}>
                 <td>
                   <span style={{ fontWeight: 700, fontFamily: "monospace", fontSize: "0.9rem", color: "var(--navy)" }}>
@@ -71,6 +79,12 @@ export function Instituicoes() {
                   </span>
                 </td>
                 <td style={{ fontWeight: 500 }}>{inst.nome}</td>
+                <td style={{ textAlign:"center" }}>
+                  {inscritos > 0
+                    ? <span className="badge badge-navy" style={{ fontVariantNumeric:"tabular-nums" }}>{inscritos}</span>
+                    : <span style={{ color:"var(--text3)", fontSize:"0.82rem" }}>—</span>
+                  }
+                </td>
                 <td>
                   <button
                     className={`badge badge-${inst.ativo ? "success" : "danger"}`}
@@ -92,9 +106,9 @@ export function Instituicoes() {
                   </div>
                 </td>
               </tr>
-            ))}
+            );})}
             {instituicoes.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhuma instituição cadastrada.</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhuma instituição cadastrada.</td></tr>
             )}
           </tbody>
         </table>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import { PONTOS } from "../../config/gamificacao";
 import { TIPO_BG, TIPO_COLOR, TIPO_ICON, TIPO_LABEL, ROLE_LABEL } from "../../utils/helpers";
 export { AvatarUpload } from "./AvatarUpload";
@@ -148,8 +148,9 @@ export function AvaliacaoWidget({ atividadeId, participanteId, avaliacoes, setAv
 
 // ── QRCodeCanvas ──────────────────────────────────────────────
 // QR Code gerado localmente via canvas — usa qrcode-generator via CDN
-export function QRCodeCanvas({ value, size = 200 }) {
-  const canvasRef = useRef(null);
+export const QRCodeCanvas = forwardRef(function QRCodeCanvas({ value, size = 200 }, externalRef) {
+  const internalRef = useRef(null);
+  const canvasRef = externalRef || internalRef;
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
 
@@ -212,7 +213,7 @@ export function QRCodeCanvas({ value, size = 200 }) {
       style={{ border: "3px solid var(--navy)", borderRadius: 8, display: "block", opacity: ready ? 1 : 0, transition: "opacity 0.3s" }}
     />
   );
-}
+});
 
 // ── TipoBadge ─────────────────────────────────────────────────
 export function TipoBadge({ tipo }) {

@@ -59,8 +59,23 @@ export function calcPresenca(participante_id, atividades, presencas, event) {
 }
 
 // ── QR Code ───────────────────────────────────────────────────
+const QR_SECRET = "enaudin_qr_2026_ufc";
+
+function qrHash(atividadeId) {
+  const str = `${QR_SECRET}::${atividadeId}`;
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h, 33) ^ str.charCodeAt(i);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
 export function qrPresencaValue(atividadeId) {
-  return `${window.location.origin}/presenca/${atividadeId}`;
+  return `${window.location.origin}/presenca/${atividadeId}?t=${qrHash(atividadeId)}`;
+}
+
+export function validarTokenQR(atividadeId, token) {
+  return token === qrHash(atividadeId);
 }
 
 // ── Gamificação ───────────────────────────────────────────────

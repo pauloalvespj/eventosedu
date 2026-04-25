@@ -127,6 +127,11 @@ export default function App() {
 
   // ── Estado — inicia com mock, substitui pelo Supabase quando disponível ──
   const [event, setEvent] = useState(INITIAL_EVENT);
+  useEffect(() => {
+    document.title = event.nome_completo
+      ? `${event.nome} — ${event.nome_completo}`
+      : event.nome;
+  }, [event.nome, event.nome_completo]);
   const [atividades, setAtividades] = useState(INITIAL_ATIVIDADES);
   const [profiles, setProfiles] = useState(INITIAL_PROFILES);
   const [presencas, setPresencas] = useState(INITIAL_PRESENCAS);
@@ -429,6 +434,7 @@ export default function App() {
               setUser={u => setUser(typeof u === "function" ? u(user) : u)}
               event={event}
               atividades={atividades}
+              setAtividades={setAtividades}
               palestrantes={palestrantes}
               presencas={presencas}
               setPresencas={setPresencas}
@@ -437,6 +443,7 @@ export default function App() {
               forumConfig={forumConfig}
               participantes={participantes}
               admins={admins}
+              instituicoes={instituicoes}
               avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
               follows={follows} setFollows={setFollows}
               pontosConfig={pontosConfig}
@@ -481,6 +488,7 @@ export default function App() {
                 ? (["super_admin","admin","credenciador"].includes(user.role) ? "admin" : "participante")
                 : "landing")}
               onLoginClick={() => setShowLogin(true)}
+              skipTokenCheck
             />
           )}
         </>} />

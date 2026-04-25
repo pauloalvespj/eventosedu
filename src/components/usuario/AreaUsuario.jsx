@@ -1,18 +1,67 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faMicrophone } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faMicrophone, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue } from "../../utils/helpers";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit, AvatarUpload } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
+import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile } from "../../lib/db";
 
-export function AreaUsuario({ user, setUser, event, atividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout }) {
+function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
+  const instList = instituicoes.filter(i => i.ativo);
+  const selectVal = formEdit.outraInst ? "__outro__" : (instList.some(i => i.nome === formEdit.instituicao) ? formEdit.instituicao : (formEdit.instituicao ? "__outro__" : ""));
+  return (
+    <div>
+      <div className="form-grid" style={{ marginBottom:"0.75rem" }}>
+        <div className="form-group" style={{ gridColumn:"1/-1" }}>
+          <label className="form-label">Nome completo</label>
+          <input className="form-input" value={formEdit.nome} onChange={e=>setFormEdit(f=>({...f,nome:e.target.value}))} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Cargo / Título</label>
+          <input className="form-input" value={formEdit.cargo} onChange={e=>setFormEdit(f=>({...f,cargo:e.target.value}))} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Instituição</label>
+          <select className="form-input" value={selectVal}
+            onChange={e => {
+              if (e.target.value === "__outro__") {
+                setFormEdit(f => ({...f, outraInst:true, instituicao:""}));
+              } else {
+                setFormEdit(f => ({...f, outraInst:false, instituicao:e.target.value}));
+              }
+            }}>
+            <option value="">Selecione...</option>
+            {instList.map(i => <option key={i.id} value={i.nome}>{i.sigla} — {i.nome}</option>)}
+            <option value="__outro__">Outra (digitar)</option>
+          </select>
+        </div>
+        {(formEdit.outraInst || (formEdit.instituicao && !instList.some(i => i.nome === formEdit.instituicao))) && (
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <label className="form-label">Nome da instituição</label>
+            <input className="form-input" placeholder="Digite o nome da sua instituição" value={formEdit.instituicao}
+              onChange={e=>setFormEdit(f=>({...f,instituicao:e.target.value,outraInst:true}))} autoFocus />
+          </div>
+        )}
+      </div>
+      <div style={{ display:"flex", gap:"0.5rem" }}>
+        <button className="btn btn-primary btn-sm" onClick={onSave}>Salvar</button>
+        <button className="btn btn-outline btn-sm" onClick={onCancel}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout }) {
   const isPalestrante = user.role === "palestrante";
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
-  const [formEdit, setFormEdit] = useState({ instituicao: user.instituicao || "", cargo: user.cargo || "" });
+  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", instituicao: user.instituicao || "", cargo: user.cargo || "", outraInst: false });
+  const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
+  const [navAberta, setNavAberta] = useState(false);
+  const fileRefs = useRef({});
 
   // Dados comuns
   const uid = getUserId(user);
@@ -28,9 +77,35 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
   const totalCH_pal = minhasPalestras.reduce((s, a) => s + a.carga_horaria, 0);
   const totalPresentes_pal = minhasPalestras.reduce((s, a) => s + presencas.filter(p => p.atividade_id === a.id).length, 0);
 
-  function salvarEdicao() {
-    if (setUser) setUser(prev => ({ ...prev, instituicao: formEdit.instituicao, cargo: formEdit.cargo }));
+  async function salvarEdicao() {
+    const updates = { nome: formEdit.nome.trim() || user.nome, instituicao: formEdit.instituicao, cargo: formEdit.cargo };
+    if (setUser) setUser(prev => ({ ...prev, ...updates }));
+    await atualizarProfile(user.id, updates);
     setEditando(false);
+  }
+
+  async function handleUploadMaterial(atividadeId, file) {
+    setUploadingId(atividadeId);
+    try {
+      const mat = await uploadMaterial(atividadeId, file);
+      const atvAtualizada = atividades.find(a => a.id === atividadeId);
+      const novosMats = [...(atvAtualizada?.materiais || []), mat];
+      await atualizarAtividade(atividadeId, { materiais: novosMats });
+      if (setAtividades) setAtividades(prev => prev.map(a => a.id === atividadeId ? { ...a, materiais: novosMats } : a));
+    } catch (e) {
+      console.error("Erro ao fazer upload:", e.message);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function handleRemoverMaterial(atividadeId, mat) {
+    if (!confirm(`Remover "${mat.nome}"?`)) return;
+    const atvAtualizada = atividades.find(a => a.id === atividadeId);
+    const novosMats = (atvAtualizada?.materiais || []).filter(m => m.id !== mat.id);
+    await deletarMaterial(mat.path);
+    await atualizarAtividade(atividadeId, { materiais: novosMats });
+    if (setAtividades) setAtividades(prev => prev.map(a => a.id === atividadeId ? { ...a, materiais: novosMats } : a));
   }
 
   function imprimirCertificadoParticipante() {
@@ -43,7 +118,6 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
     ["programacao",  "📅 Programação"],
     ["presencas",    "✅ Presenças"],
     ...(event.certificado_disponivel ? [["certificado", "🏆 Certificado"]] : []),
-    ["credencial",   "🪪 Credencial"],
     ["forum",        "💬 Fórum"],
     ["ranking",      "🏅 Ranking"],
     ["rede",         "🤝 Rede"],
@@ -61,10 +135,26 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
     ? "linear-gradient(90deg,#0a2040 0%,#1d6a6a 100%)"
     : "var(--navy)";
 
+  const abaLabel = ABAS.find(([k]) => k === aba)?.[1] || "";
+
   return (
     <div className="part-layout">
+      {/* ── MOBILE HEADER ── */}
+      <div className="mobile-header" style={{ background: isPalestrante ? "linear-gradient(90deg,#0a2040,#1a4a4a)" : "var(--navy-dark)" }}>
+        <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
+          <span/><span/><span/>
+        </button>
+        <span className="mobile-header-title">{event.nome}</span>
+        <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"#fff", flexShrink:0 }}>
+          {user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
+        </div>
+      </div>
+
+      {/* ── OVERLAY ── */}
+      {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
+
       {/* ── SIDEBAR ── */}
-      <div className="part-sidebar" style={{ background: isPalestrante ? "linear-gradient(180deg,#0a2040 0%,#0d3350 60%,#1a4a4a 100%)" : "var(--navy-dark)" }}>
+      <div className={`part-sidebar${navAberta ? " open" : ""}`} style={{ background: isPalestrante ? "linear-gradient(180deg,#0a2040 0%,#0d3350 60%,#1a4a4a 100%)" : "var(--navy-dark)" }}>
         <div className="part-sidebar-header">
           <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"0.75rem" }}>
             <AvatarUpload
@@ -75,8 +165,8 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
               onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
             />
             <div style={{ overflow:"hidden" }}>
-              <div style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.85)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome.split(" ")[0]}</div>
-              <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.4)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
+              <div style={{ fontSize:"0.78rem", color:"var(--white-hi)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome.split(" ")[0]}</div>
+              <div style={{ fontSize:"0.68rem", color:"var(--white-low)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
             </div>
           </div>
           <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
@@ -87,12 +177,12 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
 
         <nav className="part-nav">
           {ABAS.map(([k,l]) => (
-            <div key={k} className={`part-nav-item${aba===k?" active":""}`} onClick={()=>setAba(k)}>{l}</div>
+            <div key={k} className={`part-nav-item${aba===k?" active":""}`} onClick={()=>{ setAba(k); setNavAberta(false); }}>{l}</div>
           ))}
         </nav>
 
         <div style={{ padding:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", marginBottom:"0.5rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{event.nome}</div>
+          <div style={{ fontSize:"0.68rem", color:"var(--white-faint)", marginBottom:"0.5rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{event.nome}</div>
           <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%" }} onClick={onLogout}>← Sair</button>
         </div>
       </div>
@@ -103,117 +193,189 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
         {/* ════════════ DASHBOARD ════════════ */}
         {aba === "dashboard" && (
           <div>
-            {/* Banner boas-vindas */}
-            <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
-              <AvatarUpload
-                userId={user.id}
-                fotoUrl={user.foto_url}
-                iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
-                size={56}
-                onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
-              />
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Bem-vindo(a){isPalestrante?" · Palestrante":""}</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", marginBottom:"0.15rem" }}>{user.nome}</div>
-                <div style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.6)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
-              </div>
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.4)", marginBottom:"0.2rem" }}>Pontuação</div>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
-              </div>
-            </div>
 
-            {/* Cards palestrante */}
+            {/* ── PALESTRANTE ── */}
             {isPalestrante && (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))", gap:"1rem", marginBottom:"1.5rem" }}>
-                {(() => {
-                  const avsTotal = avaliacoes.filter(av => minhasPalestras.some(a=>a.id===av.atividade_id));
-                  const mediaGeral = avsTotal.length ? (avsTotal.reduce((s,av)=>s+av.estrelas,0)/avsTotal.length).toFixed(1) : "–";
-                  return [
-                    { n:minhasPalestras.length, l:"Minhas Palestras", ic:"🎙", c:"teal" },
-                    { n:`${totalCH_pal}h`, l:"Carga Horária", ic:"⏱", c:"navy" },
-                    { n:totalPresentes_pal, l:"Participantes Presentes", ic:"👥", c:"success" },
-                    { n:mediaGeral !== "–" ? `${mediaGeral}★` : "–", l:`Avaliação Média (${avsTotal.length})`, ic:"⭐", c:"gold" },
-                  ];
-                })().map((c,i) => (
-                  <div key={i} className="dash-card">
-                    <div className={`dash-card-icon ${c.c}`}>{c.ic}</div>
-                    <div className="dash-card-num" style={{ fontSize:"1.5rem" }}>{c.n}</div>
-                    <div className="dash-card-lbl">{c.l}</div>
+              <div>
+                <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
+                  <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")} size={56} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Bem-vindo(a) · Palestrante</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", marginBottom:"0.15rem" }}>{user.nome}</div>
+                    <div style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.6)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Cards participante */}
-            {!isPalestrante && (
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))", gap:"1rem", marginBottom:"1.5rem" }}>
-                {[
-                  { n:minasPresencas.length, l:"Presenças registradas", ic:"✅", c:"navy" },
-                  { n:`${presencaCalc.chCumprida}h`, l:"Carga horária", ic:"⏱", c:"teal" },
-                  { n:`${presencaCalc.pct}%`, l:"% de presença", ic:"📊", c:presencaCalc.apto?"success":"danger" },
-                  ...(event.certificado_disponivel
-                    ? [{ n:presencaCalc.apto?"Apto ✓":"Pendente", l:"Certificado", ic:"🏆", c:presencaCalc.apto?"success":"warn" }]
-                    : []),
-                ].map((c,i) => (
-                  <div key={i} className="dash-card">
-                    <div className={`dash-card-icon ${c.c}`}>{c.ic}</div>
-                    <div className="dash-card-num" style={{ fontSize:"1.5rem", color:c.c==="success"?"var(--success)":c.c==="danger"?"var(--danger)":"" }}>{c.n}</div>
-                    <div className="dash-card-lbl">{c.l}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Progresso certificado */}
-            {!isPalestrante && (
-              <div className="presenca-card" style={{ marginBottom:"1rem" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem" }}>
-                  <h3 style={{ fontWeight:700, color:"var(--navy)" }}>Progresso para certificado</h3>
-                  {presencaCalc.apto && event.certificado_disponivel && <button className="btn btn-sm btn-gold" onClick={()=>setAba("certificado")}>Ver →</button>}
-                </div>
-                <ProgressBar pct={presencaCalc.pct} minimo={event.percentual_minimo} />
-                <p style={{ fontSize:"0.85rem", color:"var(--text2)", marginTop:"0.75rem" }}>
-                  {presencaCalc.apto ? "🎉 Apto ao certificado!" : `Mínimo exigido: ${event.percentual_minimo ?? 75}% de presença.`}
-                </p>
-              </div>
-            )}
-
-            {/* Dados cadastrais */}
-            <div className="presenca-card">
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem" }}>
-                <h3 style={{ fontWeight:700, color:"var(--navy)" }}>Meus dados</h3>
-                {!isPalestrante && !editando && <button className="btn btn-sm btn-outline" onClick={()=>{ setFormEdit({ instituicao:user.instituicao||"", cargo:user.cargo||"" }); setEditando(true); }}><IconEdit /> Editar</button>}
-              </div>
-              {editando ? (
-                <div>
-                  <div className="form-grid" style={{ marginBottom:"1rem" }}>
-                    <div className="form-group"><label className="form-label">Instituição</label><input className="form-input" value={formEdit.instituicao} onChange={e=>setFormEdit(f=>({...f,instituicao:e.target.value}))}/></div>
-                    <div className="form-group"><label className="form-label">Cargo</label><input className="form-input" value={formEdit.cargo} onChange={e=>setFormEdit(f=>({...f,cargo:e.target.value}))}/></div>
-                  </div>
-                  <div style={{ display:"flex", gap:"0.5rem" }}>
-                    <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
-                    <button className="btn btn-outline btn-sm" onClick={()=>setEditando(false)}>Cancelar</button>
+                  <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div style={{ fontSize:"0.72rem", color:"var(--white-low)", marginBottom:"0.2rem" }}>Pontuação</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
                   </div>
                 </div>
-              ) : (
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem" }}>
-                  {[
-                    ["CPF", user.cpf||"–"],
-                    ["Nome", user.nome],
-                    ["Instituição", user.instituicao||"–"],
-                    ["Cargo/Título", user.cargo||user.titulo||"–"],
-                    ["E-mail", user.email],
-                    !isPalestrante && ["Credenciamento", user.credenciado ? "✓ Credenciado" : "Aguardando"],
-                  ].filter(Boolean).map(([k,v]) => (
-                    <div key={k}>
-                      <div style={{ fontSize:"0.72rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.2rem" }}>{k}</div>
-                      <div style={{ fontSize:"0.9rem", color:"var(--text)" }}>{v}</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))", gap:"1rem", marginBottom:"1.5rem" }}>
+                  {(() => {
+                    const avsTotal = avaliacoes.filter(av => minhasPalestras.some(a=>a.id===av.atividade_id));
+                    const mediaGeral = avsTotal.length ? (avsTotal.reduce((s,av)=>s+av.estrelas,0)/avsTotal.length).toFixed(1) : "–";
+                    return [
+                      { n:minhasPalestras.length, l:"Minhas Palestras", ic:"🎙", c:"teal" },
+                      { n:`${totalCH_pal}h`, l:"Carga Horária", ic:"⏱", c:"navy" },
+                      { n:totalPresentes_pal, l:"Participantes Presentes", ic:"👥", c:"success" },
+                      { n:mediaGeral !== "–" ? `${mediaGeral}★` : "–", l:`Avaliação Média (${avsTotal.length})`, ic:"⭐", c:"gold" },
+                    ];
+                  })().map((c,i) => (
+                    <div key={i} className="dash-card">
+                      <div className={`dash-card-icon ${c.c}`}>{c.ic}</div>
+                      <div className="dash-card-num" style={{ fontSize:"1.5rem" }}>{c.n}</div>
+                      <div className="dash-card-lbl">{c.l}</div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+                <div className="presenca-card">
+                  <h3 style={{ fontWeight:700, color:"var(--navy)", marginBottom:"1rem" }}>Meus dados</h3>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem" }}>
+                    {[["CPF",user.cpf||"–"],["Nome",user.nome],["Instituição",user.instituicao||"–"],["Cargo/Título",user.cargo||user.titulo||"–"],["E-mail",user.email]].map(([k,v]) => (
+                      <div key={k}>
+                        <div style={{ fontSize:"0.72rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.2rem" }}>{k}</div>
+                        <div style={{ fontSize:"0.9rem", color:"var(--text)" }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── PARTICIPANTE ── */}
+            {!isPalestrante && (() => {
+              const hoje = new Date(); hoje.setHours(0,0,0,0);
+              const inicio = new Date(event.data_inicio + "T00:00:00");
+              const fim    = new Date(event.data_fim    + "T00:00:00");
+              const diasFaltam = Math.ceil((inicio - hoje) / 86400000);
+              const emAndamento = hoje >= inicio && hoje <= fim;
+              const encerrado   = hoje > fim;
+              const rankingTodos = [...participantes, ...palestrantes, ...admins]
+                .map(p => ({ id: getUserId(p), pts: calcPontos(getUserId(p), pontuacoes) }))
+                .sort((a, b) => b.pts - a.pts);
+              const posicao = (rankingTodos.findIndex(p => p.id === uid) + 1) || rankingTodos.length;
+              return (
+                <>
+                  {/* 1. Card Evento */}
+                  <div style={{ background:"var(--hero)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.75rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1, marginBottom:"0.3rem" }}>{event.nome}</div>
+                      {event.nome_completo && event.nome_completo !== event.nome && (
+                        <div style={{ fontSize:"0.88rem", color:"rgba(255,255,255,0.7)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
+                      )}
+                      {event.tema && (
+                        <div style={{ fontSize:"0.82rem", color:"var(--white-low)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.tema}</div>
+                      )}
+                      <div style={{ display:"flex", gap:"1.5rem", flexWrap:"wrap", marginTop:"0.5rem" }}>
+                        <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📅 {formatData(event.data_inicio)}{event.data_fim !== event.data_inicio ? ` – ${formatData(event.data_fim)}` : ""}</span>
+                        <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📍 {event.local}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"center", flexShrink:0, background:"var(--gold-tint)", border:"1.5px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1rem 1.5rem", minWidth:90 }}>
+                      {encerrado ? (
+                        <>
+                          <div style={{ fontSize:"1.5rem", marginBottom:"0.2rem" }}>✓</div>
+                          <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Encerrado</div>
+                        </>
+                      ) : emAndamento ? (
+                        <>
+                          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.75rem", color:"var(--gold-on-dark)", marginBottom:"0.2rem" }}>🎉</div>
+                          <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Em andamento</div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize:"0.65rem", color:"var(--white-faint)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.1rem" }}>Faltam</div>
+                          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"3rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1 }}>{diasFaltam}</div>
+                          <div style={{ fontSize:"0.72rem", color:"var(--white-low)", marginTop:"0.2rem" }}>dia{diasFaltam!==1?"s":""}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Card Participante */}
+                  <div className="dash-participant-card">
+                    {/* Coluna esquerda */}
+                    <div style={{ padding:"1.5rem", background:"var(--surface)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", marginBottom:"1rem" }}>
+                        <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")} size={48} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:"1rem", color:"var(--navy)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
+                          <div style={{ fontSize:"0.8rem", color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                        </div>
+                        {!editando && (
+                          <button className="btn btn-sm btn-outline" style={{ flexShrink:0, padding:"0.3rem 0.55rem" }} onClick={()=>{
+                            const instList = (instituicoes||[]).filter(i=>i.ativo);
+                            const isKnown = instList.some(i=>i.nome===(user.instituicao||"")||i.sigla===(user.instituicao||""));
+                            setFormEdit({ nome:user.nome||"", instituicao:user.instituicao||"", cargo:user.cargo||"", outraInst:!isKnown&&!!(user.instituicao) });
+                            setEditando(true);
+                          }} title="Editar dados"><IconEdit /></button>
+                        )}
+                      </div>
+                      {editando ? (
+                        <EditForm formEdit={formEdit} setFormEdit={setFormEdit} instituicoes={instituicoes||[]} onSave={salvarEdicao} onCancel={()=>setEditando(false)} />
+                      ) : (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.65rem" }}>
+                          {[["CPF",user.cpf||"–"],["Cargo",user.cargo||user.titulo||"–"],["E-mail",user.email],["Instituição",user.instituicao||"–"]].map(([k,v]) => (
+                            <div key={k}>
+                              <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.15rem" }}>{k}</div>
+                              <div style={{ fontSize:"0.82rem", color:"var(--text)", wordBreak:"break-all", lineHeight:1.3 }}>{v}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Coluna direita — credencial */}
+                    <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460 55%,#1d6a6a)", padding:"1.5rem", color:"#fff", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                      <div>
+                        <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--white-faint)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
+                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", marginBottom:"0.2rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
+                        <div style={{ fontSize:"0.78rem", color:"var(--white-mid)", marginBottom:"0.75rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                        <span className={`badge badge-${user.credenciado?"success":"warn"}`} style={{ fontSize:"0.7rem" }}>{user.credenciado?"✓ Credenciado":"Aguardando credenciamento"}</span>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:"1rem" }}>
+                        <div style={{ cursor:"pointer", padding:4, background:"rgba(255,255,255,0.06)", borderRadius:10, border:"1px solid rgba(255,255,255,0.12)" }} onClick={()=>setAba("credencial_qr")} title="Ver credencial completa">
+                          <QRCodeCanvas value={`ENAUDIN:PARTICIPANTE:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={120}/>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Cards de Estatísticas */}
+                  <div className="dash-stats-3">
+                    {[
+                      { n:minasPresencas.length,       l:"Presenças registradas", ic:"✅", warn:false },
+                      { n:`${presencaCalc.chCumprida}h`, l:"Carga horária",         ic:"⏱", warn:false },
+                      { n:`${presencaCalc.pct}%`,       l:"% de presença",         ic:"📊", warn:true  },
+                    ].map((c,i) => (
+                      <div key={i} className="dash-card" style={{ textAlign:"center", padding:"1.25rem 1rem" }}>
+                        <div style={{ fontSize:"1.75rem", marginBottom:"0.4rem" }}>{c.ic}</div>
+                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"2.25rem", fontWeight:800, color:c.warn?"var(--warn)":"var(--navy)", lineHeight:1, marginBottom:"0.35rem" }}>{c.n}</div>
+                        <div style={{ fontSize:"0.75rem", color:"var(--text3)", fontWeight:500 }}>{c.l}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 4. Card de Pontuação */}
+                  <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"1.25rem 1.75rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1rem", flexWrap:"wrap" }}>
+                    <div>
+                      <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Pontuação acumulada</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                        <span style={{ fontSize:"1.5rem" }}>{nivel.icon}</span>
+                        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--gold)" }}>{meusPts}</span>
+                        <span style={{ fontSize:"0.9rem", color:"var(--text2)", alignSelf:"flex-end", marginBottom:3 }}>pts</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Posição no ranking</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", justifyContent:"flex-end" }}>
+                        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--navy)" }}>#{posicao}</span>
+                        <span style={{ fontSize:"0.82rem", color:"var(--text3)", alignSelf:"flex-end", marginBottom:3 }}>de {rankingTodos.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
           </div>
         )}
 
@@ -290,10 +452,20 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                   )}
 
                   {/* QR Code */}
-                  <div style={{ background:"var(--surface2)", borderRadius:"var(--radius)", padding:"1.25rem", display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap" }}>
+                  <div style={{ background:"var(--surface2)", borderRadius:"var(--radius)", padding:"1.25rem", display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap", marginBottom:"1rem" }}>
                     <div style={{ textAlign:"center", flexShrink:0 }}>
-                      <QRCodeCanvas value={qrPresencaValue(a.id)} size={140}/>
-                      <div style={{ fontSize:"0.7rem", color:"var(--text3)", fontFamily:"monospace", marginTop:4 }}>atividade:{a.id}</div>
+                      <QRCodeCanvas ref={el => { fileRefs.current[`qr-${a.id}`] = el; }} value={qrPresencaValue(a.id)} size={140}/>
+                      <button className="btn btn-sm btn-outline" style={{ marginTop:"0.6rem", width:"100%" }}
+                        onClick={() => {
+                          const canvas = fileRefs.current[`qr-${a.id}`];
+                          if (!canvas) return;
+                          const link = document.createElement("a");
+                          link.href = canvas.toDataURL("image/png");
+                          link.download = `qrcode-${a.titulo.replace(/\s+/g,"-").toLowerCase()}.png`;
+                          link.click();
+                        }}>
+                        <FontAwesomeIcon icon={faDownload} style={{ marginRight:4 }} />Baixar QR Code
+                      </button>
                     </div>
                     <div style={{ flex:1, minWidth:180 }}>
                       <div style={{ fontWeight:700, color:"var(--navy)", marginBottom:"0.5rem", fontSize:"0.9rem" }}>Como usar este QR Code</div>
@@ -304,6 +476,37 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                         <li>Presença registrada automaticamente</li>
                       </ol>
                     </div>
+                  </div>
+
+                  {/* Materiais */}
+                  <div style={{ border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:"1rem" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0.75rem" }}>
+                      <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.88rem" }}>📎 Materiais da Apresentação</div>
+                      <label className="btn btn-sm btn-outline" style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                        <FontAwesomeIcon icon={faUpload} />
+                        {uploadingId === a.id ? "Enviando…" : "Enviar arquivo"}
+                        <input type="file" style={{ display:"none" }} disabled={uploadingId === a.id}
+                          onChange={e => { if (e.target.files[0]) { handleUploadMaterial(a.id, e.target.files[0]); e.target.value=""; } }} />
+                      </label>
+                    </div>
+                    {(a.materiais || []).length === 0 ? (
+                      <p style={{ fontSize:"0.82rem", color:"var(--text3)", fontStyle:"italic" }}>Nenhum material enviado ainda.</p>
+                    ) : (
+                      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                        {(a.materiais || []).map(m => (
+                          <div key={m.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"0.4rem 0.6rem", background:"var(--surface2)", borderRadius:6 }}>
+                            <a href={m.url} target="_blank" rel="noreferrer"
+                              style={{ flex:1, fontSize:"0.83rem", color:"var(--teal)", fontWeight:600, textDecoration:"none", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              <FontAwesomeIcon icon={faDownload} style={{ marginRight:5 }} />{m.nome}
+                            </a>
+                            <button className="btn btn-sm btn-danger" style={{ padding:"0.15rem 0.4rem", fontSize:"0.75rem" }}
+                              onClick={() => handleRemoverMaterial(a.id, m)}>
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -497,7 +700,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                       <h2 style={{ marginBottom:"0.25rem",fontSize:"1rem" }}>Certificamos que</h2>
                       <h3 style={{ fontSize:"1.75rem",marginBottom:"0.25rem" }}>{user.nome}</h3>
                       <div style={{ fontSize:"0.85rem",color:"rgba(255,255,255,0.6)",marginBottom:"1.25rem" }}>{user.titulo}{user.instituicao?` · ${user.instituicao}`:""}</div>
-                      <p style={{ lineHeight:1.85,fontSize:"0.9rem",color:"rgba(255,255,255,0.85)" }}>
+                      <p style={{ lineHeight:1.85,fontSize:"0.9rem",color:"var(--white-hi)" }}>
                         atuou como <strong style={{ color:"var(--gold-light)" }}>palestrante convidado(a)</strong> no <strong style={{ color:"var(--gold-light)" }}>{event.nome}</strong>,<br/>
                         realizado de {formatData(event.data_inicio)} a {formatData(event.data_fim)} em {event.local}.
                       </p>
@@ -540,7 +743,7 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
                       <h2 style={{ marginBottom:"0.25rem",fontSize:"1rem" }}>Certificamos que</h2>
                       <h3 style={{ fontSize:"1.75rem",marginBottom:"0.25rem" }}>{user.nome}</h3>
                       <div style={{ fontSize:"0.85rem",color:"rgba(255,255,255,0.6)",marginBottom:"1.25rem" }}>{user.cargo} · {user.instituicao}<br/>CPF: {user.cpf}</div>
-                      <p style={{ lineHeight:1.85,fontSize:"0.9rem",color:"rgba(255,255,255,0.85)" }}>
+                      <p style={{ lineHeight:1.85,fontSize:"0.9rem",color:"var(--white-hi)" }}>
                         participou do <strong style={{ color:"var(--gold-light)" }}>{event.nome_completo||event.nome}</strong>,<br/>
                         realizado de {formatData(event.data_inicio)} a {formatData(event.data_fim)}, em {event.local}.
                       </p>
@@ -563,40 +766,42 @@ export function AreaUsuario({ user, setUser, event, atividades, palestrantes, pr
           </div>
         )}
 
-        {/* ════════════ CREDENCIAL ════════════ */}
-        {aba === "credencial" && (
+        {/* ════════════ CREDENCIAL QR (tela ampliada, acessada ao clicar no QR do dashboard) ════════════ */}
+        {aba === "credencial_qr" && (
           <div>
-            <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:"1.4rem",color:"var(--navy)",marginBottom:"0.5rem" }}>🪪 Minha Credencial</h2>
-            <p style={{ color:"var(--text2)",marginBottom:"1.5rem",fontSize:"0.9rem" }}>Apresente na recepção para credenciamento.</p>
+            <div style={{ display:"flex", alignItems:"center", gap:"1rem", marginBottom:"1.5rem" }}>
+              <button className="btn btn-sm btn-outline" onClick={()=>setAba("dashboard")}>← Voltar</button>
+              <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:"1.3rem",color:"var(--navy)" }}>🪪 Minha Credencial</h2>
+            </div>
             <div style={{ background:"linear-gradient(135deg,#0a1f40 0%,#0f3460 60%,#1d6a6a 100%)",borderRadius:"var(--radius-lg)",padding:"2rem",color:"#fff",maxWidth:420,marginBottom:"1.5rem",border:"2px solid rgba(201,168,76,0.4)" }}>
-              <div style={{ fontSize:"0.7rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",marginBottom:"1.25rem" }}>{event.nome} · {isPalestrante?"Palestrante":"Participante"}</div>
+              <div style={{ fontSize:"0.7rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--white-low)",marginBottom:"1.25rem" }}>{event.nome} · {isPalestrante?"Palestrante":"Participante"}</div>
               <div style={{ display:"flex",gap:"1rem",alignItems:"flex-start",marginBottom:"1.5rem" }}>
                 <div style={{ width:52,height:52,borderRadius:"50%",background:"rgba(201,168,76,0.2)",border:"2px solid var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:"1.2rem",fontWeight:700,color:"var(--gold-light)",flexShrink:0 }}>
                   {user.foto_iniciais||user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
                 </div>
                 <div>
                   <div style={{ fontFamily:"'Playfair Display',serif",fontSize:"1.2rem",marginBottom:"0.2rem" }}>{user.nome}</div>
-                  <div style={{ fontSize:"0.82rem",color:"rgba(255,255,255,0.65)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
-                  {user.cpf&&<div style={{ fontSize:"0.78rem",color:"rgba(255,255,255,0.4)",marginTop:"0.25rem",fontFamily:"monospace" }}>{user.cpf}</div>}
+                  <div style={{ fontSize:"0.82rem",color:"var(--white-mid)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                  {user.cpf&&<div style={{ fontSize:"0.78rem",color:"var(--white-low)",marginTop:"0.25rem",fontFamily:"monospace" }}>{user.cpf}</div>}
                 </div>
               </div>
               <div style={{ borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
                 {!isPalestrante&&<span className={`badge badge-${user.credenciado?"success":"warn"}`}>{user.credenciado?"✓ Credenciado":"Aguardando"}</span>}
                 {isPalestrante&&<span className="badge badge-gold">🎤 Palestrante</span>}
-                <div style={{ fontSize:"0.7rem",color:"rgba(255,255,255,0.4)",textAlign:"right" }}>
+                <div style={{ fontSize:"0.7rem",color:"var(--white-low)",textAlign:"right" }}>
                   <div>{formatData(event.data_inicio)}</div><div>a {formatData(event.data_fim)}</div>
                 </div>
               </div>
             </div>
             <div className="presenca-card">
               <h3 style={{ fontWeight:700,color:"var(--navy)",marginBottom:"0.5rem" }}>QR Code de Identificação</h3>
-              <p style={{ fontSize:"0.85rem",color:"var(--text2)",marginBottom:"1.25rem" }}>O credenciador escaneia para localizar seu cadastro.</p>
+              <p style={{ fontSize:"0.85rem",color:"var(--text2)",marginBottom:"1.25rem" }}>Apresente ao credenciador na entrada do evento.</p>
               <div style={{ display:"flex",gap:"2rem",alignItems:"center",flexWrap:"wrap" }}>
-                <QRCodeCanvas value={`ENAUDIN:${isPalestrante?"PALESTRANTE":"PARTICIPANTE"}:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={160}/>
+                <QRCodeCanvas value={`ENAUDIN:${isPalestrante?"PALESTRANTE":"PARTICIPANTE"}:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={180}/>
                 <div>
                   <div style={{ fontSize:"0.78rem",color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"0.25rem" }}>Identificação</div>
                   <div style={{ fontFamily:"monospace",fontSize:"1rem",fontWeight:700,color:"var(--navy)",marginBottom:"0.75rem" }}>{user.cpf||user.email}</div>
-                  <div style={{ fontWeight:600,color:"var(--text)",marginBottom:"0.75rem" }}>{user.nome}</div>
+                  <div style={{ fontWeight:600,color:"var(--text)" }}>{user.nome}</div>
                 </div>
               </div>
             </div>

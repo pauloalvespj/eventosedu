@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRoutes, NavLink, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -63,12 +64,27 @@ function AdminRoutes() {
 export function PainelAdmin(props) {
   const { user, event, participantes, onLogout } = props;
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
+  const [navAberta, setNavAberta] = useState(false);
 
   return (
     <AdminContext.Provider value={props}>
       <div className="admin-layout">
+        {/* MOBILE HEADER */}
+        <div className="mobile-header">
+          <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
+            <span/><span/><span/>
+          </button>
+          <span className="mobile-header-title">{event.nome} — Admin</span>
+          <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(201,168,76,0.2)", border:"1.5px solid var(--gold)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"var(--gold-light)", flexShrink:0 }}>
+            {user?.foto_iniciais || user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("") || "?"}
+          </div>
+        </div>
+
+        {/* OVERLAY */}
+        {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
+
         {/* SIDEBAR */}
-        <div className="admin-sidebar">
+        <div className={`admin-sidebar${navAberta ? " open" : ""}`}>
           <div className="admin-sidebar-logo">
             <h2>{event.nome}</h2>
             <p style={{ fontSize: "0.68rem", opacity: 0.5, marginTop: "0.1rem" }}>Painel Administrativo</p>
@@ -80,6 +96,7 @@ export function PainelAdmin(props) {
                 to={m.path ? `/admin/${m.path}` : "/admin"}
                 end={!m.path}
                 className={({ isActive }) => `admin-nav-item${isActive ? " active" : ""}`}
+                onClick={() => setNavAberta(false)}
               >
                 <span className="admin-nav-icon"><FontAwesomeIcon icon={m.icon} fixedWidth /></span>
                 {m.label}

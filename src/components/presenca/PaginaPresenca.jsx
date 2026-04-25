@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { formatCPF, formatData, TIPO_LABEL } from "../../utils/helpers";
+import { useSearchParams } from "react-router-dom";
+import { formatCPF, formatData, TIPO_LABEL, validarTokenQR } from "../../utils/helpers";
 import { inserirPresenca } from "../../lib/db";
 
-export function PaginaPresenca({ atividadeId, atividades, participantes, presencas, setPresencas, user, onVoltar, onLoginClick }) {
+export function PaginaPresenca({ atividadeId, atividades, participantes, presencas, setPresencas, user, onVoltar, onLoginClick, skipTokenCheck = false }) {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("t");
+  const tokenValido = skipTokenCheck || validarTokenQR(Number(atividadeId), token);
+
   const atividade = atividades.find(a => a.id === Number(atividadeId));
   const [cpf, setCpf] = useState("");
   const [status, setStatus] = useState(null); // null | "sucesso" | "duplicado" | "nao_encontrado" | "erro"
@@ -51,6 +56,19 @@ export function PaginaPresenca({ atividadeId, atividades, participantes, presenc
         <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>⚠️</div>
         <h2 style={{ color: "var(--danger)" }}>Atividade não encontrada</h2>
         <p style={{ color: "var(--text2)", margin: "0.75rem 0 1.5rem" }}>Este QR Code não corresponde a nenhuma atividade cadastrada.</p>
+        <button className="btn btn-primary btn-block" onClick={onVoltar}>Voltar ao site</button>
+      </div>
+    </div>
+  );
+
+  if (!tokenValido) return (
+    <div className="qr-page">
+      <div className="qr-card">
+        <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🚫</div>
+        <h2 style={{ color: "var(--danger)" }}>Link inválido</h2>
+        <p style={{ color: "var(--text2)", margin: "0.75rem 0 1.5rem" }}>
+          Este link não é válido. Utilize o QR Code oficial exibido durante o evento.
+        </p>
         <button className="btn btn-primary btn-block" onClick={onVoltar}>Voltar ao site</button>
       </div>
     </div>
