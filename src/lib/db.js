@@ -459,6 +459,7 @@ export async function atualizarEmailAuth(userId, email) {
   return { data, error };
 }
 
+
 export async function atualizarCredenciamento(participante_id, credenciado) {
   const credenciado_em = credenciado ? new Date().toISOString() : null;
   const { error } = await supabase
