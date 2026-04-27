@@ -119,16 +119,22 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     <div>
       <div className="form-grid">
         <div className="form-group" style={{ gridColumn: "1/-1" }}>
+          <label className="form-label">Nome Completo *</label>
+          <input className={`form-input${erros.nome ? " error" : ""}`} placeholder="Seu nome completo"
+            value={form.nome} onChange={e => set("nome", e.target.value)} />
+          {erros.nome && <div className="form-error">{erros.nome}</div>}
+        </div>
+        <div className="form-group">
           <label className="form-label">CPF *</label>
           <input className={`form-input${erros.cpf ? " error" : ""}`} placeholder="000.000.000-00"
             value={form.cpf} onChange={e => set("cpf", formatCPF(e.target.value))} maxLength={14} />
           {erros.cpf && <div className="form-error">{erros.cpf}</div>}
         </div>
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">Nome Completo *</label>
-          <input className={`form-input${erros.nome ? " error" : ""}`} placeholder="Seu nome completo"
-            value={form.nome} onChange={e => set("nome", e.target.value)} />
-          {erros.nome && <div className="form-error">{erros.nome}</div>}
+        <div className="form-group">
+          <label className="form-label">E-mail *</label>
+          <input className={`form-input${erros.email ? " error" : ""}`} placeholder="seu@email.com" type="email"
+            value={form.email} onChange={e => set("email", e.target.value)} />
+          {erros.email && <div className="form-error">{erros.email}</div>}
         </div>
         <div className="form-group">
           <label className="form-label">Instituição *</label>
@@ -150,12 +156,6 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Auditor(a), Analista..."
             value={form.cargo} onChange={e => set("cargo", e.target.value)} />
           {erros.cargo && <div className="form-error">{erros.cargo}</div>}
-        </div>
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">E-mail *</label>
-          <input className={`form-input${erros.email ? " error" : ""}`} placeholder="seu@email.com" type="email"
-            value={form.email} onChange={e => set("email", e.target.value)} />
-          {erros.email && <div className="form-error">{erros.email}</div>}
         </div>
         <div className="form-group">
           <label className="form-label">Senha *</label>

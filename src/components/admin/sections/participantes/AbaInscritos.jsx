@@ -4,7 +4,7 @@ import { faUsers, faPenToSquare, faTrash, faFloppyDisk } from "@fortawesome/free
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, deletarParticipante } from "../../../../lib/db";
+import { atualizarProfile, deletarParticipante, adminCriarUsuario } from "../../../../lib/db";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -29,16 +29,30 @@ export function AbaInscritos() {
     return ok && (filtroRole === "todos" || p.role === filtroRole);
   });
 
-  function salvar() {
+  const [salvando, setSalvando] = useState(false);
+
+  async function salvar() {
     if (!formPart.nome) { showToast("Nome obrigatório", "error"); return; }
     const role = formPart.role || "participante";
     if (modalPart === "new") {
-      const novo = {
-        ...formPart, role, id: `local-${Date.now()}`, credenciado: false,
-        foto_iniciais: formPart.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase(),
-      };
-      setParticipantes([...participantes, novo]);
-      showToast("Inscrito adicionado!", "success");
+      if (!formPart.email) { showToast("E-mail obrigatório para criar acesso", "error"); return; }
+      setSalvando(true);
+      const { data, error } = await adminCriarUsuario({
+        nome: formPart.nome,
+        email: formPart.email,
+        cpf: formPart.cpf,
+        cargo: formPart.cargo,
+        instituicao: formPart.instituicao,
+        role,
+        senha: formPart.senha,
+      });
+      setSalvando(false);
+      if (error) {
+        showToast("Erro ao criar usuário: " + (error.message || JSON.stringify(error)), "error");
+        return;
+      }
+      setParticipantes([...participantes, data.user]);
+      showToast("Inscrito criado com acesso ao sistema!", "success");
     } else {
       setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role } : x));
       atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role });
@@ -131,7 +145,7 @@ export function AbaInscritos() {
       </div>
 
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
-        title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"}>
+        title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"} wide>
         {modalPart !== "new" && formPart.id && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
             <AvatarUpload
@@ -157,11 +171,13 @@ export function AbaInscritos() {
               value={formPart.cpf || ""} onChange={e => setFormPart(f => ({ ...f, cpf: e.target.value }))} />
           </div>
           <div className="form-group">
-            <label className="form-label">E-mail</label>
-            <input className="form-input" type="email" value={formPart.email || ""}
-              onChange={e => setFormPart(f => ({ ...f, email: e.target.value }))} />
+            <label className="form-label">Tipo / Categoria</label>
+            <select className="form-input" value={formPart.role || "participante"}
+              onChange={e => setFormPart(f => ({ ...f, role: e.target.value }))}>
+              {ROLE_OPTS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
           </div>
-          <div className="form-group" style={{ gridColumn: "1/-1" }}>
+          <div className="form-group">
             <label className="form-label">Instituição</label>
             <InstSelect value={formPart.instituicao || ""} onChange={v => setFormPart(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
           </div>
@@ -171,11 +187,17 @@ export function AbaInscritos() {
               onChange={e => setFormPart(f => ({ ...f, cargo: e.target.value }))} />
           </div>
           <div className="form-group">
-            <label className="form-label">Tipo / Categoria</label>
-            <select className="form-input" value={formPart.role || "participante"}
-              onChange={e => setFormPart(f => ({ ...f, role: e.target.value }))}>
-              {ROLE_OPTS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
+            <label className="form-label">E-mail {modalPart === "new" && <span style={{ color: "var(--gold-on-dark)" }}>*</span>}</label>
+            <input className="form-input" type="email" value={formPart.email || ""}
+              onChange={e => setFormPart(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">
+              Senha{modalPart === "new" && <span style={{ fontWeight: 400, color: "var(--text3)", marginLeft: 4 }}>(opcional)</span>}
+            </label>
+            <input className="form-input" type="password" placeholder="Mín. 6 caracteres"
+              value={formPart.senha || ""} onChange={e => setFormPart(f => ({ ...f, senha: e.target.value }))}
+              disabled={modalPart !== "new"} />
           </div>
         </div>
         {formPart.role === "palestrante" && (
@@ -184,10 +206,10 @@ export function AbaInscritos() {
           </div>
         )}
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
-          <button className="btn btn-primary" onClick={salvar}>
-            <FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight: 6 }} />Salvar
+          <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+            <FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight: 6 }} />{salvando ? "Criando..." : "Salvar"}
           </button>
-          <button className="btn btn-outline" onClick={() => setModalPart(null)}>Cancelar</button>
+          <button className="btn btn-outline" onClick={() => setModalPart(null)} disabled={salvando}>Cancelar</button>
         </div>
       </Modal>
     </div>

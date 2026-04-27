@@ -5,6 +5,7 @@ import { useAdmin } from "./AdminContext";
 import { DatePickerInput } from "../../base/index";
 import { formatData } from "../../../utils/helpers";
 import { atualizarEvento } from "../../../lib/db";
+import { PRESETS, applyTheme, isLightHex } from "../../../lib/themes";
 
 function InscricoesStatusBadge({ event }) {
   const hoje = new Date().toISOString().split("T")[0];
@@ -21,6 +22,111 @@ function InscricoesStatusBadge({ event }) {
   return badge("#4ade80","rgba(74,222,128,0.1)","rgba(74,222,128,0.3)","Abertas");
 }
 
+// ── Seletor de tema ───────────────────────────────────────────
+function ThemeSelector({ value, onChange }) {
+  const presetId = value?.preset || "azul";
+  const [customHero,   setCustomHero]   = useState(value?.hero   || "#0d1f3c");
+  const [customAccent, setCustomAccent] = useState(value?.accent || "#c4a050");
+
+  function selectPreset(id) {
+    onChange({ preset: id });
+    applyTheme({ preset: id });
+  }
+
+  function applyCustom(hero, accent) {
+    const mode = isLightHex(hero) ? "light" : "dark";
+    const tema = { preset: "custom", hero, accent, mode };
+    onChange(tema);
+    applyTheme(tema);
+  }
+
+  function openCustom() {
+    if (presetId !== "custom") applyCustom(customHero, customAccent);
+  }
+
+  const isCustom = presetId === "custom";
+
+  const swatchBtn = (sel, onClick, children, title) => (
+    <button onClick={onClick} title={title}
+      style={{
+        display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+        padding:6, border: sel ? "2px solid var(--navy)" : "2px solid var(--border)",
+        borderRadius:10, cursor:"pointer", background: sel ? "var(--surface2)" : "transparent",
+        width:68, flexShrink:0,
+      }}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div>
+      {/* ── Swatches ── */}
+      <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap", marginBottom: isCustom ? "0.85rem" : 0 }}>
+        {PRESETS.map(p => {
+          const sel = presetId === p.id;
+          const textOnHero = p.mode === "light" ? "rgba(20,24,40,0.25)" : "rgba(255,255,255,0.30)";
+          return swatchBtn(sel, () => selectPreset(p.id), (
+            <>
+              <div style={{ width:56, height:44, background:p.hero, borderRadius:8, display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", gap:5 }}>
+                <div style={{ width:32, height:3, background:textOnHero, borderRadius:2 }}/>
+                <div style={{ width:24, height:4, background:p.accent, borderRadius:2 }}/>
+              </div>
+              <span style={{ fontSize:"0.58rem", color: sel ? "var(--navy)" : "var(--text3)", fontWeight: sel ? 700 : 500, textAlign:"center", lineHeight:1.2 }}>{p.label}</span>
+            </>
+          ), p.label);
+        })}
+
+        {/* Botão personalizado */}
+        {swatchBtn(isCustom, openCustom, (
+          <>
+            <div style={{ width:56, height:44, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", border:"1.5px dashed var(--border2)" }}>
+              <span style={{ fontSize:"1.5rem", color:"var(--text3)", lineHeight:1 }}>+</span>
+            </div>
+            <span style={{ fontSize:"0.58rem", color: isCustom ? "var(--navy)" : "var(--text3)", fontWeight: isCustom ? 700 : 500 }}>Personalizado</span>
+          </>
+        ), "Personalizado")}
+      </div>
+
+      {/* ── Pickers do tema personalizado ── */}
+      {isCustom && (
+        <div style={{ display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap", padding:"0.9rem 1rem", background:"var(--surface2)", borderRadius:"var(--radius)", border:"1px solid var(--border)" }}>
+          <div>
+            <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:5 }}>Fundo</div>
+            <input type="color" value={customHero}
+              onChange={e => { setCustomHero(e.target.value); applyCustom(e.target.value, customAccent); }}
+              style={{ width:44, height:34, border:"1px solid var(--border)", cursor:"pointer", borderRadius:6, padding:2 }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:5 }}>Destaque</div>
+            <input type="color" value={customAccent}
+              onChange={e => { setCustomAccent(e.target.value); applyCustom(customHero, e.target.value); }}
+              style={{ width:44, height:34, border:"1px solid var(--border)", cursor:"pointer", borderRadius:6, padding:2 }}
+            />
+          </div>
+          {/* Mini prévia */}
+          <div style={{ flex:1, minWidth:140, background:customHero, borderRadius:"var(--radius)", padding:"0.65rem 1rem" }}>
+            {(() => {
+              const r = parseInt(customAccent.slice(1,3),16);
+              const g = parseInt(customAccent.slice(3,5),16);
+              const b = parseInt(customAccent.slice(5,7),16);
+              const textColor = isLightHex(customHero) ? "rgba(20,24,40,0.55)" : "rgba(255,255,255,0.55)";
+              return (
+                <>
+                  <div style={{ fontSize:"0.52rem", letterSpacing:"0.12em", textTransform:"uppercase", color:`rgba(${r},${g},${b},0.85)`, marginBottom:3 }}>Prévia</div>
+                  <div style={{ color:customAccent, fontWeight:700, fontSize:"0.88rem", marginBottom:2 }}>Nome do Evento</div>
+                  <div style={{ color:textColor, fontSize:"0.7rem" }}>Subtítulo / tema aqui</div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Evento() {
   const { event, setEvent, showToast } = useAdmin();
   const [editando, setEditando] = useState(false);
@@ -29,7 +135,7 @@ export function Evento() {
 
   function iniciarEdicao() { setForm({ ...event }); setEditando(true); }
   function salvar() { setEvent(form); setEditando(false); atualizarEvento(event.id, form); showToast("Evento atualizado!", "success"); }
-  function cancelar() { setEditando(false); }
+  function cancelar() { setEditando(false); applyTheme(event.tema); }
 
   const LABEL = { fontSize:"0.68rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem", display:"flex", alignItems:"center", gap:6 };
 
@@ -69,7 +175,24 @@ export function Evento() {
                 ))}
               </div>
             </div>
-            {/* Bloco inscrições */}
+            {/* Bloco tema + inscrições */}
+            <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+            {(() => {
+              const t = event.tema;
+              const preset = t?.preset || "azul";
+              const p = PRESETS.find(x => x.id === preset);
+              const label = preset === "custom" ? "Personalizado" : (p?.label || "Azul");
+              const hero  = preset === "custom" ? (t?.hero   || "#0d1f3c") : (p?.hero   || "#0d1f3c");
+              const acct  = preset === "custom" ? (t?.accent || "#c4a050") : (p?.accent || "#c4a050");
+              return (
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ width:28, height:22, background:hero, borderRadius:5, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <div style={{ width:14, height:3, background:acct, borderRadius:2 }}/>
+                  </div>
+                  <span style={{ fontSize:"0.72rem", color:"var(--white-mid)" }}>{label}</span>
+                </div>
+              );
+            })()}
             <div style={{ flexShrink:0, background:"var(--gold-tint)", border:"1px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1.1rem 1.4rem", minWidth:170 }}>
               <div className="hero-label" style={{ marginBottom:"0.4rem" }}>Inscrições</div>
               <div style={{ fontWeight:600, fontSize:"0.88rem", lineHeight:1.5 }}>
@@ -78,6 +201,7 @@ export function Evento() {
                 {event.inscricao_fim ? formatData(event.inscricao_fim) : "–"}
               </div>
               <InscricoesStatusBadge event={event} />
+            </div>
             </div>
           </div>
 
@@ -163,6 +287,12 @@ export function Evento() {
           <div className="form-group" style={{ gridColumn:"1/-1" }}>
             <label className="form-label">Realização</label>
             <textarea className="form-input" rows={2} value={form.realizacao||""} onChange={e => set("realizacao", e.target.value)} />
+          </div>
+
+          {/* ── Tema visual — linha inteira abaixo do grid ── */}
+          <div style={{ gridColumn:"1/-1", marginTop:"0.25rem" }}>
+            <div style={{ ...LABEL, marginBottom:"0.85rem" }}>Tema Visual</div>
+            <ThemeSelector value={form.tema} onChange={v => set("tema", v)} />
           </div>
         </div>
       )}

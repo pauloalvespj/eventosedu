@@ -198,7 +198,7 @@ export function DatePickerInput({ label, value, onChange, placeholder = "dd/mm/a
                   style={{
                     textAlign: "center", padding: "6px 0", fontSize: "0.82rem", border: "none",
                     borderRadius: "var(--radius-sm)", cursor: "pointer", fontWeight: isSel ? 700 : 400,
-                    background: isSel ? "var(--navy)" : isHoje ? "rgba(15,52,96,0.08)" : "none",
+                    background: isSel ? "var(--navy)" : isHoje ? "var(--gold-tint)" : "none",
                     color: isSel ? "#fff" : isHoje ? "var(--navy)" : "var(--text)",
                     outline: isHoje && !isSel ? "1.5px solid var(--navy)" : "none",
                   }}

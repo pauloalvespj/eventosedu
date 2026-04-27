@@ -21,6 +21,7 @@ import {
 } from "./data/initial";
 import { PONTOS } from "./config/gamificacao";
 import { TIPO_ICON } from "./utils/helpers";
+import { applyTheme } from "./lib/themes";
 
 import { Toast, Modal } from "./components/base/index";
 import { FormInscricao } from "./components/auth/FormInscricao";
@@ -132,6 +133,7 @@ export default function App() {
       ? `${event.nome} — ${event.nome_completo}`
       : event.nome;
   }, [event.nome, event.nome_completo]);
+  useEffect(() => { applyTheme(event.tema); }, [event.tema]);
   const [atividades, setAtividades] = useState(INITIAL_ATIVIDADES);
   const [profiles, setProfiles] = useState(INITIAL_PROFILES);
   const [presencas, setPresencas] = useState(INITIAL_PRESENCAS);
@@ -182,12 +184,6 @@ export default function App() {
       setConfirmandoEmail(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Views derivadas por role ──────────────────────────────────
-  function viewParaRole(role) {
-    if (["super_admin", "admin", "credenciador"].includes(role)) return "admin";
-    return "participante";
-  }
 
   // ── Carga inicial de dados ────────────────────────────────────
   async function loadData() {
@@ -255,13 +251,11 @@ export default function App() {
     if (!authUser) return;
     const prof = profiles.find(p => p.id === authUser.id);
     if (prof) {
-      const v = viewParaRole(prof.role);
       setUser(prof);
-      setView(v);
       setConfirmandoEmail(false);
-      if (loginExplicito.current && v === "admin") {
+      if (loginExplicito.current) {
         loginExplicito.current = false;
-        navigate("/admin", { replace: true });
+        navigate("/painel", { replace: true });
       }
     } else if (!loading && !criandoProfile.current) {
       fetchProfiles().then(async ({ data }) => {
@@ -269,14 +263,12 @@ export default function App() {
           setProfiles(data);
           const found = data.find(p => p.id === authUser.id);
           if (found) {
-            const v = viewParaRole(found.role);
             setUser(found);
-            setView(v);
             setConfirmandoEmail(false);
             showToast(`Bem-vindo(a), ${found.nome.split(" ")[0]}!`, "success");
-            if (loginExplicito.current && v === "admin") {
+            if (loginExplicito.current) {
               loginExplicito.current = false;
-              navigate("/admin", { replace: true });
+              navigate("/painel", { replace: true });
             }
           } else {
             // Profile não encontrado — cria a partir do user_metadata (caso em que
@@ -297,21 +289,31 @@ export default function App() {
                 ativo:       true,
                 foto_iniciais: meta.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase(),
               };
-              const { error } = await supabase.from("profiles").insert(novoProfile);
+              const { error } = await supabase.from("profiles").upsert(novoProfile, { onConflict: "id" });
               if (!error) {
                 setProfiles(prev => [...prev, novoProfile]);
                 setUser(novoProfile);
-                setView("participante");
                 setConfirmandoEmail(false);
                 showToast(`E-mail confirmado! Bem-vindo(a), ${meta.nome.split(" ")[0]}!`, "success");
               } else {
-                criandoProfile.current = false;
+                // Upsert falhou — tenta buscar o profile existente como fallback
                 console.error("Erro ao criar profile:", error.message);
+                const { data: existente } = await supabase.from("profiles").select("*").eq("id", authUser.id).single();
+                if (existente) {
+                  setProfiles(prev => prev.some(p => p.id === existente.id) ? prev : [...prev, existente]);
+                  setUser(existente);
+                  setConfirmandoEmail(false);
+                  showToast(`Bem-vindo(a), ${existente.nome.split(" ")[0]}!`, "success");
+                } else {
+                  criandoProfile.current = false;
+                }
               }
+              navigate("/painel", { replace: true });
             } else {
-              // Sem metadata — usuário antigo ou sem dados; apenas loga
+              // Sem metadata — usuário antigo ou sem dados; redireciona para /painel mesmo assim
               criandoProfile.current = false;
               setConfirmandoEmail(false);
+              navigate("/painel", { replace: true });
             }
           }
         }
@@ -320,7 +322,7 @@ export default function App() {
   }, [authUser, profiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Login callback (vindo do FormLogin após signIn) ───────────
-  async function handleLogin(authUserObj) {
+  async function handleLogin() {
     loginExplicito.current = true;
     setShowLogin(false);
   }
@@ -386,12 +388,43 @@ export default function App() {
       <Toast toast={toast} />
 
       <Routes>
-        {/* Rotas do painel admin */}
-        <Route path="/admin" element={
-          user ? <PainelAdmin {...adminProps} /> : <AdminLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
-        } />
-        <Route path="/admin/*" element={
-          user ? <PainelAdmin {...adminProps} /> : <AdminLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
+        {/* /admin e /admin/* redirecionam para /painel */}
+        <Route path="/admin"   element={<Navigate to="/painel" replace />} />
+        <Route path="/admin/*" element={<Navigate to="/painel" replace />} />
+
+        {/* Rota principal — /painel e /painel/* para todos os usuários autenticados */}
+        <Route path="/painel/*" element={
+          !user
+            ? <AdminLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
+            : ["super_admin","admin","credenciador"].includes(user.role)
+              ? <PainelAdmin {...adminProps} />
+              : <AreaUsuario
+                  user={user}
+                  setUser={u => setUser(typeof u === "function" ? u(user) : u)}
+                  event={event} atividades={atividades} setAtividades={setAtividades}
+                  palestrantes={palestrantes} presencas={presencas} setPresencas={setPresencas}
+                  topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
+                  forumConfig={forumConfig} participantes={participantes} admins={admins}
+                  instituicoes={instituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
+                  follows={follows} setFollows={setFollows} pontosConfig={pontosConfig}
+                  onSeguir={async (followingId) => {
+                    const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
+                    setFollows(prev => [...prev, novo]);
+                    seguirUsuario(user.id, followingId);
+                    const pts = pontosConfig.seguir ?? 5;
+                    if (pts > 0) {
+                      const p = { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" };
+                      setPontuacoes(prev => [...prev, p]);
+                      inserirPontuacao(p);
+                    }
+                  }}
+                  onDesseguir={(followingId) => {
+                    setFollows(prev => prev.filter(f => !(f.follower_id === user.id && f.following_id === followingId)));
+                    desseguirUsuario(user.id, followingId);
+                  }}
+                  registrarPresencaComPontos={registrarPresencaComPontos}
+                  onLogout={handleLogout}
+                />
         } />
 
         {/* Rota de presença via QR Code */}
@@ -407,67 +440,9 @@ export default function App() {
           />
         } />
 
-        {/* Todas as demais views (landing, participante, presença) */}
-        <Route path="*" element={<>
-          {(view === "landing" || view === "admin") && (
-            <>
-              <LandingPage
-                event={event}
-                atividades={atividades}
-                palestrantes={palestrantes}
-                onInscricaoClick={() => setShowInscricao(true)}
-                onLoginClick={() => {
-                  if (user) {
-                    if (["super_admin","admin","credenciador"].includes(user.role)) navigate("/admin");
-                    else setView(viewParaRole(user.role));
-                  } else {
-                    setShowLogin(true);
-                  }
-                }}
-              />
-            </>
-          )}
-
-          {(view === "participante" || view === "palestrante") && user && (
-            <AreaUsuario
-              user={user}
-              setUser={u => setUser(typeof u === "function" ? u(user) : u)}
-              event={event}
-              atividades={atividades}
-              setAtividades={setAtividades}
-              palestrantes={palestrantes}
-              presencas={presencas}
-              setPresencas={setPresencas}
-              topicos={topicos} setTopicos={setTopicos}
-              pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
-              forumConfig={forumConfig}
-              participantes={participantes}
-              admins={admins}
-              instituicoes={instituicoes}
-              avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
-              follows={follows} setFollows={setFollows}
-              pontosConfig={pontosConfig}
-              onSeguir={async (followingId) => {
-                const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
-                setFollows(prev => [...prev, novo]);
-                seguirUsuario(user.id, followingId);
-                const pts = pontosConfig.seguir ?? 5;
-                if (pts > 0) {
-                  const p = { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" };
-                  setPontuacoes(prev => [...prev, p]);
-                  inserirPontuacao(p);
-                }
-              }}
-              onDesseguir={(followingId) => {
-                setFollows(prev => prev.filter(f => !(f.follower_id === user.id && f.following_id === followingId)));
-                desseguirUsuario(user.id, followingId);
-              }}
-              registrarPresencaComPontos={registrarPresencaComPontos}
-              onLogout={handleLogout}
-            />
-          )}
-
-          {view === "presenca" && (
+        {/* Landing page e presença (via state) */}
+        <Route path="*" element={
+          view === "presenca" ? (
             <PaginaPresenca
               atividadeId={presencaAtv}
               atividades={atividades}
@@ -484,14 +459,21 @@ export default function App() {
                 setPresencas(newPresencas);
               }}
               user={user}
-              onVoltar={() => setView(user
-                ? (["super_admin","admin","credenciador"].includes(user.role) ? "admin" : "participante")
-                : "landing")}
+              onVoltar={() => user ? navigate("/painel") : setView("landing")}
               onLoginClick={() => setShowLogin(true)}
               skipTokenCheck
             />
-          )}
-        </>} />
+          ) : (
+            <LandingPage
+              event={event}
+              atividades={atividades}
+              palestrantes={palestrantes}
+              user={user}
+              onInscricaoClick={() => setShowInscricao(true)}
+              onLoginClick={() => user ? navigate("/painel") : setShowLogin(true)}
+            />
+          )
+        } />
       </Routes>
 
       <Modal show={showInscricao} onClose={() => setShowInscricao(false)} title="Inscrição no Evento">

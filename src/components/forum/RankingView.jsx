@@ -17,7 +17,7 @@ export function RankingView({ participantes, palestrantes, admins, pontuacoes, u
       <p style={{ color:"var(--text2)", fontSize:"0.88rem", marginBottom:"1.5rem" }}>Pontos por presença, fórum e interações.</p>
 
       {eu && (
-        <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460)", borderRadius:"var(--radius)", padding:"1.25rem 1.5rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.25rem", flexWrap:"wrap" }}>
+        <div style={{ background:"linear-gradient(135deg,var(--hero-dark),var(--hero))", borderRadius:"var(--radius)", padding:"1.25rem 1.5rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.25rem", flexWrap:"wrap" }}>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--gold-light)", width:44, textAlign:"center" }}>{minhaPos+1}º</div>
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:700, marginBottom:"0.2rem" }}>{eu.nome}</div>

@@ -12,6 +12,12 @@ export function AbaPalestrantes() {
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
 
+  function toggleDestaque(p) {
+    const novo = { ...p, destaque: !p.destaque };
+    setPalestrantes(palestrantes.map(x => x.id === p.id ? novo : x));
+    if (p.id && !String(p.id).startsWith("local-")) atualizarProfile(p.id, { destaque: novo.destaque });
+  }
+
   async function salvar() {
     if (!formPal.nome) { showToast("Nome obrigatório", "error"); return; }
     if (formPal.id) {
@@ -19,6 +25,7 @@ export function AbaPalestrantes() {
       atualizarProfile(formPal.id, {
         nome: formPal.nome, titulo: formPal.titulo,
         area: formPal.area, mini_bio: formPal.mini_bio, instituicao: formPal.instituicao,
+        destaque: formPal.destaque ?? false,
       });
     } else {
       const iniciais = formPal.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -52,7 +59,7 @@ export function AbaPalestrantes() {
         </div>
         <table>
           <thead>
-            <tr><th>Nome</th><th>Título</th><th>Instituição</th><th>Área</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>Título</th><th>Instituição</th><th>Área</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {filtrados.map(p => (
@@ -69,6 +76,13 @@ export function AbaPalestrantes() {
                 <td style={{ fontSize: "0.85rem", color: "var(--text2)" }}>{p.titulo}</td>
                 <td style={{ fontSize: "0.85rem" }}>{p.instituicao || <span style={{ color: "var(--text3)" }}>–</span>}</td>
                 <td><span className="badge badge-navy">{p.area}</span></td>
+                <td style={{ textAlign:"center" }}>
+                  <button
+                    onClick={() => toggleDestaque(p)}
+                    title={p.destaque ? "Remover destaque" : "Marcar como destaque"}
+                    style={{ background:"none", border:"none", cursor:"pointer", fontSize:"1.3rem", lineHeight:1, padding:"2px 6px", transition:"color 0.15s", color: p.destaque ? "var(--gold-on-dark)" : "var(--border2)" }}
+                  >★</button>
+                </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
                     <button className="btn btn-sm btn-outline" onClick={() => { setFormPal({ ...p }); setModalPal(true); }}>
@@ -103,6 +117,23 @@ export function AbaPalestrantes() {
             />
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => setFormPal(f => ({ ...f, destaque: !f.destaque }))}
+          style={{
+            display:"flex", alignItems:"center", gap:"0.6rem", width:"100%",
+            padding:"0.7rem 1rem", borderRadius:"var(--radius-sm)", border:"1.5px solid",
+            fontSize:"0.88rem", fontWeight:600, cursor:"pointer", transition:"all 0.15s",
+            marginBottom:"1.25rem",
+            background: formPal.destaque ? "var(--gold-tint)" : "var(--surface2)",
+            borderColor: formPal.destaque ? "var(--gold-on-dark)" : "var(--border)",
+            color: formPal.destaque ? "var(--navy)" : "var(--text3)",
+          }}
+        >
+          <span style={{ fontSize:"1.3rem", lineHeight:1, color: formPal.destaque ? "var(--gold-on-dark)" : "var(--border2)" }}>★</span>
+          {formPal.destaque ? "Destaque ativo — aparece na landing page" : "Marcar como destaque (landing page)"}
+        </button>
+
         <div className="form-group">
           <label className="form-label">Nome *</label>
           <input className="form-input" value={formPal.nome || ""} onChange={e => setFormPal(f => ({ ...f, nome: e.target.value }))} />

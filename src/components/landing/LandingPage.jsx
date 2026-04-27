@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import enaudinMapa from "../../assets/enaudin-mapa.png";
 import { FAQ_ITEMS } from "../../data/initial";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { formatData, diaSemana } from "../../utils/helpers";
@@ -14,7 +15,7 @@ function inscricoesAbertas(event) {
   return { aberta: true };
 }
 
-export function LandingPage({ event, atividades, palestrantes, onInscricaoClick, onLoginClick }) {
+export function LandingPage({ event, atividades, palestrantes, onInscricaoClick, onLoginClick, user }) {
   const [diaAtivo, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
   const inscStatus = inscricoesAbertas(event);
@@ -29,14 +30,14 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
     <div>
       {/* NAVBAR */}
       <nav className="navbar">
-        <div className="navbar-logo">{event.nome}<span style={{color:"var(--gold)",fontSize:"0.7em",marginLeft:4}}>ENAUDIN</span></div>
+        <div className="navbar-logo">{event.nome}</div>
         <div className="navbar-nav">
           <a href="#sobre" className="navbar-link">Sobre</a>
           <a href="#programacao" className="navbar-link">Programação</a>
           <a href="#palestrantes" className="navbar-link">Palestrantes</a>
           <a href="#realizacao" className="navbar-link">Realização</a>
           <a href="#local" className="navbar-link">Local</a>
-          <button className="btn-inscricao btn-login-mobile" onClick={onLoginClick} style={{ background: "var(--gold)", color: "var(--navy-dark)" }}>Login</button>
+          <button className="btn-inscricao btn-login-mobile" onClick={onLoginClick} style={{ background: "var(--gold)", color: "var(--navy-dark)" }}>{user ? "Minha Área" : "Login"}</button>
         </div>
       </nav>
 
@@ -71,37 +72,15 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
         <div className="container">
           <div className="sobre-grid">
             <div>
-              <div className="section-header">
-                <div style={{ color: "var(--gold)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Sobre o Evento</div>
-                <h2 className="section-title">{event.nome_completo || event.nome}</h2>
-                <p className="section-sub" style={{ fontStyle:"italic", color:"var(--teal)", fontWeight:600 }}>"{event.subtitulo}"</p>
-              </div>
-              <p style={{ color: "var(--text2)", lineHeight: 1.85, marginBottom: "1.25rem" }}>{event.descricao}</p>
-              {event.realizacao && (
-                <div style={{ background:"var(--surface2)", borderRadius:"var(--radius-sm)", padding:"1rem 1.25rem", marginBottom:"1.25rem" }}>
-                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem" }}>Realização</div>
-                  {event.realizacao.split(",").map((r,i) => (
-                    <div key={i} style={{ fontSize:"0.88rem", color:"var(--text)", marginBottom:"0.2rem" }}>• {r.trim()}</div>
-                  ))}
-                </div>
-              )}
-              {inscStatus.aberta
-                ? <button className="btn btn-primary" onClick={onInscricaoClick}>Participar do Evento</button>
-                : <div style={{ display:"inline-block", background:"var(--surface2)", border:"1px solid var(--border)", color:"var(--text3)", padding:"0.6rem 1.25rem", borderRadius:"var(--radius-sm)", fontSize:"0.88rem", fontWeight:600 }}>{inscStatus.msg}</div>
-              }
+              <div style={{ color: "var(--gold)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Sobre o Evento</div>
+              <p style={{ color: "var(--text2)", lineHeight: 1.85, marginBottom: "1.25rem", whiteSpace: "pre-wrap", textAlign: "justify" }}>{event.descricao}</p>
             </div>
-            <div className="sobre-stats">
-              {[
-                { n: atividadesPublicas.length, l: "Atividades" },
-                { n: palestrantes.length,        l: "Palestrantes" },
-                { n: `${chTotal}h`,              l: "CH Certificável" },
-                { n: dias.length,                l: "Dias de Evento" },
-              ].map((c,i) => (
-                <div key={i} className="stat-card">
-                  <div className="num">{c.n}</div>
-                  <div className="lbl">{c.l}</div>
-                </div>
-              ))}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <img
+                src={enaudinMapa}
+                alt="Mapa do evento"
+                style={{ width:"100%", maxWidth:480, objectFit:"contain", alignSelf:"stretch" }}
+              />
             </div>
           </div>
         </div>
@@ -170,7 +149,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
             <p className="section-sub">Especialistas em auditoria, governança e controle público</p>
           </div>
           <div className="palestrantes-grid">
-            {palestrantes.map(p => (
+            {palestrantes.filter(p => p.destaque).map(p => (
               <div key={p.id} className="palestrante-card">
                 {p.foto_url
                   ? <img src={p.foto_url} alt={p.nome} className="palestrante-avatar" style={{ objectFit:"cover", fontSize:0 }} />

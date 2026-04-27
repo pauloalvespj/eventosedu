@@ -11,11 +11,11 @@ export function Toast({ toast }) {
 }
 
 // ── Modal ─────────────────────────────────────────────────────
-export function Modal({ show, onClose, title, children }) {
+export function Modal({ show, onClose, title, children, wide }) {
   if (!show) return null;
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" style={wide ? { maxWidth: 720 } : undefined}>
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
@@ -171,7 +171,7 @@ export const QRCodeCanvas = forwardRef(function QRCodeCanvas({ value, size = 200
         canvas.height = size;
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = "#0f3460";
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--navy").trim() || "#0f3460";
         for (let row = 0; row < moduleCount; row++) {
           for (let col = 0; col < moduleCount; col++) {
             if (qr.isDark(row, col)) {

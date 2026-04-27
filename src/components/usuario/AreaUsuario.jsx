@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faMicrophone, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue } from "../../utils/helpers";
+import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue, formatCPF } from "../../utils/helpers";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit, AvatarUpload } from "../base/index";
 import { ForumView } from "../forum/ForumView";
@@ -58,7 +58,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const isPalestrante = user.role === "palestrante";
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
-  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", instituicao: user.instituicao || "", cargo: user.cargo || "", outraInst: false });
+  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
   const [navAberta, setNavAberta] = useState(false);
   const fileRefs = useRef({});
@@ -78,7 +78,13 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const totalPresentes_pal = minhasPalestras.reduce((s, a) => s + presencas.filter(p => p.atividade_id === a.id).length, 0);
 
   async function salvarEdicao() {
-    const updates = { nome: formEdit.nome.trim() || user.nome, instituicao: formEdit.instituicao, cargo: formEdit.cargo };
+    const updates = {
+      nome: formEdit.nome.trim() || user.nome,
+      cpf: formEdit.cpf,
+      instituicao: formEdit.instituicao,
+      cargo: formEdit.cargo,
+      ...(isPalestrante && { titulo: formEdit.titulo, area: formEdit.area, mini_bio: formEdit.mini_bio }),
+    };
     if (setUser) setUser(prev => ({ ...prev, ...updates }));
     await atualizarProfile(user.id, updates);
     setEditando(false);
@@ -121,6 +127,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     ["forum",        "💬 Fórum"],
     ["ranking",      "🏅 Ranking"],
     ["rede",         "🤝 Rede"],
+    ["meus_dados",   "👤 Meus Dados"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
     ["minhas_palestras", "🎙 Minhas Palestras"],
@@ -132,7 +139,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
 
   // Cor do topbar
   const topbarBg = isPalestrante
-    ? "linear-gradient(90deg,#0a2040 0%,#1d6a6a 100%)"
+    ? "linear-gradient(90deg,var(--hero-dark),var(--hero))"
     : "var(--navy)";
 
   const abaLabel = ABAS.find(([k]) => k === aba)?.[1] || "";
@@ -140,7 +147,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   return (
     <div className="part-layout">
       {/* ── MOBILE HEADER ── */}
-      <div className="mobile-header" style={{ background: isPalestrante ? "linear-gradient(90deg,#0a2040,#1a4a4a)" : "var(--navy-dark)" }}>
+      <div className="mobile-header" style={{ background: isPalestrante ? "linear-gradient(90deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)" }}>
         <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
           <span/><span/><span/>
         </button>
@@ -154,7 +161,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
       {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
 
       {/* ── SIDEBAR ── */}
-      <div className={`part-sidebar${navAberta ? " open" : ""}`} style={{ background: isPalestrante ? "linear-gradient(180deg,#0a2040 0%,#0d3350 60%,#1a4a4a 100%)" : "var(--navy-dark)" }}>
+      <div className={`part-sidebar${navAberta ? " open" : ""}`} style={{ background: isPalestrante ? "linear-gradient(180deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)" }}>
         <div className="part-sidebar-header">
           <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"0.75rem" }}>
             <AvatarUpload
@@ -197,7 +204,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             {/* ── PALESTRANTE ── */}
             {isPalestrante && (
               <div>
-                <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
+                <div style={{ background:"linear-gradient(135deg,var(--hero-dark),var(--hero))", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
                   <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")} size={56} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Bem-vindo(a) · Palestrante</div>
@@ -209,14 +216,14 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
                   </div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))", gap:"1rem", marginBottom:"1.5rem" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"1rem", marginBottom:"1.5rem" }}>
                   {(() => {
                     const avsTotal = avaliacoes.filter(av => minhasPalestras.some(a=>a.id===av.atividade_id));
                     const mediaGeral = avsTotal.length ? (avsTotal.reduce((s,av)=>s+av.estrelas,0)/avsTotal.length).toFixed(1) : "–";
                     return [
                       { n:minhasPalestras.length, l:"Minhas Palestras", ic:"🎙", c:"teal" },
                       { n:`${totalCH_pal}h`, l:"Carga Horária", ic:"⏱", c:"navy" },
-                      { n:totalPresentes_pal, l:"Participantes Presentes", ic:"👥", c:"success" },
+                      { n:totalPresentes_pal, l:"Presentes", ic:"👥", c:"success" },
                       { n:mediaGeral !== "–" ? `${mediaGeral}★` : "–", l:`Avaliação Média (${avsTotal.length})`, ic:"⭐", c:"gold" },
                     ];
                   })().map((c,i) => (
@@ -227,16 +234,37 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     </div>
                   ))}
                 </div>
-                <div className="presenca-card">
-                  <h3 style={{ fontWeight:700, color:"var(--navy)", marginBottom:"1rem" }}>Meus dados</h3>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem" }}>
-                    {[["CPF",user.cpf||"–"],["Nome",user.nome],["Instituição",user.instituicao||"–"],["Cargo/Título",user.cargo||user.titulo||"–"],["E-mail",user.email]].map(([k,v]) => (
-                      <div key={k}>
-                        <div style={{ fontSize:"0.72rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.2rem" }}>{k}</div>
-                        <div style={{ fontSize:"0.9rem", color:"var(--text)" }}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
+
+                {/* Próximas Palestras */}
+                <div>
+                  <h3 style={{ fontWeight:700, color:"var(--navy)", marginBottom:"1rem", fontSize:"1rem" }}>Minhas Próximas Palestras</h3>
+                  {minhasPalestras.length === 0 ? (
+                    <div className="presenca-card" style={{ color:"var(--text3)", textAlign:"center", padding:"2rem" }}>Nenhuma palestra cadastrada.</div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
+                      {minhasPalestras
+                        .slice()
+                        .sort((a,b) => (a.dia||"").localeCompare(b.dia||"") || (a.horario||"").localeCompare(b.horario||""))
+                        .map(a => (
+                          <div key={a.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.25rem 1.5rem", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
+                            <div style={{ background:"var(--hero-gradient)", borderRadius:"var(--radius-sm)", padding:"0.6rem 1rem", textAlign:"center", minWidth:80, flexShrink:0 }}>
+                              <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{diaSemana(a.dia)}</div>
+                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1.2 }}>{formatData(a.dia)}</div>
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontWeight:700, fontSize:"0.97rem", color:"var(--navy)", marginBottom:"0.2rem" }}>{a.titulo}</div>
+                              <div style={{ fontSize:"0.82rem", color:"var(--text3)" }}>{event.nome}</div>
+                              {a.local && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.15rem" }}>📍 {a.local}</div>}
+                            </div>
+                            <div style={{ textAlign:"right", flexShrink:0 }}>
+                              <div style={{ fontFamily:"monospace", fontSize:"1.1rem", fontWeight:700, color:"var(--navy)" }}>{a.horario}{a.horario_fim ? ` – ${a.horario_fim}` : ""}</div>
+                              {a.carga_horaria > 0 && <div style={{ fontSize:"0.72rem", color:"var(--text3)", marginTop:"0.15rem" }}>{a.carga_horaria}h</div>}
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -262,8 +290,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                       {event.nome_completo && event.nome_completo !== event.nome && (
                         <div style={{ fontSize:"0.88rem", color:"rgba(255,255,255,0.7)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
                       )}
-                      {event.tema && (
-                        <div style={{ fontSize:"0.82rem", color:"var(--white-low)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.tema}</div>
+                      {event.subtitulo && (
+                        <div style={{ fontSize:"0.82rem", color:"var(--white-low)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.subtitulo}</div>
                       )}
                       <div style={{ display:"flex", gap:"1.5rem", flexWrap:"wrap", marginTop:"0.5rem" }}>
                         <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📅 {formatData(event.data_inicio)}{event.data_fim !== event.data_inicio ? ` – ${formatData(event.data_fim)}` : ""}</span>
@@ -324,7 +352,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                       )}
                     </div>
                     {/* Coluna direita — credencial */}
-                    <div style={{ background:"linear-gradient(135deg,#0a1f40,#0f3460 55%,#1d6a6a)", padding:"1.5rem", color:"#fff", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                    <div style={{ background:"linear-gradient(135deg,var(--hero-dark),var(--hero))", padding:"1.5rem", color:"#fff", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
                       <div>
                         <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--white-faint)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
                         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", marginBottom:"0.2rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
@@ -773,7 +801,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               <button className="btn btn-sm btn-outline" onClick={()=>setAba("dashboard")}>← Voltar</button>
               <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:"1.3rem",color:"var(--navy)" }}>🪪 Minha Credencial</h2>
             </div>
-            <div style={{ background:"linear-gradient(135deg,#0a1f40 0%,#0f3460 60%,#1d6a6a 100%)",borderRadius:"var(--radius-lg)",padding:"2rem",color:"#fff",maxWidth:420,marginBottom:"1.5rem",border:"2px solid rgba(201,168,76,0.4)" }}>
+            <div style={{ background:"var(--hero-gradient)",borderRadius:"var(--radius-lg)",padding:"2rem",color:"#fff",maxWidth:420,marginBottom:"1.5rem",border:"2px solid var(--gold-border)" }}>
               <div style={{ fontSize:"0.7rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--white-low)",marginBottom:"1.25rem" }}>{event.nome} · {isPalestrante?"Palestrante":"Participante"}</div>
               <div style={{ display:"flex",gap:"1rem",alignItems:"flex-start",marginBottom:"1.5rem" }}>
                 <div style={{ width:52,height:52,borderRadius:"50%",background:"rgba(201,168,76,0.2)",border:"2px solid var(--gold)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:"1.2rem",fontWeight:700,color:"var(--gold-light)",flexShrink:0 }}>
@@ -839,6 +867,114 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             onSeguir={onSeguir}
             onDesseguir={onDesseguir}
           />
+        )}
+
+        {aba === "meus_dados" && (
+          <div style={{ maxWidth: 760 }}>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"0.25rem" }}>Meus Dados</h2>
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Informações do seu perfil no evento</p>
+            </div>
+
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem" }}>
+              {/* Avatar + cabeçalho */}
+              <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.75rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+                <AvatarUpload
+                  userId={user.id}
+                  fotoUrl={user.foto_url}
+                  iniciais={user.foto_iniciais || user.nome.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                  size={72}
+                  onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
+                />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.15rem" }}>{user.nome}</div>
+                  <div style={{ fontSize: "0.82rem", color: "var(--text3)" }}>{user.email}</div>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text3)", marginTop: 2 }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
+                </div>
+                {!editando && (
+                  <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }}
+                    onClick={() => { setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false }); setEditando(true); }}>
+                    ✏️ Editar
+                  </button>
+                )}
+              </div>
+
+              {editando ? (
+                <div>
+                  <div className="form-grid">
+                    <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                      <label className="form-label">Nome completo</label>
+                      <input className="form-input" value={formEdit.nome} onChange={e => setFormEdit(f => ({ ...f, nome: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">CPF</label>
+                      <input className="form-input" style={{ fontFamily: "monospace" }} placeholder="000.000.000-00"
+                        value={formEdit.cpf} onChange={e => setFormEdit(f => ({ ...f, cpf: formatCPF(e.target.value) }))} maxLength={14} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">E-mail</label>
+                      <input className="form-input" value={user.email} disabled style={{ background: "var(--surface2)", color: "var(--text3)" }} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                      <label className="form-label">Cargo / Função</label>
+                      <input className="form-input" value={formEdit.cargo} onChange={e => setFormEdit(f => ({ ...f, cargo: e.target.value }))} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                      <label className="form-label">Instituição</label>
+                      <select className="form-input" value={instituicoes.filter(i => i.ativo).some(i => i.nome === formEdit.instituicao || i.sigla === formEdit.instituicao) ? formEdit.instituicao : (formEdit.instituicao ? "__outro__" : "")}
+                        onChange={e => setFormEdit(f => ({ ...f, instituicao: e.target.value === "__outro__" ? "" : e.target.value, outraInst: e.target.value === "__outro__" }))}>
+                        <option value="">Selecione...</option>
+                        {instituicoes.filter(i => i.ativo).map(i => <option key={i.id} value={i.sigla}>{i.sigla} — {i.nome}</option>)}
+                        <option value="__outro__">Outra (digitar)</option>
+                      </select>
+                      {formEdit.outraInst && (
+                        <input className="form-input" style={{ marginTop: "0.4rem" }} placeholder="Nome da instituição"
+                          value={formEdit.instituicao} onChange={e => setFormEdit(f => ({ ...f, instituicao: e.target.value }))} autoFocus />
+                      )}
+                    </div>
+                    {isPalestrante && (<>
+                      <div className="form-group">
+                        <label className="form-label">Título / Formação</label>
+                        <input className="form-input" value={formEdit.titulo} onChange={e => setFormEdit(f => ({ ...f, titulo: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Área de Atuação</label>
+                        <input className="form-input" value={formEdit.area} onChange={e => setFormEdit(f => ({ ...f, area: e.target.value }))} />
+                      </div>
+                      <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                        <label className="form-label">Mini Biografia</label>
+                        <textarea className="form-input" rows={3} value={formEdit.mini_bio} onChange={e => setFormEdit(f => ({ ...f, mini_bio: e.target.value }))} />
+                      </div>
+                    </>)}
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                    <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => setEditando(false)}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
+                  {[
+                    ["Nome",        user.nome,        "1/-1"],
+                    ["CPF",         user.cpf,         null],
+                    ["E-mail",      user.email,       null],
+                    ["Cargo",       user.cargo,       "1/-1"],
+                    ["Instituição", user.instituicao, "1/-1"],
+                    ...(isPalestrante ? [
+                      ["Título",       user.titulo,   null],
+                      ["Área",         user.area,     null],
+                      ["Mini Bio",     user.mini_bio, "1/-1"],
+                    ] : []),
+                  ].map(([label, val, span]) => (
+                    <div key={label} style={span ? { gridColumn: span } : {}}>
+                      <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>{label}</div>
+                      <div style={{ fontSize: "0.88rem", color: "var(--text)", lineHeight: 1.5 }}>{val || <span style={{ color: "var(--text3)" }}>—</span>}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
       </div>

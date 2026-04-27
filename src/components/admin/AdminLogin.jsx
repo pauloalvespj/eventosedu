@@ -9,7 +9,7 @@ export function AdminLogin({ onLogin, instituicoes = [], showToast }) {
   const [showInscricao, setShowInscricao] = useState(false);
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0a1f40 0%,#0f3460 60%,#1d6a6a 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+    <div style={{ minHeight: "100vh", background: "var(--hero-gradient)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>

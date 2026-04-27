@@ -110,7 +110,7 @@ export function PaginaPresenca({ atividadeId, atividades, participantes, presenc
   return (
     <div className="qr-page">
       <div className="qr-card" style={{ maxWidth: 460 }}>
-        <div style={{ background: "linear-gradient(135deg,#0a2040,#0f3460)", borderRadius: "var(--radius)", padding: "1.25rem", marginBottom: "1.5rem", color: "#fff" }}>
+        <div style={{ background: "linear-gradient(135deg,var(--hero-dark),var(--hero))", borderRadius: "var(--radius)", padding: "1.25rem", marginBottom: "1.5rem", color: "#fff" }}>
           <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "0.35rem" }}>
             {TIPO_LABEL[atividade.tipo] || "Atividade"} · Confirmação de Presença
           </div>
