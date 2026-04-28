@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faCircleUser,
+  faArrowRightFromBracket, faBuilding, faCircleUser, faScroll,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
@@ -17,7 +17,8 @@ import { Programacao }          from "./sections/Programacao";
 import { GestaoParticipantes }  from "./sections/GestaoParticipantes";
 import { Credenciamento }       from "./sections/Credenciamento";
 import { Presencas }      from "./sections/Presencas";
-import { Certificados }   from "./sections/Certificados";
+import { Certificados }         from "./sections/Certificados";
+import { ModeloCertificado }    from "./sections/ModeloCertificado";
 import { Relatorios }     from "./sections/Relatorios";
 import { Avaliacoes }     from "./sections/Avaliacoes";
 import { ForumAdmin }     from "./sections/ForumAdmin";
@@ -187,6 +188,7 @@ function AdminRoutes() {
     { path: "credenciamento",    element: <Credenciamento /> },
     { path: "presencas",         element: <Presencas /> },
     { path: "certificados",      element: <Certificados /> },
+    { path: "modelo-cert",       element: <ModeloCertificado /> },
     { path: "relatorios",        element: <Relatorios /> },
     { path: "avaliacoes",        element: <Avaliacoes /> },
     { path: "forum",             element: <ForumAdmin /> },

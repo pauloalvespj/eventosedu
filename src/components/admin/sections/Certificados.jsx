@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { calcPresenca } from "../../../utils/helpers";
 import { atualizarEvento, uploadCertificado } from "../../../lib/db";
 
 export function Certificados() {
   const { event, setEvent, atividades, participantes, setParticipantes, presencas, showToast } = useAdmin();
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(null); // id do participante em upload
   const [busca, setBusca] = useState("");
   const fileRefs = useRef({});
@@ -78,6 +80,11 @@ export function Certificados() {
       <div className="admin-topbar">
         <div><h1>Certificados</h1><p>Gestão e emissão</p></div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button className="btn btn-outline" onClick={() => navigate("/painel/modelo-cert")}
+            style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FontAwesomeIcon icon={faScroll} />
+            Configurar modelo
+          </button>
           <button
             className={`btn ${event.certificado_disponivel ? "btn-success" : "btn-outline"}`}
             onClick={toggleCertificado}
@@ -178,13 +185,13 @@ export function Certificados() {
           <thead>
             <tr>
               <th>Nome</th><th>CPF</th><th>Instituição</th><th>Cargo</th>
-              <th>CH Cumprida</th><th>Percentual</th><th>Status</th>
+              <th>CH Cumprida</th><th>Status</th>
               {event.certificado_externo && <th style={{ width: 110 }}>Certificado</th>}
             </tr>
           </thead>
           <tbody>
             {participantesFiltrados.length === 0 && (
-              <tr><td colSpan={event.certificado_externo ? 8 : 7} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para "{busca}".</td></tr>
+              <tr><td colSpan={event.certificado_externo ? 7 : 6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para "{busca}".</td></tr>
             )}
             {participantesFiltrados.map(p => {
               const r = calcPresenca(p.id, atividades, presencas, event);
@@ -196,14 +203,6 @@ export function Certificados() {
                   <td>{p.instituicao}</td>
                   <td>{p.cargo}</td>
                   <td>{r.chCumprida}h / {r.chTotal}h</td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${Math.min(r.pct, 100)}%`, background: r.apto ? "var(--success)" : "var(--danger)", borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{r.pct}%</span>
-                    </div>
-                  </td>
                   <td><span className={`badge badge-${r.apto ? "success" : "danger"}`}>{r.apto ? "APTO" : "NÃO APTO"}</span></td>
                   {event.certificado_externo && <td>
                     <input

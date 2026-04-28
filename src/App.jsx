@@ -31,6 +31,7 @@ import { AreaUsuario } from "./components/usuario/AreaUsuario";
 import { PainelAdmin } from "./components/admin/PainelAdmin";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
+import { ValidarCertificado } from "./components/ValidarCertificado";
 
 // Converte dados mock para o formato profiles (array unificado)
 const INITIAL_PROFILES = [
@@ -388,6 +389,9 @@ export default function App() {
       <Toast toast={toast} />
 
       <Routes>
+        {/* Validação pública de certificado — sem autenticação */}
+        <Route path="/validar" element={<ValidarCertificado />} />
+
         {/* /admin e /admin/* redirecionam para /painel */}
         <Route path="/admin"   element={<Navigate to="/painel" replace />} />
         <Route path="/admin/*" element={<Navigate to="/painel" replace />} />

@@ -481,6 +481,16 @@ export async function uploadCertificado(participanteId, file) {
   return publicUrl;
 }
 
+// Upload de assets do certificado (logos, assinaturas) — bucket: cert-assets
+export async function uploadCertAsset(eventId, campo, file) {
+  const ext = file.name.split(".").pop();
+  const path = `evento-${eventId}/${campo}.${ext}`;
+  const { error } = await supabase.storage.from("cert-assets").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("cert-assets").getPublicUrl(path);
+  return publicUrl;
+}
+
 export async function atualizarCredenciamento(participante_id, credenciado) {
   const credenciado_em = credenciado ? new Date().toISOString() : null;
   const { error } = await supabase
