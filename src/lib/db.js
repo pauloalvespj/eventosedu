@@ -471,6 +471,16 @@ export async function atualizarEmailAuth(userId, email) {
 }
 
 
+export async function uploadCertificado(participanteId, file) {
+  const ext = file.name.split(".").pop();
+  const path = `${participanteId}.${ext}`;
+  const { error } = await supabase.storage.from("certificados").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("certificados").getPublicUrl(path);
+  await supabase.from("profiles").update({ certificado_url: publicUrl }).eq("id", participanteId);
+  return publicUrl;
+}
+
 export async function atualizarCredenciamento(participante_id, credenciado) {
   const credenciado_em = credenciado ? new Date().toISOString() : null;
   const { error } = await supabase
