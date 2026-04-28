@@ -8,6 +8,7 @@ import { atualizarEvento, uploadCertificado } from "../../../lib/db";
 export function Certificados() {
   const { event, setEvent, atividades, participantes, setParticipantes, presencas, showToast } = useAdmin();
   const [uploading, setUploading] = useState(null); // id do participante em upload
+  const [busca, setBusca] = useState("");
   const fileRefs = useRef({});
 
   async function toggleCertificado() {
@@ -50,6 +51,16 @@ export function Certificados() {
 
   const cargaHorariaTotal = atividades.filter(a => a.conta_certificado).reduce((s, a) => s + a.carga_horaria, 0);
   const aptos = participantes.filter(p => calcPresenca(p.id, atividades, presencas, event).apto);
+
+  const buscaNorm = busca.trim().toLowerCase().replace(/\D/g, x => x === "" ? "" : x);
+  const participantesFiltrados = busca.trim()
+    ? participantes.filter(p => {
+        const termo = busca.trim().toLowerCase();
+        const cpfLimpo = (p.cpf || "").replace(/\D/g, "");
+        const buscaCpf = busca.trim().replace(/\D/g, "");
+        return p.nome.toLowerCase().includes(termo) || (buscaCpf && cpfLimpo.includes(buscaCpf));
+      })
+    : participantes;
 
   function exportarLista() {
     const header = "Nome,CPF,Instituição,Cargo,CH Cumprida,Percentual,Status\n";
@@ -147,7 +158,22 @@ export function Certificados() {
       </div>
 
       <div className="table-wrap">
-        <div className="table-header"><span className="table-title">Lista de Participantes</span></div>
+        <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <span className="table-title">Lista de Participantes</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Buscar por nome ou CPF…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              style={{ width: 220, marginBottom: 0 }}
+            />
+            {busca && (
+              <button className="btn btn-sm btn-outline" onClick={() => setBusca("")} style={{ padding: "0.35rem 0.6rem" }}>✕</button>
+            )}
+          </div>
+        </div>
         <table>
           <thead>
             <tr>
@@ -157,7 +183,10 @@ export function Certificados() {
             </tr>
           </thead>
           <tbody>
-            {participantes.map(p => {
+            {participantesFiltrados.length === 0 && (
+              <tr><td colSpan={event.certificado_externo ? 8 : 7} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para "{busca}".</td></tr>
+            )}
+            {participantesFiltrados.map(p => {
               const r = calcPresenca(p.id, atividades, presencas, event);
               const isUploading = uploading === p.id;
               return (

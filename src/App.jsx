@@ -29,7 +29,7 @@ import { FormLogin } from "./components/auth/FormLogin";
 import { LandingPage } from "./components/landing/LandingPage";
 import { AreaUsuario } from "./components/usuario/AreaUsuario";
 import { PainelAdmin } from "./components/admin/PainelAdmin";
-import { AdminLogin } from "./components/admin/AdminLogin";
+import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
 
 // Converte dados mock para o formato profiles (array unificado)
@@ -395,7 +395,7 @@ export default function App() {
         {/* Rota principal — /painel e /painel/* para todos os usuários autenticados */}
         <Route path="/painel/*" element={
           !user
-            ? <AdminLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
+            ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
             : ["super_admin","admin","credenciador"].includes(user.role)
               ? <PainelAdmin {...adminProps} />
               : <AreaUsuario

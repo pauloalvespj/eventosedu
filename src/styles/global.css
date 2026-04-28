@@ -320,6 +320,13 @@ tr:hover td{background:var(--surface2)}
   .dash-event-grid{grid-template-columns:1fr}
   .dash-participant-card{grid-template-columns:1fr}
   .dash-stats-3{grid-template-columns:1fr}
+  /* Evento card — countdown abaixo */
+  .dash-event-card{flex-direction:column !important;align-items:stretch !important}
+  .dash-countdown{align-self:center;width:auto !important;min-width:0 !important;padding:0.75rem 1.5rem !important}
+  /* QR code centralizado */
+  .dash-qr-wrap{justify-content:center !important}
+  /* Cards palestrante — 2 colunas no mobile */
+  .dash-cards-pal{grid-template-columns:repeat(2,1fr) !important}
   /* Dashboard admin — mobile */
   .dash-metrics{grid-template-columns:repeat(2,1fr)}
   .prog-item{grid-template-columns:60px 1fr;}.prog-item > *:last-child{grid-column:1/-1}

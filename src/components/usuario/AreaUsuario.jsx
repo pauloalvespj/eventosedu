@@ -216,7 +216,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
                   </div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"1rem", marginBottom:"1.5rem" }}>
+                <div className="dash-cards-pal" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"1rem", marginBottom:"1.5rem" }}>
                   {(() => {
                     const avsTotal = avaliacoes.filter(av => minhasPalestras.some(a=>a.id===av.atividade_id));
                     const mediaGeral = avsTotal.length ? (avsTotal.reduce((s,av)=>s+av.estrelas,0)/avsTotal.length).toFixed(1) : "–";
@@ -284,7 +284,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               return (
                 <>
                   {/* 1. Card Evento */}
-                  <div style={{ background:"var(--hero)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
+                  <div className="dash-event-card" style={{ background:"var(--hero)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1rem", flexWrap:"wrap" }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.75rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1, marginBottom:"0.3rem" }}>{event.nome}</div>
                       {event.nome_completo && event.nome_completo !== event.nome && (
@@ -298,7 +298,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                         <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📍 {event.local}</span>
                       </div>
                     </div>
-                    <div style={{ textAlign:"center", flexShrink:0, background:"var(--gold-tint)", border:"1.5px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1rem 1.5rem", minWidth:90 }}>
+                    <div className="dash-countdown" style={{ textAlign:"center", flexShrink:0, background:"var(--gold-tint)", border:"1.5px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1rem 1.5rem", minWidth:90 }}>
                       {encerrado ? (
                         <>
                           <div style={{ fontSize:"1.5rem", marginBottom:"0.2rem" }}>✓</div>
@@ -352,15 +352,15 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                       )}
                     </div>
                     {/* Coluna direita — credencial */}
-                    <div style={{ background:"linear-gradient(135deg,var(--hero-dark),var(--hero))", padding:"1.5rem", color:"#fff", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                    <div style={{ background:"var(--surface2)", padding:"1.5rem", display:"flex", flexDirection:"column", justifyContent:"space-between", borderLeft:"1px solid var(--border)" }}>
                       <div>
-                        <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--white-faint)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
-                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", marginBottom:"0.2rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
-                        <div style={{ fontSize:"0.78rem", color:"var(--white-mid)", marginBottom:"0.75rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                        <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text3)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
+                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", color:"var(--navy)", marginBottom:"0.2rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
+                        <div style={{ fontSize:"0.78rem", color:"var(--text2)", marginBottom:"0.75rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
                         <span className={`badge badge-${user.credenciado?"success":"warn"}`} style={{ fontSize:"0.7rem" }}>{user.credenciado?"✓ Credenciado":"Aguardando credenciamento"}</span>
                       </div>
-                      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:"1rem" }}>
-                        <div style={{ cursor:"pointer", padding:4, background:"rgba(255,255,255,0.06)", borderRadius:10, border:"1px solid rgba(255,255,255,0.12)" }} onClick={()=>setAba("credencial_qr")} title="Ver credencial completa">
+                      <div className="dash-qr-wrap" style={{ display:"flex", justifyContent:"flex-end", marginTop:"1rem" }}>
+                        <div style={{ cursor:"pointer", padding:4, background:"var(--surface)", borderRadius:10, border:"1px solid var(--border)" }} onClick={()=>setAba("credencial_qr")} title="Ver credencial completa">
                           <QRCodeCanvas value={`ENAUDIN:PARTICIPANTE:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={120}/>
                         </div>
                       </div>

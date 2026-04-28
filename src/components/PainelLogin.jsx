@@ -1,11 +1,11 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShieldHalved } from "@fortawesome/free-solid-svg-icons";
-import { FormLogin } from "../auth/FormLogin";
-import { FormInscricao } from "../auth/FormInscricao";
-import { Modal } from "../base/index";
+import { faCalendarDays } from "@fortawesome/free-solid-svg-icons";
+import { FormLogin } from "./auth/FormLogin";
+import { FormInscricao } from "./auth/FormInscricao";
+import { Modal } from "./base/index";
 import { useState } from "react";
 
-export function AdminLogin({ onLogin, instituicoes = [], showToast }) {
+export function PainelLogin({ onLogin, instituicoes = [], showToast }) {
   const [showInscricao, setShowInscricao] = useState(false);
 
   return (
@@ -14,10 +14,10 @@ export function AdminLogin({ onLogin, instituicoes = [], showToast }) {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "2px solid var(--gold)", marginBottom: "1rem" }}>
-            <FontAwesomeIcon icon={faShieldHalved} style={{ color: "var(--gold)", fontSize: "1.4rem" }} />
+            <FontAwesomeIcon icon={faCalendarDays} style={{ color: "var(--gold)", fontSize: "1.4rem" }} />
           </div>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#fff", marginBottom: "0.25rem" }}>Painel Admin</div>
-          <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.45)" }}>Acesso restrito à equipe organizadora</div>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#fff", marginBottom: "0.25rem" }}>Enaudin</div>
+          <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.45)" }}>Acesse sua área do evento</div>
         </div>
 
         {/* Card de login */}

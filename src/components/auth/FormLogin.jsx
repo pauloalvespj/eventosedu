@@ -212,13 +212,6 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
             Inscreva-se gratuitamente
           </button>
         </div>
-        <div style={{ background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: "0.75rem 1rem", fontSize: "0.75rem", color: "var(--text3)", lineHeight: 1.9 }}>
-          <strong style={{ color: "var(--text2)" }}>Credenciais de demo:</strong><br />
-          Super Admin: admin@enaudin.gov.br / admin123<br />
-          Credenciador: recepcao@enaudin.gov.br / rec2026<br />
-          Participante: ana.clara@exemplo.com / 123456<br />
-          Palestrante: eduardo@exemplo.com / 123456
-        </div>
       </div>
     </div>
   );
