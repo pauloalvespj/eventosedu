@@ -235,9 +235,9 @@ export function gerarHtmlCertificado(user, event, presencaCalc, minasPresencas =
     .ass-linha{border-top:1px solid;width:140px;margin:.1rem auto .25rem}
     .ass-nome{font-size:10.5px;color:#333;font-weight:600}
     .ass-cargo{font-size:10px;color:#666}
-    .footer{font-size:9px;color:#aaa;margin-top:1rem;line-height:1.7}
-    .footer-hash{font-family:monospace;background:#f5f5f5;padding:.1rem .4rem;border-radius:3px;font-size:9px;color:#888;letter-spacing:.04em}
-    .footer-link{color:#888;text-decoration:none;font-size:9px}
+    .footer{position:absolute;bottom:1rem;left:2.5rem;right:2.5rem;font-size:8.5px;color:#bbb;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e8e8e8;padding-top:.4rem}
+    .footer-hash{font-family:monospace;color:#aaa;letter-spacing:.04em}
+    .footer-link{color:#aaa;text-decoration:none}
     @media print{body{background:#fff;padding:0}@page{size:A4 landscape;margin:0}}
   `;
 
@@ -258,9 +258,8 @@ export function gerarHtmlCertificado(user, event, presencaCalc, minasPresencas =
   ${progHtml}
   <div class="assinaturas">${assHtml}</div>
   <div class="footer">
-    Emitido em ${new Date().toLocaleDateString("pt-BR")} · ${event.nome}<br>
-    Código de autenticidade: <span class="footer-hash">${gerarHashCertificado(user.id, event.id)}</span><br>
-    Verifique em: <a class="footer-link" href="${baseUrl}/validar?u=${user.id}&e=${event.id}&s=${gerarHashCertificado(user.id, event.id)}">${baseUrl}/validar</a>
+    <span>Emitido em ${new Date().toLocaleDateString("pt-BR")} · ${event.nome}</span>
+    <span>Cód.: <span class="footer-hash">${gerarHashCertificado(user.id, event.id)}</span> · <a class="footer-link" href="${baseUrl}/validar?u=${user.id}&e=${event.id}&s=${gerarHashCertificado(user.id, event.id)}">${baseUrl}/validar</a></span>
   </div>
 </div>
 <script>window.onload=()=>window.print()</script>
