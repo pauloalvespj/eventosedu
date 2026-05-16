@@ -53,24 +53,24 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
 
       {/* HERO */}
       <section className="hero" id="home">
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 860, margin: "0 auto" }}>
+        <div style={{ position:"relative", zIndex:1, width:"100%", maxWidth:860, margin:"0 auto" }}>
           {event.logo_url ? (
-            <div style={{ marginBottom: "1.25rem" }}>
+            <div style={{ marginBottom:"1.25rem" }}>
               <img src={event.logo_url} alt={event.nome}
-                style={{ maxHeight: 200, maxWidth: 580, objectFit: "contain", filter: isLightTheme(event) ? "none" : "drop-shadow(0 2px 12px rgba(0,0,0,0.35))" }} />
+                style={{ width:"100%", maxHeight:200, maxWidth:560, objectFit:"contain", filter: isLightTheme(event) ? "none" : "drop-shadow(0 2px 12px rgba(0,0,0,0.35))" }} />
             </div>
           ) : (
-            <h1 style={{ fontSize: "clamp(2.8rem,7vw,5rem)", marginBottom: "0.5rem" }}>
+            <h1 style={{ fontSize:"clamp(2.8rem,7vw,5rem)", marginBottom:"0.5rem" }}>
               <em>{event.nome}</em>
             </h1>
           )}
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(0.95rem,2vw,1.15rem)", color: "var(--hero-subtext)", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(0.9rem,2vw,1.1rem)", color:"var(--hero-subtext)", marginBottom:"1.25rem", lineHeight:1.6, maxWidth:680, margin:"0 auto 1.25rem" }}>
             {event.nome_completo}
           </div>
-          <div style={{ display:"inline-block", background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.6rem", borderRadius:"var(--radius-sm)", fontSize:"1rem", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6 }}>
+          <div style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
             {event.subtitulo}
           </div>
-          <div style={{ fontFamily:"'Poppins',sans-serif", fontSize:"clamp(1.8rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
+          <div style={{ fontFamily:"'Poppins',sans-serif", fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
             {formatPeriodo(event.data_inicio, event.data_fim)}{event.data_fim ? ` · ${event.data_fim.split("-")[0]}` : event.data_inicio ? ` · ${event.data_inicio.split("-")[0]}` : ""}
           </div>
           <div className="hero-meta" style={{ marginBottom:"2.5rem" }}>
@@ -111,6 +111,10 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           {event.programacao_visivel === false ? (
             /* ── Em breve ── */
             <div style={{ textAlign:"center" }}>
+              <div className="section-header centered">
+                <div style={{ color:"var(--section-label)", fontSize:"0.8rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"0.5rem" }}>Agenda</div>
+                <h2 className="section-title">Programação</h2>
+              </div>
               <span style={{ display:"inline-block", background:"var(--gold-tint)", color:"var(--teal)", border:"1px solid var(--gold-border)", borderRadius:50, padding:"0.3rem 1rem", fontSize:"0.75rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"1.5rem" }}>
                 Em breve
               </span>
@@ -180,12 +184,12 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
       {/* PALESTRANTES */}
       <section className="section" data-section="accent" id="palestrantes">
         <div className="container">
-          {palestrantes.filter(p => p.destaque).length === 0 ? (
+          {event.palestrantes_visivel === false || palestrantes.filter(p => p.destaque).length === 0 ? (
             <div style={{ textAlign:"center" }}>
               <div style={{ color: "var(--sec3-text-soft)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Convidados</div>
               <h2 className="section-title" style={{ marginBottom:"0.5rem" }}>Palestrantes</h2>
               {event.palestrantes_subtitulo && <p className="section-sub" style={{ marginBottom:"1.5rem" }}>{event.palestrantes_subtitulo}</p>}
-              <span style={{ display:"inline-block", background:"var(--gold-tint)", color:"var(--sec3-text)", border:"2px solid var(--gold-border)", borderRadius:50, padding:"0.75rem 2.5rem", fontSize:"1rem", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase" }}>
+              <span style={{ display:"inline-block", background:"rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.90)", border:"1px solid rgba(255,255,255,0.40)", borderRadius:50, padding:"0.3rem 1rem", fontSize:"0.75rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"1.5rem" }}>
                 Em breve
               </span>
             </div>

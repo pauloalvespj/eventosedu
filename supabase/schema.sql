@@ -33,6 +33,7 @@ create table if not exists profiles (
   sexo          text,
   credenciado   boolean not null default false,
   credenciado_em timestamptz,
+  destaque      boolean not null default false,
   ativo         boolean not null default true,
   created_at    timestamptz not null default now()
 );
@@ -54,6 +55,7 @@ create table if not exists events (
   percentual_minimo   int not null default 75,
   carga_horaria_total int not null default 16,
   programacao_visivel     boolean not null default true,
+  palestrantes_visivel    boolean not null default true,
   logo_url                text,
   palestrantes_subtitulo  text
 );

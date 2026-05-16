@@ -1,22 +1,31 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faTrash, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, AvatarUpload } from "../../base/index";
 import { InstSelect } from "./InstSelect";
-import { atualizarProfile } from "../../../lib/db";
+import { atualizarProfile, atualizarEvento } from "../../../lib/db";
 
 export function Palestrantes() {
-  const { palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
+  const { event, setEvent, palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
   const [busca, setBusca]       = useState("");
+
+  const visivel = event?.palestrantes_visivel !== false;
+
+  async function toggleVisibilidade() {
+    const novoValor = !visivel;
+    setEvent(ev => ({ ...ev, palestrantes_visivel: novoValor }));
+    atualizarEvento(event.id, { palestrantes_visivel: novoValor });
+    showToast(novoValor ? "Palestrantes liberados no site!" : "Palestrantes bloqueados (Em breve)", novoValor ? "success" : "warn");
+  }
 
   async function salvar() {
     if (!formPal.nome) { showToast("Nome obrigatório", "error"); return; }
     if (formPal.id) {
       setPalestrantes(palestrantes.map(p => p.id === formPal.id ? formPal : p));
-      atualizarProfile(formPal.id, { nome: formPal.nome, titulo: formPal.titulo, area: formPal.area, mini_bio: formPal.mini_bio, instituicao: formPal.instituicao });
+      atualizarProfile(formPal.id, { nome: formPal.nome, titulo: formPal.titulo, area: formPal.area, mini_bio: formPal.mini_bio, instituicao: formPal.instituicao, destaque: formPal.destaque ?? false });
     } else {
       const iniciais = formPal.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
       setPalestrantes([...palestrantes, { ...formPal, id: `local-${Date.now()}`, foto_iniciais: iniciais, role: "palestrante" }]);
@@ -30,7 +39,18 @@ export function Palestrantes() {
     <div>
       <div className="admin-topbar">
         <div><h1>Palestrantes</h1></div>
-        <button className="btn btn-primary" onClick={() => { setFormPal({}); setModalPal(true); }}>+ Novo Palestrante</button>
+        <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+          <button
+            className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
+            onClick={toggleVisibilidade}
+            title={visivel ? "Clique para bloquear (mostra Em breve no site)" : "Clique para liberar (mostra palestrantes no site)"}
+            style={{ display:"flex", alignItems:"center", gap:6 }}
+          >
+            <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
+            {visivel ? "Visível no site" : "Em breve no site"}
+          </button>
+          <button className="btn btn-primary" onClick={() => { setFormPal({}); setModalPal(true); }}>+ Novo Palestrante</button>
+        </div>
       </div>
 
       <div className="table-wrap">
@@ -86,6 +106,12 @@ export function Palestrantes() {
         <div className="form-group"><label className="form-label">Área de Atuação</label><input className="form-input" value={formPal.area || ""} onChange={e => setFormPal(f => ({ ...f, area: e.target.value }))} /></div>
         <div className="form-group"><label className="form-label">Instituição</label><InstSelect value={formPal.instituicao||""} onChange={v => setFormPal(f=>({...f,instituicao:v}))} instituicoes={instituicoes||[]} /></div>
         <div className="form-group"><label className="form-label">Mini Biografia</label><textarea className="form-input" rows={2} value={formPal.mini_bio || ""} onChange={e => setFormPal(f => ({ ...f, mini_bio: e.target.value }))} /></div>
+        <div className="form-group">
+          <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", userSelect:"none" }}>
+            <input type="checkbox" checked={formPal.destaque ?? false} onChange={e => setFormPal(f => ({ ...f, destaque: e.target.checked }))} />
+            <span className="form-label" style={{ margin:0 }}>Exibir no site (destaque)</span>
+          </label>
+        </div>
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "1rem", marginTop: "0.5rem", marginBottom: "0.5rem" }}>
           <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>Credenciais de Acesso</div>
           <div className="form-grid">
