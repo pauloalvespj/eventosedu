@@ -4,13 +4,14 @@ import { faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile } from "../../../../lib/db";
+import { atualizarProfile, adminCriarUsuario } from "../../../../lib/db";
 
 export function AbaPalestrantes() {
   const { palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
-  const [busca, setBusca]     = useState("");
+  const [busca, setBusca]       = useState("");
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
+  const [salvando, setSalvando] = useState(false);
 
   function toggleDestaque(p) {
     const novo = { ...p, destaque: !p.destaque };
@@ -27,12 +28,31 @@ export function AbaPalestrantes() {
         area: formPal.area, mini_bio: formPal.mini_bio, instituicao: formPal.instituicao,
         destaque: formPal.destaque ?? false,
       });
+      setModalPal(false);
+      showToast("Palestrante salvo!", "success");
     } else {
-      const iniciais = formPal.nome.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
-      setPalestrantes([...palestrantes, { ...formPal, id: `local-${Date.now()}`, foto_iniciais: iniciais, role: "palestrante" }]);
+      if (!formPal.email) { showToast("E-mail obrigatório para criar acesso", "error"); return; }
+      setSalvando(true);
+      const { data, error } = await adminCriarUsuario({
+        nome: formPal.nome,
+        email: formPal.email,
+        titulo: formPal.titulo,
+        area: formPal.area,
+        mini_bio: formPal.mini_bio,
+        instituicao: formPal.instituicao,
+        destaque: formPal.destaque ?? false,
+        role: "palestrante",
+        senha: formPal.senha,
+      });
+      setSalvando(false);
+      if (error) {
+        showToast("Erro ao criar palestrante: " + (error.message || JSON.stringify(error)), "error");
+        return;
+      }
+      setPalestrantes([...palestrantes, data.user]);
+      setModalPal(false);
+      showToast("Palestrante criado com acesso ao sistema!", "success");
     }
-    setModalPal(false);
-    showToast("Palestrante salvo!", "success");
   }
 
   const filtrados = palestrantes.filter(p => {
@@ -168,7 +188,9 @@ export function AbaPalestrantes() {
           </div>
         </div>
         {!formPal.id && <p style={{ fontSize: "0.78rem", color: "var(--text3)", marginBottom: "0.75rem" }}>💡 A foto pode ser adicionada após salvar o palestrante.</p>}
-        <button className="btn btn-primary btn-block" onClick={salvar}>Salvar</button>
+        <button className="btn btn-primary btn-block" onClick={salvar} disabled={salvando}>
+          {salvando ? "Criando..." : "Salvar"}
+        </button>
       </Modal>
     </div>
   );

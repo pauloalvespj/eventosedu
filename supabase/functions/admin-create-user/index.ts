@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { nome, email, cpf, cargo, instituicao, role, senha } = await req.json();
+    const { nome, email, cpf, cargo, instituicao, role, senha, titulo, area, mini_bio, destaque } = await req.json();
 
     if (!nome || !email) {
       return new Response(JSON.stringify({ error: "nome e email são obrigatórios" }), {
@@ -80,6 +80,10 @@ Deno.serve(async (req) => {
       credenciado: false,
       ativo: true,
       foto_iniciais: iniciais,
+      ...(titulo !== undefined && { titulo }),
+      ...(area !== undefined && { area }),
+      ...(mini_bio !== undefined && { mini_bio }),
+      ...(destaque !== undefined && { destaque }),
     });
 
     if (profileError) {
@@ -102,6 +106,10 @@ Deno.serve(async (req) => {
         credenciado: false,
         ativo: true,
         foto_iniciais: iniciais,
+        titulo: titulo || "",
+        area: area || "",
+        mini_bio: mini_bio || "",
+        destaque: destaque ?? false,
       },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 

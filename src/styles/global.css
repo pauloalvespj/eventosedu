@@ -368,12 +368,20 @@ tr:hover td{background:var(--surface2)}
 .hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0.4rem;display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s}
 
+.ev-view-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.ev-main-card{display:flex;justify-content:space-between;align-items:flex-start;gap:2rem}
+.ev-main-info{flex:1;min-width:0}
+.ev-inscricoes-block{flex-shrink:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;min-width:170px}
+
 /* RESPONSIVE */
 @media(max-width:768px){
   /* Landing / geral */
-  .sobre-grid,.local-card{grid-template-columns:1fr}
+  .sobre-grid,.local-card,.ev-view-grid{grid-template-columns:1fr}
+  .ev-main-card{flex-direction:column}
+  .ev-inscricoes-block{min-width:0;width:100%;border-top:1px solid var(--border);border-radius:0;border-left:none;border-right:none;border-bottom:none;background:transparent;padding:1rem 0 0}
   .form-grid{grid-template-columns:1fr}
   .form-grid-4{grid-template-columns:1fr}
+  .form-grid-4 > *{grid-column:1/-1 !important}
   .dash-event-grid{grid-template-columns:1fr}
   .dash-participant-card{grid-template-columns:1fr}
   .dash-stats-3{grid-template-columns:1fr}

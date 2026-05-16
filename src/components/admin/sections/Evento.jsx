@@ -186,13 +186,11 @@ export function Evento() {
         <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
 
           {/* ── Card principal do evento ── */}
-          <div className="card-white" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"2rem", flexWrap:"wrap", borderTop:"4px solid var(--admin-hd)" }}>
-            <div style={{ flex:1, minWidth:0 }}>
+          <div className="card-white ev-main-card" style={{ borderTop:"4px solid var(--admin-hd)" }}>
+            <div className="ev-main-info">
               <div style={{ fontSize:"0.68rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.4rem" }}>Evento</div>
-              <div style={{ marginBottom:"0.4rem" }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.8rem", fontWeight:800, color:"var(--navy)", lineHeight:1.1 }}>{event.nome}</div>
-              </div>
-              {event.subtitulo && <div style={{ fontSize:"0.9rem", color:"var(--text2)", fontStyle:"italic", marginBottom:"1.25rem", lineHeight:1.5 }}>{event.subtitulo}</div>}
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.8rem", fontWeight:800, color:"var(--navy)", lineHeight:1.1, marginBottom:"0.4rem" }}>{event.nome}</div>
+              {event.subtitulo && <div style={{ fontSize:"0.9rem", color:"var(--text2)", fontStyle:"italic", marginBottom:"1rem", lineHeight:1.5 }}>{event.subtitulo}</div>}
               <div style={{ display:"flex", gap:"2rem", flexWrap:"wrap", marginTop: event.subtitulo ? 0 : "1rem" }}>
                 {[
                   ["Período",       `${formatData(event.data_inicio)} – ${formatData(event.data_fim)}`],
@@ -207,25 +205,7 @@ export function Evento() {
                 ))}
               </div>
             </div>
-            {/* Bloco tema + inscrições */}
-            <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
-            {(() => {
-              const t = event.tema;
-              const preset = t?.preset || "azul";
-              const p = PRESETS.find(x => x.id === preset);
-              const label = preset === "custom" ? "Personalizado" : (p?.label || "Azul");
-              const hero  = preset === "custom" ? (t?.hero   || "#234c82") : (p?.hero   || "#234c82");
-              const acct  = preset === "custom" ? (t?.accent || "#c4a050") : (p?.accent || "#c4a050");
-              return (
-                <div style={{ display:"flex", alignItems:"center", gap:8, background:"var(--surface2)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem" }}>
-                  <div style={{ width:28, height:22, background:hero, borderRadius:5, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <div style={{ width:14, height:3, background:acct, borderRadius:2 }}/>
-                  </div>
-                  <span style={{ fontSize:"0.75rem", color:"var(--text2)", fontWeight:500 }}>{label}</span>
-                </div>
-              );
-            })()}
-            <div style={{ flexShrink:0, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1rem 1.25rem", minWidth:170 }}>
+            <div className="ev-inscricoes-block">
               <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.4rem" }}>Inscrições</div>
               <div style={{ fontWeight:600, fontSize:"0.88rem", color:"var(--text)", lineHeight:1.5 }}>
                 {event.inscricao_inicio ? formatData(event.inscricao_inicio) : "–"}
@@ -233,7 +213,6 @@ export function Evento() {
                 {event.inscricao_fim ? formatData(event.inscricao_fim) : "–"}
               </div>
               <InscricoesStatusBadge event={event} />
-            </div>
             </div>
           </div>
 
@@ -265,7 +244,7 @@ export function Evento() {
           </div>
 
           {/* ── Nome completo + Endereço ── */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem" }}>
+          <div className="ev-view-grid">
             <div className="card-white">
               <div style={LABEL}><FontAwesomeIcon icon={faFileLines} style={{ color:"var(--navy)" }}/>Nome Completo</div>
               <div style={{ color:"var(--text)", fontSize:"0.92rem", lineHeight:1.6 }}>{event.nome_completo || <span style={{ color:"var(--text3)" }}>–</span>}</div>
