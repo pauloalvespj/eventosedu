@@ -57,7 +57,14 @@ export function AbaPalestrantes() {
         showToast("Erro ao criar palestrante: " + (error.message || JSON.stringify(error)), "error");
         return;
       }
-      setPalestrantes([...palestrantes, data.user]);
+      // Salva campos extras que a Edge Function pode não ter processado
+      const extras = {};
+      if (formPal.titulo)    extras.titulo   = formPal.titulo;
+      if (formPal.area)      extras.area     = formPal.area;
+      if (formPal.mini_bio)  extras.mini_bio = formPal.mini_bio;
+      extras.destaque = formPal.destaque ?? false;
+      if (Object.keys(extras).length) atualizarProfile(data.user.id, extras);
+      setPalestrantes([...palestrantes, { ...data.user, ...extras }]);
       setModalPal(false);
       showToast("Palestrante criado com acesso ao sistema!", "success");
     }
