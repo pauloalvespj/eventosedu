@@ -20,6 +20,7 @@ export const INITIAL_EVENT = {
   inscricao_inicio: "2026-07-01",
   inscricao_fim: "2026-09-14",
   certificado_disponivel: false,
+  palestrantes_subtitulo: "Especialistas em auditoria, governança e controle público",
 };
 
 export const INITIAL_INSTITUICOES = [

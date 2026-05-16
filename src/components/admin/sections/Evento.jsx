@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, faFileAlt } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, faFileAlt, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { DatePickerInput } from "../../base/index";
 import { formatData } from "../../../utils/helpers";
-import { atualizarEvento } from "../../../lib/db";
+import { atualizarEvento, uploadEventLogo } from "../../../lib/db";
 import { PRESETS, applyTheme, isLightHex } from "../../../lib/themes";
 
 function InscricoesStatusBadge({ event }) {
@@ -131,11 +131,41 @@ export function Evento() {
   const { event, setEvent, showToast } = useAdmin();
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({});
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   function iniciarEdicao() { setForm({ ...event }); setEditando(true); }
-  function salvar() { setEvent(form); setEditando(false); atualizarEvento(event.id, form); showToast("Evento atualizado!", "success"); }
+  function salvar() {
+    // Remove sec_bg customizados — cores de seção seguem o preset fixo
+    const { sec1_bg, sec2_bg, sec3_bg, ...temaClean } = form.tema || {};
+    const cleanForm = { ...form, tema: temaClean };
+    setEvent(cleanForm);
+    setEditando(false);
+    atualizarEvento(event.id, cleanForm);
+    showToast("Evento atualizado!", "success");
+  }
   function cancelar() { setEditando(false); applyTheme(event.tema); }
+
+  async function handleLogoUpload(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const url = await uploadEventLogo(event.id, file);
+      setEvent(ev => ({ ...ev, logo_url: url }));
+      if (editando) set("logo_url", url);
+      showToast("Logo atualizada!", "success");
+    } catch (err) {
+      showToast("Erro ao enviar logo: " + err.message, "error");
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function removerLogo() {
+    setEvent(ev => ({ ...ev, logo_url: null }));
+    atualizarEvento(event.id, { logo_url: null });
+    showToast("Logo removida", "info");
+  }
 
   const LABEL = { fontSize:"0.68rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem", display:"flex", alignItems:"center", gap:6 };
 
@@ -155,22 +185,24 @@ export function Evento() {
       {!editando ? (
         <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
 
-          {/* ── Card Hero ── */}
-          <div className="card-hero" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"2rem", flexWrap:"wrap" }}>
+          {/* ── Card principal do evento ── */}
+          <div className="card-white" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"2rem", flexWrap:"wrap", borderTop:"4px solid var(--admin-hd)" }}>
             <div style={{ flex:1, minWidth:0 }}>
-              <div className="hero-label">Evento</div>
-              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1.1, marginBottom:"0.4rem" }}>{event.nome}</div>
-              {event.subtitulo && <div style={{ fontSize:"0.92rem", color:"var(--white-mid)", fontStyle:"italic", marginBottom:"1.25rem", lineHeight:1.5 }}>{event.subtitulo}</div>}
-              <div style={{ display:"flex", gap:"2.25rem", flexWrap:"wrap", marginTop: event.subtitulo ? 0 : "1rem" }}>
+              <div style={{ fontSize:"0.68rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.4rem" }}>Evento</div>
+              <div style={{ marginBottom:"0.4rem" }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.8rem", fontWeight:800, color:"var(--navy)", lineHeight:1.1 }}>{event.nome}</div>
+              </div>
+              {event.subtitulo && <div style={{ fontSize:"0.9rem", color:"var(--text2)", fontStyle:"italic", marginBottom:"1.25rem", lineHeight:1.5 }}>{event.subtitulo}</div>}
+              <div style={{ display:"flex", gap:"2rem", flexWrap:"wrap", marginTop: event.subtitulo ? 0 : "1rem" }}>
                 {[
-                  ["Período",        `${formatData(event.data_inicio)} – ${formatData(event.data_fim)}`],
-                  ["Local",          event.local || "–"],
-                  ["Carga horária",  `${event.carga_horaria_total || "–"}h`],
-                  ["Mín. presença",  `${event.percentual_minimo || "–"}%`],
+                  ["Período",       `${formatData(event.data_inicio)} – ${formatData(event.data_fim)}`],
+                  ["Local",         event.local || "–"],
+                  ["Carga horária", `${event.carga_horaria_total || "–"}h`],
+                  ["Mín. presença", `${event.percentual_minimo || "–"}%`],
                 ].map(([label, value]) => (
                   <div key={label}>
-                    <div className="hero-label" style={{ marginBottom:"0.25rem" }}>{label}</div>
-                    <div style={{ fontWeight:600, fontSize:"0.95rem" }}>{value}</div>
+                    <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.2rem" }}>{label}</div>
+                    <div style={{ fontWeight:600, fontSize:"0.92rem", color:"var(--text)" }}>{value}</div>
                   </div>
                 ))}
               </div>
@@ -182,26 +214,53 @@ export function Evento() {
               const preset = t?.preset || "azul";
               const p = PRESETS.find(x => x.id === preset);
               const label = preset === "custom" ? "Personalizado" : (p?.label || "Azul");
-              const hero  = preset === "custom" ? (t?.hero   || "#0d1f3c") : (p?.hero   || "#0d1f3c");
+              const hero  = preset === "custom" ? (t?.hero   || "#234c82") : (p?.hero   || "#234c82");
               const acct  = preset === "custom" ? (t?.accent || "#c4a050") : (p?.accent || "#c4a050");
               return (
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:"var(--surface2)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem" }}>
                   <div style={{ width:28, height:22, background:hero, borderRadius:5, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <div style={{ width:14, height:3, background:acct, borderRadius:2 }}/>
                   </div>
-                  <span style={{ fontSize:"0.72rem", color:"var(--white-mid)" }}>{label}</span>
+                  <span style={{ fontSize:"0.75rem", color:"var(--text2)", fontWeight:500 }}>{label}</span>
                 </div>
               );
             })()}
-            <div style={{ flexShrink:0, background:"var(--gold-tint)", border:"1px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1.1rem 1.4rem", minWidth:170 }}>
-              <div className="hero-label" style={{ marginBottom:"0.4rem" }}>Inscrições</div>
-              <div style={{ fontWeight:600, fontSize:"0.88rem", lineHeight:1.5 }}>
+            <div style={{ flexShrink:0, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1rem 1.25rem", minWidth:170 }}>
+              <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.4rem" }}>Inscrições</div>
+              <div style={{ fontWeight:600, fontSize:"0.88rem", color:"var(--text)", lineHeight:1.5 }}>
                 {event.inscricao_inicio ? formatData(event.inscricao_inicio) : "–"}
                 {" – "}
                 {event.inscricao_fim ? formatData(event.inscricao_fim) : "–"}
               </div>
               <InscricoesStatusBadge event={event} />
             </div>
+            </div>
+          </div>
+
+          {/* ── Logo do Evento ── */}
+          <div className="card-white">
+            <div style={{ ...LABEL, marginBottom:"0.75rem" }}><FontAwesomeIcon icon={faImage} style={{ color:"var(--navy)" }}/>Logo do Evento</div>
+            <div style={{ display:"flex", alignItems:"center", gap:"1.25rem", flexWrap:"wrap" }}>
+              {event.logo_url ? (
+                <>
+                  <img src={event.logo_url} alt="Logo do evento"
+                    style={{ maxHeight:80, maxWidth:220, objectFit:"contain", borderRadius:"var(--radius-sm)", border:"1px solid var(--border)", padding:"0.5rem", background:"#fff" }} />
+                  <button className="btn btn-sm btn-danger" onClick={removerLogo}>
+                    <FontAwesomeIcon icon={faTrash} style={{ marginRight:5 }}/>Remover logo
+                  </button>
+                </>
+              ) : (
+                <span style={{ color:"var(--text3)", fontSize:"0.88rem" }}>Nenhuma logo cadastrada</span>
+              )}
+              <label style={{ cursor: uploadingLogo ? "wait" : "pointer" }}>
+                <input type="file" accept="image/*" style={{ display:"none" }} disabled={uploadingLogo}
+                  onChange={e => { handleLogoUpload(e.target.files[0]); e.target.value = ""; }} />
+                <span className="btn btn-sm btn-outline" style={{ pointerEvents:"none" }}>
+                  <FontAwesomeIcon icon={faImage} style={{ marginRight:5 }} />
+                  {uploadingLogo ? "Enviando…" : event.logo_url ? "Trocar logo" : "Enviar logo"}
+                </span>
+              </label>
+              <span style={{ fontSize:"0.75rem", color:"var(--text3)" }}>PNG/SVG recomendado · aparece no banner e navbar do site</span>
             </div>
           </div>
 
@@ -289,10 +348,51 @@ export function Evento() {
             <textarea className="form-input" rows={2} value={form.realizacao||""} onChange={e => set("realizacao", e.target.value)} />
           </div>
 
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <label className="form-label">Subtítulo da seção de Palestrantes</label>
+            <input className="form-input" placeholder="Ex: Especialistas em auditoria, governança e controle público" value={form.palestrantes_subtitulo||""} onChange={e => set("palestrantes_subtitulo", e.target.value)} />
+          </div>
+
+          {/* ── Logo do Evento — linha inteira ── */}
+          <div style={{ gridColumn:"1/-1", marginTop:"0.25rem" }}>
+            <div style={{ ...LABEL, marginBottom:"0.75rem" }}><FontAwesomeIcon icon={faImage} style={{ color:"var(--navy)" }}/>Logo do Evento</div>
+            <div style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"1rem", background:"var(--surface2)", borderRadius:"var(--radius)", border:"1px solid var(--border)", flexWrap:"wrap" }}>
+              {form.logo_url ? (
+                <img src={form.logo_url} alt="Logo" style={{ maxHeight:64, maxWidth:180, objectFit:"contain", borderRadius:6, background:"#fff", padding:"0.35rem", border:"1px solid var(--border)" }} />
+              ) : (
+                <div style={{ width:64, height:64, background:"var(--surface)", borderRadius:6, border:"1.5px dashed var(--border2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <FontAwesomeIcon icon={faImage} style={{ color:"var(--text3)", fontSize:"1.4rem" }} />
+                </div>
+              )}
+              <div style={{ display:"flex", flexDirection:"column", gap:"0.4rem" }}>
+                <label style={{ cursor: uploadingLogo ? "wait" : "pointer" }}>
+                  <input type="file" accept="image/*" style={{ display:"none" }} disabled={uploadingLogo}
+                    onChange={e => { handleLogoUpload(e.target.files[0]); e.target.value = ""; }} />
+                  <span className="btn btn-sm btn-outline" style={{ pointerEvents:"none" }}>
+                    <FontAwesomeIcon icon={faImage} style={{ marginRight:5 }} />
+                    {uploadingLogo ? "Enviando…" : form.logo_url ? "Trocar logo" : "Enviar logo"}
+                  </span>
+                </label>
+                {form.logo_url && (
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => { set("logo_url", null); removerLogo(); }}>
+                    <FontAwesomeIcon icon={faTrash} style={{ marginRight:4 }}/>Remover
+                  </button>
+                )}
+              </div>
+              <span style={{ fontSize:"0.75rem", color:"var(--text3)" }}>PNG ou SVG · aparece no banner do site e na navbar</span>
+            </div>
+          </div>
+
           {/* ── Tema visual — linha inteira abaixo do grid ── */}
           <div style={{ gridColumn:"1/-1", marginTop:"0.25rem" }}>
             <div style={{ ...LABEL, marginBottom:"0.85rem" }}>Tema Visual</div>
-            <ThemeSelector value={form.tema} onChange={v => set("tema", v)} />
+            <ThemeSelector value={form.tema} onChange={v => set("tema", { ...(form.tema||{}), ...v })} />
+          </div>
+
+          {/* ── Botão salvar (rodapé do formulário) ── */}
+          <div style={{ gridColumn:"1/-1", display:"flex", justifyContent:"flex-end", gap:"0.5rem", paddingTop:"1rem", borderTop:"1px solid var(--border)", marginTop:"0.5rem" }}>
+            <button className="btn btn-outline" onClick={cancelar}>Cancelar</button>
+            <button className="btn btn-primary" onClick={salvar}><FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight:6 }}/>Salvar alterações</button>
           </div>
         </div>
       )}

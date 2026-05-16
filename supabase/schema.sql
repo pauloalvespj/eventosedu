@@ -52,7 +52,10 @@ create table if not exists events (
   realizacao          text,
   banner_cor          text default '#0f3460',
   percentual_minimo   int not null default 75,
-  carga_horaria_total int not null default 16
+  carga_horaria_total int not null default 16,
+  programacao_visivel     boolean not null default true,
+  logo_url                text,
+  palestrantes_subtitulo  text
 );
 
 -- ── CONFIGURAÇÕES DE GAMIFICAÇÃO ─────────────────────────────

@@ -2,14 +2,14 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
-  faDownload, faClock, faFileAlt,
+  faDownload, faClock, faFileAlt, faEye, faEyeSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
 import { formatData, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
-  inserirPresenca, uploadMaterial, deletarMaterial,
+  inserirPresenca, uploadMaterial, deletarMaterial, atualizarEvento,
 } from "../../../lib/db";
 
 function formatBytes(b) {
@@ -20,7 +20,7 @@ function formatBytes(b) {
 }
 
 export function Programacao() {
-  const { atividades, setAtividades, palestrantes, participantes, presencas, setPresencas, showToast } = useAdmin();
+  const { atividades, setAtividades, palestrantes, participantes, presencas, setPresencas, event, setEvent, showToast } = useAdmin();
 
   const [busca, setBusca]                       = useState("");
   const [modalAtv, setModalAtv]                 = useState(false);
@@ -70,12 +70,31 @@ export function Programacao() {
   }
 
   const filtradas = atividades.filter(a => a.titulo.toLowerCase().includes(busca.toLowerCase()));
+  const visivel = event?.programacao_visivel !== false;
+
+  async function toggleVisibilidade() {
+    const novoValor = !visivel;
+    setEvent(ev => ({ ...ev, programacao_visivel: novoValor }));
+    atualizarEvento(event.id, { programacao_visivel: novoValor });
+    showToast(novoValor ? "Programação liberada no site!" : "Programação bloqueada (Em breve)", novoValor ? "success" : "warn");
+  }
 
   return (
     <div>
       <div className="admin-topbar">
         <div><h1>Programação</h1><p>Atividades e palestras</p></div>
-        <button className="btn btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button
+            className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
+            onClick={toggleVisibilidade}
+            title={visivel ? "Clique para bloquear (mostra Em breve no site)" : "Clique para liberar (mostra programação no site)"}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
+            {visivel ? "Visível no site" : "Em breve no site"}
+          </button>
+          <button className="btn btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+        </div>
       </div>
 
       <div className="table-wrap">

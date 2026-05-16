@@ -370,6 +370,16 @@ export async function atualizarForumConfig(id, updates) {
 
 // ── EVENTO ───────────────────────────────────────────────────
 
+export async function uploadEventLogo(eventId, file) {
+  const ext = file.name.split(".").pop();
+  const path = `evento-${eventId}/logo.${ext}`;
+  const { error } = await supabase.storage.from("cert-assets").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("cert-assets").getPublicUrl(path);
+  await supabase.from("events").update({ logo_url: publicUrl }).eq("id", eventId);
+  return publicUrl;
+}
+
 export async function atualizarEvento(id, updates) {
   const { error } = await supabase
     .from("events")

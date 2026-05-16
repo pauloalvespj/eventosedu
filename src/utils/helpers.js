@@ -36,6 +36,16 @@ export function formatData(d) {
   return `${dia}/${m}/${y}`;
 }
 
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+export function formatPeriodo(inicio, fim) {
+  if (!inicio) return "";
+  const [, m1, d1] = inicio.split("-");
+  if (!fim) return `${parseInt(d1)} de ${MESES[parseInt(m1)-1]}`;
+  const [, m2, d2] = fim.split("-");
+  if (m1 === m2) return `${parseInt(d1)} a ${parseInt(d2)} de ${MESES[parseInt(m2)-1]}`;
+  return `${parseInt(d1)} de ${MESES[parseInt(m1)-1]} a ${parseInt(d2)} de ${MESES[parseInt(m2)-1]}`;
+}
+
 const DIAS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 export function diaSemana(d) {
   const dt = new Date(d + "T12:00:00");
