@@ -125,7 +125,7 @@ function LinkExpiradoModal({ email, onClose, onLogin }) {
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState(false); // sem tela de loading — mock é imediato
+  const [loading, setLoading] = useState(false); // eslint-disable-line no-unused-vars
 
   // ── Estado — inicia com mock, substitui pelo Supabase quando disponível ──
   const [event, setEvent] = useState(INITIAL_EVENT);
@@ -134,7 +134,9 @@ export default function App() {
       ? `${event.nome} — ${event.nome_completo}`
       : event.nome;
   }, [event.nome, event.nome_completo]);
-  useEffect(() => { applyTheme(event.tema); }, [event.tema]);
+  // Só aplica tema quando vier do Supabase (event.tema !== undefined).
+  // O módulo themes.js já aplica o cache do localStorage sincronicamente antes do React renderizar.
+  useEffect(() => { if (event.tema !== undefined) applyTheme(event.tema); }, [event.tema]);
   const [atividades, setAtividades] = useState(INITIAL_ATIVIDADES);
   const [profiles, setProfiles] = useState(INITIAL_PROFILES);
   const [presencas, setPresencas] = useState(INITIAL_PRESENCAS);
@@ -188,13 +190,14 @@ export default function App() {
 
   // ── Carga inicial de dados ────────────────────────────────────
   async function loadData() {
+    const get = r => r?.status === "fulfilled" ? r.value?.data : null;
+
     // Fase 1: dados críticos para mostrar o app (aguarda até 20s pelo cold start)
     const fase1 = await Promise.allSettled([
       fetchEvent(),       // 0
       fetchAtividades(),  // 1
       fetchProfiles(),    // 2
     ]);
-    const get = r => r?.status === "fulfilled" ? r.value?.data : null;
     if (get(fase1[0])) setEvent(get(fase1[0]));
     if (get(fase1[1])) setAtividades(get(fase1[1]));
     if (get(fase1[2])) setProfiles(get(fase1[2]));

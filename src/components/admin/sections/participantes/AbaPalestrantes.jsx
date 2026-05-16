@@ -1,13 +1,21 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faTrash, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, adminCriarUsuario } from "../../../../lib/db";
+import { atualizarProfile, adminCriarUsuario, atualizarEvento } from "../../../../lib/db";
 
 export function AbaPalestrantes() {
-  const { palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
+  const { event, setEvent, palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
+
+  const visivel = event?.palestrantes_visivel !== false;
+  function toggleVisibilidade() {
+    const novo = !visivel;
+    setEvent(ev => ({ ...ev, palestrantes_visivel: novo }));
+    atualizarEvento(event.id, { palestrantes_visivel: novo });
+    showToast(novo ? "Palestrantes visíveis no site!" : "Palestrantes ocultados (Em breve)", novo ? "success" : "warn");
+  }
   const [busca, setBusca]       = useState("");
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
@@ -67,9 +75,20 @@ export function AbaPalestrantes() {
           <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Palestrantes</h2>
           <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>{palestrantes.length} cadastrado{palestrantes.length !== 1 ? "s" : ""}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setFormPal({}); setModalPal(true); }}>
-          + Novo Palestrante
-        </button>
+        <div style={{ display:"flex", gap:"0.5rem" }}>
+          <button
+            className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
+            onClick={toggleVisibilidade}
+            title={visivel ? "Clique para ocultar no site" : "Clique para exibir no site"}
+            style={{ display:"flex", alignItems:"center", gap:6 }}
+          >
+            <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
+            {visivel ? "Visível no site" : "Em breve no site"}
+          </button>
+          <button className="btn btn-primary" onClick={() => { setFormPal({}); setModalPal(true); }}>
+            + Novo Palestrante
+          </button>
+        </div>
       </div>
 
       <div className="table-wrap">
@@ -100,7 +119,7 @@ export function AbaPalestrantes() {
                   <button
                     onClick={() => toggleDestaque(p)}
                     title={p.destaque ? "Remover destaque" : "Marcar como destaque"}
-                    style={{ background:"none", border:"none", cursor:"pointer", fontSize:"1.3rem", lineHeight:1, padding:"2px 6px", transition:"color 0.15s", color: p.destaque ? "var(--gold-on-dark)" : "var(--border2)" }}
+                    style={{ background:"none", border:"none", cursor:"pointer", fontSize:"1.3rem", lineHeight:1, padding:"2px 6px", transition:"color 0.15s", color: p.destaque ? "#e4a11b" : "#cbd5e1" }}
                   >★</button>
                 </td>
                 <td>
@@ -150,7 +169,7 @@ export function AbaPalestrantes() {
             color: formPal.destaque ? "var(--navy)" : "var(--text3)",
           }}
         >
-          <span style={{ fontSize:"1.3rem", lineHeight:1, color: formPal.destaque ? "var(--gold-on-dark)" : "var(--border2)" }}>★</span>
+          <span style={{ fontSize:"1.3rem", lineHeight:1, color: formPal.destaque ? "#e4a11b" : "#cbd5e1" }}>★</span>
           {formPal.destaque ? "Destaque ativo — aparece na landing page" : "Marcar como destaque (landing page)"}
         </button>
 

@@ -460,12 +460,19 @@ export async function deletarParticipante(id) {
 
 // Cria um usuário de auth + profile via Edge Function com service role.
 // Requer a Edge Function "admin-create-user" deployada no Supabase.
-export async function adminCriarUsuario({ nome, email, cpf, cargo, instituicao, role, senha }) {
+export async function adminCriarUsuario({ nome, email, cpf, cargo, instituicao, role, senha, titulo, area, mini_bio, destaque }) {
   const { data: { session } } = await supabase.auth.getSession();
   const { data, error } = await supabase.functions.invoke("admin-create-user", {
-    body: { nome, email, cpf, cargo, instituicao, role, senha },
+    body: { nome, email, cpf, cargo, instituicao, role, senha, titulo, area, mini_bio, destaque },
     headers: { Authorization: `Bearer ${session?.access_token}` },
   });
+  if (error) {
+    // Tenta extrair a mensagem real do corpo da resposta
+    try {
+      const body = await error.context?.json?.();
+      if (body?.error) return { data: null, error: { message: body.error } };
+    } catch {}
+  }
   return { data, error };
 }
 
