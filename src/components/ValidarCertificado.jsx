@@ -37,7 +37,7 @@ export function ValidarCertificado() {
   const hash = sig || "";
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--hero-gradient)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--hero-gradient)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", fontFamily: "'Poppins', sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 520 }}>
 
         {/* Header */}

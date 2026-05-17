@@ -36,10 +36,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
       {/* NAVBAR */}
       <nav className="navbar">
         <div className="navbar-logo">
-          {event.logo_url
-            ? <img src={event.logo_url} alt={event.nome}
-                style={{ height: 38, maxWidth: 160, objectFit: "contain", display: "block" }} />
-            : event.nome}
+          {event.nome}
         </div>
         <div className="navbar-nav">
           <a href="#sobre" className="navbar-link">Sobre</a>
@@ -70,7 +67,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
           <div style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
             {event.subtitulo}
           </div>
-          <div style={{ fontFamily:"'Poppins',sans-serif", fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
+          <div style={{ fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
             {formatPeriodo(event.data_inicio, event.data_fim)}{event.data_fim ? ` · ${event.data_fim.split("-")[0]}` : event.data_inicio ? ` · ${event.data_inicio.split("-")[0]}` : ""}
           </div>
           <div className="hero-meta" style={{ marginBottom:"2.5rem" }}>
@@ -118,7 +115,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
               <span style={{ display:"inline-block", background:"var(--gold-tint)", color:"var(--teal)", border:"1px solid var(--gold-border)", borderRadius:50, padding:"0.3rem 1rem", fontSize:"0.75rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"1.5rem" }}>
                 Em breve
               </span>
-              <h3 style={{ fontFamily:"'Poppins',sans-serif", fontSize:"1.4rem", color:"var(--text)", fontWeight:600, marginBottom:"0.75rem", lineHeight:1.4 }}>
+              <h3 style={{ fontSize:"1.4rem", color:"var(--text)", fontWeight:600, marginBottom:"0.75rem", lineHeight:1.4 }}>
                 A programação está sendo preparada
               </h3>
               <p style={{ color:"var(--text2)", fontSize:"0.92rem", lineHeight:1.75, maxWidth:480, margin:"0 auto" }}>
@@ -297,7 +294,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
       {/* CTA */}
       <section style={{ background: "var(--navy)", padding: "4rem 2rem", textAlign: "center" }}>
         <div className="container">
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(1.5rem,3vw,2rem)", color: "#fff", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "clamp(1.5rem,3vw,2rem)", fontWeight: 700, color: "#fff", marginBottom: "0.75rem" }}>
             Garanta sua inscrição
           </h2>
           <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "2rem", fontSize: "1rem" }}>
@@ -312,7 +309,7 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
 
       {/* FOOTER */}
       <footer style={{ background: "var(--navy-dark)", color: "rgba(255,255,255,0.5)", padding: "2rem", textAlign: "center", fontSize: "0.82rem" }}>
-        <div style={{ fontFamily:"'Poppins',sans-serif", fontWeight:600, fontSize:"1.1rem", color:"#ffffff", marginBottom:"0.5rem" }}>{event.nome}</div>
+        <div style={{ fontWeight:600, fontSize:"1.1rem", color:"#ffffff", marginBottom:"0.5rem" }}>{event.nome}</div>
         <div>{event.nome_completo}</div>
       </footer>
     </div>

@@ -32,6 +32,7 @@ import { PainelAdmin } from "./components/admin/PainelAdmin";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
 import { ValidarCertificado } from "./components/ValidarCertificado";
+import { AuthCallback } from "./components/auth/AuthCallback";
 
 // Converte dados mock para o formato profiles (array unificado)
 const INITIAL_PROFILES = [
@@ -392,6 +393,9 @@ export default function App() {
       <Toast toast={toast} />
 
       <Routes>
+        {/* Callback de autenticação por magic link */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
+
         {/* Validação pública de certificado — sem autenticação */}
         <Route path="/validar" element={<ValidarCertificado />} />
 

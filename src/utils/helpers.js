@@ -218,9 +218,9 @@ export function gerarHtmlCertificado(user, event, presencaCalc, minasPresencas =
     : "";
 
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',sans-serif;background:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+    body{font-family:'Poppins',sans-serif;background:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
     .cert{width:277mm;min-height:190mm;border:5px double ${C1};padding:2rem 2.5rem;text-align:center;position:relative;background:#fff}
     ${bordaStyle}
     .logos{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;min-height:64px}
