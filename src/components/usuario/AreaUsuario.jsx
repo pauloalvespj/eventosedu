@@ -587,7 +587,15 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
         {aba === "programacao" && (
           <div>
             <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"1.5rem" }}>Programação do Evento</h2>
-            {[...new Set(atividades.map(a=>a.dia))].sort().map(dia => (
+            {event.programacao_visivel === false ? (
+              <div style={{ textAlign:"center", padding:"3rem 2rem", background:"var(--surface)", border:"1px dashed var(--border2)", borderRadius:"var(--radius-lg)" }}>
+                <div style={{ fontSize:"3rem", marginBottom:"1rem" }}>📅</div>
+                <h3 style={{ fontWeight:700, color:"var(--navy)", marginBottom:"0.5rem" }}>Programação em breve</h3>
+                <p style={{ color:"var(--text2)", fontSize:"0.92rem", lineHeight:1.75, maxWidth:400, margin:"0 auto" }}>
+                  A grade de atividades e horários ainda está sendo preparada. Fique atento às novidades!
+                </p>
+              </div>
+            ) : [...new Set(atividades.map(a=>a.dia))].sort().map(dia => (
               <div key={dia} style={{ marginBottom:"1.75rem" }}>
                 <div style={{ fontWeight:700, fontSize:"0.88rem", marginBottom:"0.75rem", padding:"0.5rem 1rem", background:"var(--navy)", color:"#fff", borderRadius:"var(--radius-sm)", display:"inline-flex", alignItems:"center", gap:"0.5rem" }}>
                   📅 {diaSemana(dia)}, {formatData(dia)}
