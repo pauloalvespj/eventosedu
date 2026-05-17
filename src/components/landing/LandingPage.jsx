@@ -57,13 +57,17 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
                 style={{ width:"100%", maxHeight:200, maxWidth:560, objectFit:"contain", filter: isLightTheme(event) ? "none" : "drop-shadow(0 2px 12px rgba(0,0,0,0.35))" }} />
             </div>
           ) : (
-            <h1 style={{ fontSize:"clamp(2.8rem,7vw,5rem)", marginBottom:"0.5rem" }}>
-              <em>{event.nome}</em>
-            </h1>
+            <>
+              <h1 style={{ fontSize:"clamp(2.8rem,7vw,5rem)", marginBottom:"0.5rem" }}>
+                <em>{event.nome}</em>
+              </h1>
+              {event.nome_completo && (
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(0.9rem,2vw,1.1rem)", color:"var(--hero-subtext)", marginBottom:"1.25rem", lineHeight:1.6, maxWidth:680, margin:"0 auto 1.25rem" }}>
+                  {event.nome_completo}
+                </div>
+              )}
+            </>
           )}
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(0.9rem,2vw,1.1rem)", color:"var(--hero-subtext)", marginBottom:"1.25rem", lineHeight:1.6, maxWidth:680, margin:"0 auto 1.25rem" }}>
-            {event.nome_completo}
-          </div>
           <div style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
             {event.subtitulo}
           </div>
