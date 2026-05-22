@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faComments, faRotateLeft, faStar, faListCheck, faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faComments, faRotateLeft, faStar, faListCheck, faTrash, faPlus, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
+import { atualizarEvento } from "../../../lib/db";
 import { Modal } from "../../base/index";
 import { CATEGORIAS_FORUM } from "../../../config/gamificacao";
 import { RoleBadge } from "../../base/index";
@@ -9,7 +10,15 @@ import { forumAberto } from "../../../utils/helpers";
 import { atualizarForumConfig, fixarTopico, deletarTopico, criarTopico } from "../../../lib/db";
 
 export function ForumAdmin() {
-  const { user, topicos, setTopicos, forumConfig, setForumConfig, showToast } = useAdmin();
+  const { event, setEvent, user, topicos, setTopicos, forumConfig, setForumConfig, showToast } = useAdmin();
+
+  const forumAtivo = event?.forum_ativo !== false;
+  function toggleForum() {
+    const novo = !forumAtivo;
+    setEvent(ev => ({ ...ev, forum_ativo: novo }));
+    atualizarEvento(event.id, { forum_ativo: novo });
+    showToast(novo ? "Fórum ativado" : "Fórum desativado", novo ? "success" : "info");
+  }
 
   const [modalTopico, setModalTopico] = useState(false);
   const [form, setForm] = useState({ categoria: "geral", titulo: "", corpo: "" });
@@ -43,9 +52,16 @@ export function ForumAdmin() {
     <div>
       <div className="admin-topbar">
         <div><h1>Gestão do Fórum</h1><p>Configuração, moderação e conteúdo</p></div>
-        <button className="btn btn-primary" onClick={() => setModalTopico(true)}>
-          <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Novo Tópico
-        </button>
+        <div style={{ display:"flex", gap:"0.5rem" }}>
+          <button className={`btn btn-sm ${forumAtivo ? "btn-outline" : "btn-danger"}`} onClick={toggleForum}
+            title={forumAtivo ? "Clique para desativar (oculta fórum dos participantes)" : "Clique para ativar"}>
+            <FontAwesomeIcon icon={forumAtivo ? faEye : faEyeSlash} style={{ marginRight:6 }} />
+            {forumAtivo ? "Fórum ativo" : "Fórum inativo"}
+          </button>
+          <button className="btn btn-primary" onClick={() => setModalTopico(true)}>
+            <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Novo Tópico
+          </button>
+        </div>
       </div>
 
       {/* Configurações */}

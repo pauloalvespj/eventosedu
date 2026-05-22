@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMedal, faDownload, faTrophy, faGear, faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
+import { faMedal, faDownload, faTrophy, faGear, faFloppyDisk, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
+import { atualizarEvento } from "../../../lib/db";
 import { NIVEL_LABELS } from "../../../config/gamificacao";
 import { getRanking, getNivel, ROLE_LABEL } from "../../../utils/helpers";
 import { RoleBadge } from "../../base/index";
@@ -19,7 +20,15 @@ const PONTOS_LABELS = {
 };
 
 export function Gamificacao() {
-  const { participantes, palestrantes, admins, pontuacoes, pontosConfig, setPontosConfig, showToast } = useAdmin();
+  const { event, setEvent, participantes, palestrantes, admins, pontuacoes, pontosConfig, setPontosConfig, showToast } = useAdmin();
+
+  const gamAtiva = event?.gamificacao_ativa !== false;
+  function toggleGamificacao() {
+    const novo = !gamAtiva;
+    setEvent(ev => ({ ...ev, gamificacao_ativa: novo }));
+    atualizarEvento(event.id, { gamificacao_ativa: novo });
+    showToast(novo ? "Gamificação ativada" : "Gamificação desativada", novo ? "success" : "info");
+  }
   const [editandoConfig, setEditandoConfig] = useState(false);
   const [formConfig, setFormConfig] = useState({});
 
@@ -53,9 +62,16 @@ export function Gamificacao() {
     <div>
       <div className="admin-topbar">
         <div><h1>Gamificação</h1><p>Ranking, pontuação e níveis</p></div>
-        <button className="btn btn-sm btn-outline" onClick={exportarRanking}>
-          <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
-        </button>
+        <div style={{ display:"flex", gap:"0.5rem" }}>
+          <button className={`btn btn-sm ${gamAtiva ? "btn-outline" : "btn-danger"}`} onClick={toggleGamificacao}
+            title={gamAtiva ? "Clique para desativar (oculta ranking dos participantes)" : "Clique para ativar"}>
+            <FontAwesomeIcon icon={gamAtiva ? faEye : faEyeSlash} style={{ marginRight:6 }} />
+            {gamAtiva ? "Gamificação ativa" : "Gamificação inativa"}
+          </button>
+          <button className="btn btn-sm btn-outline" onClick={exportarRanking}>
+            <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* Configuração de pontos */}

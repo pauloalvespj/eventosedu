@@ -22,6 +22,8 @@ export const INITIAL_EVENT = {
   certificado_disponivel: false,
   palestrantes_visivel: true,
   palestrantes_subtitulo: "Especialistas em auditoria, governança e controle público",
+  gamificacao_ativa: true,
+  forum_ativo: true,
 };
 
 export const INITIAL_INSTITUICOES = [

@@ -22,6 +22,29 @@ export function Relatorios() {
     <div>
       <div className="admin-topbar"><div><h1>Relatórios</h1><p>Análise e exportação de dados</p></div></div>
 
+      {/* Participantes por instituição */}
+      <div className="table-wrap" style={{ marginBottom: "1.5rem" }}>
+        <div className="table-header"><span className="table-title"><FontAwesomeIcon icon={faBuilding} style={{ marginRight: 6 }} />Participantes por Instituição</span></div>
+        <table>
+          <thead><tr><th>Instituição</th><th>Inscritos</th><th>Credenciados</th><th>Aptos ao Certificado</th></tr></thead>
+          <tbody>
+            {[...new Set(participantes.map(p => p.instituicao))].sort().map(inst => {
+              const pts = participantes.filter(p => p.instituicao === inst);
+              const cred = pts.filter(p => p.credenciado).length;
+              const aptosInst = pts.filter(p => calcPresenca(p.id, atividades, presencas, event).apto).length;
+              return (
+                <tr key={inst}>
+                  <td style={{ fontWeight: 600 }}>{inst}</td>
+                  <td>{pts.length}</td>
+                  <td><span className="badge badge-teal">{cred}</span></td>
+                  <td><span className={`badge badge-${aptosInst > 0 ? "success" : "warn"}`}>{aptosInst}</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* Presença por atividade */}
       <div className="table-wrap" style={{ marginBottom: "1.5rem" }}>
         <div className="table-header">
@@ -58,29 +81,6 @@ export function Relatorios() {
                       <span style={{ fontSize: "0.82rem", fontWeight: 700, minWidth: 36 }}>{pct}%</span>
                     </div>
                   </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Participantes por instituição */}
-      <div className="table-wrap" style={{ marginBottom: "1.5rem" }}>
-        <div className="table-header"><span className="table-title"><FontAwesomeIcon icon={faBuilding} style={{ marginRight: 6 }} />Participantes por Instituição</span></div>
-        <table>
-          <thead><tr><th>Instituição</th><th>Inscritos</th><th>Credenciados</th><th>Aptos ao Certificado</th></tr></thead>
-          <tbody>
-            {[...new Set(participantes.map(p => p.instituicao))].sort().map(inst => {
-              const pts = participantes.filter(p => p.instituicao === inst);
-              const cred = pts.filter(p => p.credenciado).length;
-              const aptosInst = pts.filter(p => calcPresenca(p.id, atividades, presencas, event).apto).length;
-              return (
-                <tr key={inst}>
-                  <td style={{ fontWeight: 600 }}>{inst}</td>
-                  <td>{pts.length}</td>
-                  <td><span className="badge badge-teal">{cred}</span></td>
-                  <td><span className={`badge badge-${aptosInst > 0 ? "success" : "warn"}`}>{aptosInst}</span></td>
                 </tr>
               );
             })}

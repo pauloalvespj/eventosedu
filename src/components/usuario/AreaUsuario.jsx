@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faMicrophone, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue, formatCPF } from "../../utils/helpers";
@@ -63,6 +63,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const [navAberta, setNavAberta] = useState(false);
   const fileRefs = useRef({});
 
+  // Redireciona para dashboard se a aba atual for desativada pelo admin
+  useEffect(() => {
+    if (aba === "forum"   && event.forum_ativo === false)      setAba("dashboard");
+    if (aba === "ranking" && event.gamificacao_ativa === false) setAba("dashboard");
+  }, [event.forum_ativo, event.gamificacao_ativa]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Dados comuns
   const uid = getUserId(user);
   const meusPts = calcPontos(uid, pontuacoes);
@@ -124,8 +130,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     ["programacao",  "📅 Programação"],
     ["presencas",    "✅ Presenças"],
     ...(event.certificado_disponivel ? [["certificado", "🏆 Certificado"]] : []),
-    ["forum",        "💬 Fórum"],
-    ["ranking",      "🏅 Ranking"],
+    ...(event.forum_ativo !== false ? [["forum", "💬 Fórum"]] : []),
+    ...(event.gamificacao_ativa !== false ? [["ranking", "🏅 Ranking"]] : []),
     ["rede",         "🤝 Rede"],
     ["meus_dados",   "👤 Meus Dados"],
   ];
