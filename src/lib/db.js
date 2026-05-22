@@ -441,6 +441,56 @@ export async function deletarAtividade(id) {
 
 // ── PROFILES (admin) ─────────────────────────────────────────
 
+// ── Inscrições por evento ─────────────────────────────────────
+export async function inserirEnrollment(userId, role = "participante", eventId = 1) {
+  const { error } = await supabase
+    .from("event_enrollments")
+    .upsert({ event_id: eventId, user_id: userId, role, ativo: true, cancelado_em: null }, { onConflict: "event_id,user_id" });
+  return { error };
+}
+
+export async function cancelarInscricao(userId, eventId = 1) {
+  const { error: e1 } = await supabase
+    .from("event_enrollments")
+    .upsert({ event_id: eventId, user_id: userId, ativo: false, cancelado_em: new Date().toISOString() }, { onConflict: "event_id,user_id" });
+  const { error: e2 } = await supabase
+    .from("profiles")
+    .update({ ativo: false })
+    .eq("id", userId);
+  return { error: e1 || e2 };
+}
+
+export async function reativarInscricao(userId, eventId = 1) {
+  const { error: e1 } = await supabase
+    .from("event_enrollments")
+    .upsert({ event_id: eventId, user_id: userId, ativo: true, cancelado_em: null }, { onConflict: "event_id,user_id" });
+  const { error: e2 } = await supabase
+    .from("profiles")
+    .update({ ativo: true })
+    .eq("id", userId);
+  return { error: e1 || e2 };
+}
+
+export async function adicionarComoParticipante(userId, primaryRole, currentRoles, eventId = 1) {
+  const base = currentRoles?.length ? currentRoles : [primaryRole];
+  const roles = [...new Set([...base, "participante"])];
+  const [{ error: e1 }, { error: e2 }] = await Promise.all([
+    inserirEnrollment(userId, "participante", eventId),
+    supabase.from("profiles").update({ roles }).eq("id", userId),
+  ]);
+  return { roles, error: e1 || e2 };
+}
+
+export async function removerComoParticipante(userId, primaryRole, currentRoles, eventId = 1) {
+  const filtrado = (currentRoles?.length ? currentRoles : [primaryRole]).filter(r => r !== "participante");
+  const roles = filtrado.length > 1 ? filtrado : null;
+  const [{ error: e1 }, { error: e2 }] = await Promise.all([
+    supabase.from("event_enrollments").delete().match({ event_id: eventId, user_id: userId }),
+    supabase.from("profiles").update({ roles }).eq("id", userId),
+  ]);
+  return { roles, error: e1 || e2 };
+}
+
 export async function atualizarProfile(id, updates) {
   const { error } = await supabase
     .from("profiles")
@@ -450,10 +500,12 @@ export async function atualizarProfile(id, updates) {
 }
 
 export async function deletarParticipante(id) {
-  // 1. Remove o registro de autenticação (requer função RPC com SECURITY DEFINER)
+  // 1. Remove enrollment primeiro para evitar violação de FK (caso o CASCADE não esteja configurado)
+  await supabase.from("event_enrollments").delete().eq("user_id", id);
+  // 2. Remove o registro de autenticação (requer função RPC com SECURITY DEFINER)
   const { error: authError } = await supabase.rpc("admin_delete_auth_user", { user_id: id });
   if (authError) return { error: authError };
-  // 2. Remove o profile (a deleção em auth.users já faz cascade via FK, mas removemos explicitamente)
+  // 3. Remove o profile
   const { error } = await supabase.from("profiles").delete().eq("id", id);
   return { error };
 }

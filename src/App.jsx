@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from "react-router-dom";
 import "./styles/global.css";
 
@@ -11,7 +11,7 @@ import {
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
   fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
   seguirUsuario, desseguirUsuario,
-  inserirPontuacao,
+  inserirPontuacao, inserirEnrollment,
 } from "./lib/db";
 import {
   INITIAL_EVENT, INITIAL_ATIVIDADES, INITIAL_PALESTRANTES, INITIAL_PARTICIPANTES,
@@ -33,6 +33,7 @@ import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
 import { ValidarCertificado } from "./components/ValidarCertificado";
 import { AuthCallback } from "./components/auth/AuthCallback";
+import { RoleSelector } from "./components/auth/RoleSelector";
 
 // Converte dados mock para o formato profiles (array unificado)
 const INITIAL_PROFILES = [
@@ -154,6 +155,14 @@ export default function App() {
   const [user, setUser] = useState(null);         // profile do usuário logado
   const [authUser, setAuthUser] = useState(null); // supabase auth.user
   const loginExplicito = useRef(false);
+  const [activeRole, setActiveRole] = useState(null);       // role ativo na sessão
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+
+  // Usuário efetivo: mesmo profile mas com o role selecionado na sessão
+  const effectiveUser = useMemo(
+    () => user ? { ...user, role: activeRole ?? user.role } : null,
+    [user, activeRole]
+  );
 
   // ── UI ───────────────────────────────────────────────────────
   const [view, setView] = useState("landing");
@@ -254,14 +263,32 @@ export default function App() {
   // Quando authUser muda E profiles estiver carregado, resolve o profile
   useEffect(() => {
     if (!authUser) return;
+
+    // Verifica se o usuário tem múltiplos perfis e decide o que fazer
+    function resolveRole(prof) {
+      const allRoles = prof.roles?.length > 1 ? prof.roles : null;
+      if (allRoles) {
+        const stored = sessionStorage.getItem("enaudin_active_role");
+        if (stored && allRoles.includes(stored) && !loginExplicito.current) {
+          setActiveRole(stored); // restaura silenciosamente (ex: F5)
+        } else {
+          loginExplicito.current = false;
+          setShowRoleSelector(true); // mostra seletor de perfil
+        }
+      } else {
+        setActiveRole(prof.role);
+        if (loginExplicito.current) {
+          loginExplicito.current = false;
+          navigate("/painel", { replace: true });
+        }
+      }
+    }
+
     const prof = profiles.find(p => p.id === authUser.id);
     if (prof) {
       setUser(prof);
       setConfirmandoEmail(false);
-      if (loginExplicito.current) {
-        loginExplicito.current = false;
-        navigate("/painel", { replace: true });
-      }
+      resolveRole(prof);
     } else if (!loading && !criandoProfile.current) {
       fetchProfiles().then(async ({ data }) => {
         if (data) {
@@ -271,10 +298,7 @@ export default function App() {
             setUser(found);
             setConfirmandoEmail(false);
             showToast(`Bem-vindo(a), ${found.nome.split(" ")[0]}!`, "success");
-            if (loginExplicito.current) {
-              loginExplicito.current = false;
-              navigate("/painel", { replace: true });
-            }
+            resolveRole(found);
           } else {
             // Profile não encontrado — cria a partir do user_metadata (caso em que
             // a confirmação de e-mail estava ativada e o insert no signUp foi bloqueado pelo RLS)
@@ -296,6 +320,7 @@ export default function App() {
               };
               const { error } = await supabase.from("profiles").upsert(novoProfile, { onConflict: "id" });
               if (!error) {
+                inserirEnrollment(novoProfile.id, "participante");
                 setProfiles(prev => [...prev, novoProfile]);
                 setUser(novoProfile);
                 setConfirmandoEmail(false);
@@ -332,8 +357,18 @@ export default function App() {
     setShowLogin(false);
   }
 
+  // ── Seleção de perfil ─────────────────────────────────────────
+  function handleSelectRole(role) {
+    sessionStorage.setItem("enaudin_active_role", role);
+    setActiveRole(role);
+    setShowRoleSelector(false);
+    navigate("/painel", { replace: true });
+  }
+
   // ── Logout ───────────────────────────────────────────────────
   async function handleLogout() {
+    sessionStorage.removeItem("enaudin_active_role");
+    setActiveRole(null);
     await supabase.auth.signOut();
     navigate("/", { replace: true });
     showToast("Até logo!", "info");
@@ -359,7 +394,7 @@ export default function App() {
   const palestrantes = profiles.filter(p => p.role === "palestrante");
   // Participantes = todos os profiles ativos (qualquer role pode receber certificado)
   const participantes = profiles.filter(p => p.ativo !== false);
-  const admins = profiles.filter(p => ["super_admin", "admin", "credenciador"].includes(p.role));
+  const admins = profiles.filter(p => ["admin", "credenciador"].includes(p.role));
 
   function simularQR(atividadeId) {
     setPresencaAtv(atividadeId);
@@ -367,7 +402,8 @@ export default function App() {
   }
 
   const adminProps = {
-    user,
+    user: effectiveUser,
+    onSwitchRole: () => setShowRoleSelector(true),
     event, setEvent,
     atividades, setAtividades,
     palestrantes,
@@ -376,7 +412,7 @@ export default function App() {
     setParticipantes: updated => setProfiles(() => updated),
     presencas, setPresencas,
     admins,
-    setAdmins: updated => setProfiles(prev => [...prev.filter(p => !["super_admin","admin","credenciador"].includes(p.role)), ...updated]),
+    setAdmins: updated => setProfiles(prev => [...prev.filter(p => !["admin","credenciador"].includes(p.role)), ...updated]),
     topicos, setTopicos,
     pontuacoes, setPontuacoes,
     pontosConfig, setPontosConfig,
@@ -392,6 +428,10 @@ export default function App() {
     <>
       <Toast toast={toast} />
 
+      {showRoleSelector && user && (
+        <RoleSelector user={user} roles={user.roles} onSelect={handleSelectRole} />
+      )}
+
       <Routes>
         {/* Callback de autenticação por magic link */}
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -405,13 +445,14 @@ export default function App() {
 
         {/* Rota principal — /painel e /painel/* para todos os usuários autenticados */}
         <Route path="/painel/*" element={
-          !user
+          !effectiveUser
             ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
-            : ["super_admin","admin","credenciador"].includes(user.role)
+            : ["admin","credenciador"].includes(effectiveUser.role)
               ? <PainelAdmin {...adminProps} />
               : <AreaUsuario
-                  user={user}
+                  user={effectiveUser}
                   setUser={u => setUser(typeof u === "function" ? u(user) : u)}
+                  onSwitchRole={effectiveUser.roles?.length > 1 ? () => setShowRoleSelector(true) : null}
                   event={event} atividades={atividades} setAtividades={setAtividades}
                   palestrantes={palestrantes} presencas={presencas} setPresencas={setPresencas}
                   topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}

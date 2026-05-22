@@ -25,7 +25,7 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
 
   const aberto = forumAberto(forumConfig);
   const uid = getUserId(user);
-  const isAdmin = user && ["super_admin", "admin"].includes(user.role);
+  const isAdmin = user && user.role === "admin";
   const podePostar = user && (aberto || isAdmin);
 
   function showFloat(pts) {

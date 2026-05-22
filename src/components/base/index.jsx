@@ -227,7 +227,7 @@ export function TipoBadge({ tipo }) {
 
 // ── AvatarMini ────────────────────────────────────────────────
 export function AvatarMini({ nome, role }) {
-  const colors = { super_admin: ["#b03030", "#faeaea"], admin: ["#0f3460", "#e8f0fb"], credenciador: ["#1d6a6a", "#e1f3f3"], palestrante: ["#9a7a20", "#fdf8ee"], participante: ["#0f3460", "#e8f0fb"] };
+  const colors = { admin: ["#0f3460", "#e8f0fb"], credenciador: ["#1d6a6a", "#e1f3f3"], palestrante: ["#9a7a20", "#fdf8ee"], participante: ["#0f3460", "#e8f0fb"] };
   const [bg] = colors[role] || colors.participante;
   const ini = (nome || "?").split(" ").map(n => n[0]).slice(0, 2).join("");
   return <div className="avatar-mini" style={{ background: bg + "22", color: bg, border: `1.5px solid ${bg}40` }}>{ini}</div>;
@@ -235,7 +235,7 @@ export function AvatarMini({ nome, role }) {
 
 // ── RoleBadge ─────────────────────────────────────────────────
 export function RoleBadge({ role }) {
-  const cfg = { super_admin: ["👑", "danger"], admin: ["🔧", "navy"], credenciador: ["🏷", "teal"], palestrante: ["🎤", "gold"], participante: ["👤", "navy"] };
+  const cfg = { admin: ["🔧", "navy"], credenciador: ["🏷", "teal"], palestrante: ["🎤", "gold"], participante: ["👤", "navy"] };
   const [ic, c] = cfg[role] || ["👤", "navy"];
   return <span className={`badge badge-${c}`} style={{ fontSize: "0.68rem" }}>{ic} {ROLE_LABEL[role] || role}</span>;
 }

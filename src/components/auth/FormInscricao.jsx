@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatCPF, validateCPF } from "../../utils/helpers";
 import { supabase } from "../../lib/supabase";
+import { inserirEnrollment } from "../../lib/db";
 
 export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
   const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", email: "", senha: "", confirmSenha: "" });
@@ -89,6 +90,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
         ativo:       true,
         ...profileData,
       });
+      await inserirEnrollment(data.user.id, "participante");
     }
 
     setEnviando(false);

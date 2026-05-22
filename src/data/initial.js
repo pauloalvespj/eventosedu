@@ -149,9 +149,9 @@ export const INITIAL_PARTICIPANTES = [
   { id: 5, cpf: "333.444.555-66", nome: "Elisa Furtado Nobre",  instituicao: "CGU",    cargo: "Auditora Federal",         sexo: "F", email: "elisa@exemplo.com",     senha: "123456", credenciado: false, role: "participante" },
 ];
 
-// Perfis: super_admin | admin | credenciador
+// Perfis: admin | credenciador
 export const INITIAL_ADMINS = [
-  { id: 1, nome: "Comissão Organizadora", email: "admin@enaudin.gov.br",      senha: "admin123", role: "super_admin",  instituicao: "UFC",    ativo: true,  foto_iniciais: "CO" },
+  { id: 1, nome: "Comissão Organizadora", email: "admin@enaudin.gov.br",      senha: "admin123", role: "admin",  instituicao: "UFC",    ativo: true,  foto_iniciais: "CO" },
   { id: 2, nome: "Secretaria do Evento",  email: "secretaria@enaudin.gov.br", senha: "sec2026",  role: "admin",        instituicao: "IFCE",   ativo: true,  foto_iniciais: "SE" },
   { id: 3, nome: "Recepção UFC",          email: "recepcao@enaudin.gov.br",   senha: "rec2026",  role: "credenciador", instituicao: "UFC",    ativo: true,  foto_iniciais: "RU" },
   { id: 4, nome: "Suporte Técnico",       email: "ti@enaudin.gov.br",         senha: "ti2026",   role: "admin",        instituicao: "Unilab", ativo: false, foto_iniciais: "ST" },
@@ -214,7 +214,7 @@ export const INITIAL_TOPICOS = [
   {
     id: 1, categoria: "geral", titulo: "Bem-vindos ao III ENAUDIN!",
     corpo: "Bem-vindos ao Encontro das Auditorias Internas! Aproveitem as palestras, interajam e façam boas conexões. Qualquer dúvida, a comissão organizadora está à disposição.",
-    autor_id: "admin:1", autor_nome: "Comissão Organizadora", autor_role: "super_admin",
+    autor_id: "admin:1", autor_nome: "Comissão Organizadora", autor_role: "admin",
     created_at: "2026-09-14T09:00", curtidas: [2, 3, 4], fixado: true, destaque: true, removido: false,
     respostas: [
       { id: 101, corpo: "Muito animada para esta edição! O tema está incrível.", autor_id: "participante:1", autor_nome: "Ana Clara Pinheiro", autor_role: "participante", created_at: "2026-09-14T10:15", curtidas: [2] },

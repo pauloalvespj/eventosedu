@@ -7,7 +7,7 @@ import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, Icon
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
-import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile } from "../../lib/db";
+import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao } from "../../lib/db";
 
 function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
   const instList = instituicoes.filter(i => i.ativo);
@@ -54,13 +54,15 @@ function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
   );
 }
 
-export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout }) {
+export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout, onSwitchRole }) {
   const isPalestrante = user.role === "palestrante";
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
   const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
   const [navAberta, setNavAberta] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
   const fileRefs = useRef({});
 
   // Redireciona para dashboard se a aba atual for desativada pelo admin
@@ -68,6 +70,30 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     if (aba === "forum"   && event.forum_ativo === false)      setAba("dashboard");
     if (aba === "ranking" && event.gamificacao_ativa === false) setAba("dashboard");
   }, [event.forum_ativo, event.gamificacao_ativa]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleCancelarInscricao() {
+    setCancelando(true);
+    await cancelarInscricao(user.id);
+    setUser(u => ({ ...u, ativo: false }));
+    setCancelando(false);
+    setConfirmandoCancelamento(false);
+  }
+
+  // Tela de inscrição cancelada
+  if (user.ativo === false) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: "2rem" }}>
+        <div style={{ textAlign: "center", maxWidth: 420 }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📋</div>
+          <h2 style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "0.5rem" }}>Inscrição cancelada</h2>
+          <p style={{ color: "var(--text2)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+            Sua participação no <strong>{event.nome}</strong> foi cancelada. Entre em contato com a organização do evento caso queira reativar sua inscrição.
+          </p>
+          <button className="btn btn-outline" onClick={onLogout}>← Sair</button>
+        </div>
+      </div>
+    );
+  }
 
   // Dados comuns
   const uid = getUserId(user);
@@ -196,6 +222,11 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
 
         <div style={{ padding:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontSize:"0.68rem", color:"var(--white-faint)", marginBottom:"0.5rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{event.nome}</div>
+          {onSwitchRole && (
+            <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem" }} onClick={onSwitchRole}>
+              ⇄ Trocar perfil
+            </button>
+          )}
           <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%" }} onClick={onLogout}>← Sair</button>
         </div>
       </div>
@@ -988,6 +1019,33 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                 </div>
               )}
             </div>
+
+            {/* Zona de perigo — cancelamento de inscrição */}
+            {!isPalestrante && (
+              <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px dashed var(--border2)" }}>
+                {!confirmandoCancelamento ? (
+                  <button style={{ background: "transparent", border: "none", color: "var(--text3)", fontSize: "0.78rem", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                    onClick={() => setConfirmandoCancelamento(true)}>
+                    Cancelar minha inscrição no evento
+                  </button>
+                ) : (
+                  <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger)", borderRadius: "var(--radius)", padding: "1.25rem 1.5rem" }}>
+                    <div style={{ fontWeight: 700, color: "var(--danger)", marginBottom: "0.5rem" }}>Cancelar inscrição?</div>
+                    <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem", lineHeight: 1.6 }}>
+                      Você perderá acesso ao evento. Sua conta continuará existindo, mas precisará entrar em contato com a organização para reativar.
+                    </p>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button className="btn btn-sm btn-danger" onClick={handleCancelarInscricao} disabled={cancelando}>
+                        {cancelando ? "Cancelando…" : "Confirmar cancelamento"}
+                      </button>
+                      <button className="btn btn-sm btn-outline" onClick={() => setConfirmandoCancelamento(false)}>
+                        Voltar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

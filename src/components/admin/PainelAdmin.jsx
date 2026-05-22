@@ -27,20 +27,20 @@ import { Usuarios }       from "./sections/Usuarios";
 import { Instituicoes }   from "./sections/Instituicoes";
 
 const MENU = [
-  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["super_admin","admin","credenciador"] },
-  { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["super_admin","admin"] },
-  { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["super_admin","admin"] },
-  { path: "participantes",  icon: faUsers,        label: "Participantes",   roles: ["super_admin","admin"] },
-  { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["super_admin","admin","credenciador"] },
-  { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["super_admin","admin"] },
-  { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["super_admin","admin"] },
-  { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["super_admin","admin"] },
-  { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["super_admin","admin"] },
-  { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["super_admin","admin"] },
-  { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["super_admin","admin"] },
-  { path: "usuarios",       icon: faLock,         label: "Usuários",        roles: ["super_admin"] },
-  { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["super_admin","admin"] },
-  { path: "meus-dados",     icon: faCircleUser,   label: "Meus Dados",      roles: ["super_admin","admin","credenciador"] },
+  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin","credenciador"] },
+  { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["admin"] },
+  { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["admin"] },
+  { path: "participantes",  icon: faUsers,        label: "Participantes",   roles: ["admin"] },
+  { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["admin","credenciador"] },
+  { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["admin"] },
+  { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
+  { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
+  { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
+  { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
+  { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
+  { path: "usuarios",       icon: faLock,         label: "Usuários",        roles: ["admin"] },
+  { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
+  { path: "meus-dados",     icon: faCircleUser,   label: "Meus Dados",      roles: ["admin","credenciador"] },
 ];
 
 function MeusDados() {
@@ -201,7 +201,7 @@ function AdminRoutes() {
 }
 
 export function PainelAdmin(props) {
-  const { user, event, participantes, onLogout } = props;
+  const { user, event, participantes, onLogout, onSwitchRole } = props;
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
   const [navAberta, setNavAberta] = useState(false);
 
@@ -255,6 +255,11 @@ export function PainelAdmin(props) {
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginBottom: "0.5rem" }}>
               {participantes.length} inscritos · {participantes.filter(p=>p.credenciado).length} credenciados
             </div>
+            {onSwitchRole && (
+              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginBottom: "0.4rem" }} onClick={onSwitchRole}>
+                ⇄ Trocar perfil
+              </button>
+            )}
             <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%" }} onClick={onLogout}>
               <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ marginRight: 6 }} />Sair
             </button>

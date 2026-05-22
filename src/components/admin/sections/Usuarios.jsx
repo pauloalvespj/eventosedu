@@ -8,11 +8,10 @@ import { RoleBadge } from "../../base/index";
 import { atualizarProfile, atualizarEmailAuth } from "../../../lib/db";
 import { ROLE_LABEL } from "../../../utils/helpers";
 
-const ROLES = ["super_admin", "admin", "credenciador", "palestrante", "participante"];
+const ROLES = ["admin", "credenciador", "palestrante", "participante"];
 
 const ROLE_PERMS = {
-  super_admin:  "Acesso total: gerencia usuários, configurações, todas as seções.",
-  admin:        "Gerencia evento, programação, inscrições, fórum e relatórios.",
+  admin:        "Acesso total: gerencia evento, participantes, programação, fórum e relatórios.",
   credenciador: "Acessa apenas a tela de credenciamento.",
   palestrante:  "Acesso ao painel do palestrante (palestras, presença).",
   participante: "Acessa o portal do participante (sem acesso admin).",
@@ -72,7 +71,7 @@ export function Usuarios() {
     <div>
       <div className="admin-topbar">
         <div><h1>Usuários</h1><p>Equipe administrativa e credenciadores</p></div>
-        {userRole === "super_admin" && (
+        {userRole === "admin" && (
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Usuário</button>
         )}
       </div>
@@ -120,7 +119,7 @@ export function Usuarios() {
                 </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
-                    {userRole === "super_admin" && (
+                    {userRole === "admin" && (
                       <>
                         <button className="btn btn-sm btn-outline" title="Editar" onClick={() => abrirEditar(u)}>
                           <FontAwesomeIcon icon={faPenToSquare} />

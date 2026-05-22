@@ -7,8 +7,8 @@ export const TIPO_BG    = { palestra: "#e8f0fb", mesa_redonda: "#e1f3f3", soleni
 export const TIPO_ICON  = { palestra: "🎤", mesa_redonda: "🗣️", solenidade: "🏛", intervalo: "☕", painel: "🗣️", encerramento: "🎓" };
 
 // ── Role labels ───────────────────────────────────────────────
-export const ROLE_LABEL = { super_admin: "Super Admin", admin: "Administrador", credenciador: "Credenciador", palestrante: "Palestrante", participante: "Participante" };
-export const ROLE_COLOR = { super_admin: "danger", admin: "navy", credenciador: "teal", palestrante: "gold", participante: "navy" };
+export const ROLE_LABEL = { admin: "Administrador", credenciador: "Credenciador", palestrante: "Palestrante", participante: "Participante" };
+export const ROLE_COLOR = { admin: "navy", credenciador: "teal", palestrante: "gold", participante: "navy" };
 
 // ── Formatação ────────────────────────────────────────────────
 export function formatCPF(v) {
