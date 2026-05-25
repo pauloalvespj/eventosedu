@@ -252,7 +252,7 @@ export function LandingPage({ event, atividades, palestrantes, instituicoes, onI
                   return (
                     <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"0.5rem" }}>
                       {item.logo_url ? (
-                        <img src={item.logo_url} alt={item.sigla} style={{ height:56, maxWidth:160, objectFit:"contain" }} />
+                        <img src={item.logo_url} alt={item.sigla} style={{ height:80, maxWidth:"100%", objectFit:"contain" }} />
                       ) : (
                         <>
                           <div style={{ fontSize:"2rem" }}>🏛</div>
