@@ -8,11 +8,19 @@ create extension if not exists "uuid-ossp";
 
 -- ── INSTITUIÇÕES ─────────────────────────────────────────────
 create table if not exists instituicoes (
-  id    serial primary key,
-  sigla text not null,
-  nome  text not null,
-  ativo boolean not null default true
+  id          serial primary key,
+  sigla       text not null,
+  nome        text not null,
+  ativo       boolean not null default true,
+  realizadora boolean not null default false,
+  ordem       integer,
+  logo_url    text
 );
+
+-- Migração (rodar se a tabela já existir):
+-- alter table instituicoes add column if not exists realizadora boolean not null default false;
+-- alter table instituicoes add column if not exists ordem integer;
+-- alter table instituicoes add column if not exists logo_url text;
 
 -- ── PROFILES ─────────────────────────────────────────────────
 -- Unifica participantes, palestrantes e admins.

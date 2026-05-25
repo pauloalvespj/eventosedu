@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoutes, NavLink, Navigate } from "react-router-dom";
+import { useRoutes, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
@@ -204,6 +204,7 @@ export function PainelAdmin(props) {
   const { user, event, participantes, onLogout, onSwitchRole } = props;
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
   const [navAberta, setNavAberta] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <AdminContext.Provider value={props}>
@@ -225,7 +226,11 @@ export function PainelAdmin(props) {
         {/* SIDEBAR */}
         <div className={`admin-sidebar${navAberta ? " open" : ""}`}>
           <div className="admin-sidebar-logo">
-            <h2>{event.nome}</h2>
+            <h2
+              onClick={() => navigate("/")}
+              title="Ver site"
+              style={{ cursor: "pointer" }}
+            >{event.nome}</h2>
             <p style={{ fontSize: "0.68rem", opacity: 0.5, marginTop: "0.1rem" }}>Painel Administrativo</p>
           </div>
           <nav className="admin-nav">

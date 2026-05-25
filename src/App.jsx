@@ -269,11 +269,16 @@ export default function App() {
       const allRoles = prof.roles?.length > 1 ? prof.roles : null;
       if (allRoles) {
         const stored = sessionStorage.getItem("enaudin_active_role");
+        const noAdmin = location.pathname.startsWith("/painel");
         if (stored && allRoles.includes(stored) && !loginExplicito.current) {
           setActiveRole(stored); // restaura silenciosamente (ex: F5)
-        } else {
+        } else if (loginExplicito.current || noAdmin) {
           loginExplicito.current = false;
           setShowRoleSelector(true); // mostra seletor de perfil
+        } else {
+          // sessão restaurada fora do painel — usa o primeiro role sem interromper
+          loginExplicito.current = false;
+          setActiveRole(stored && allRoles.includes(stored) ? stored : allRoles[0]);
         }
       } else {
         setActiveRole(prof.role);
@@ -520,6 +525,7 @@ export default function App() {
               event={event}
               atividades={atividades}
               palestrantes={palestrantes}
+              instituicoes={instituicoes}
               user={user}
               onInscricaoClick={() => setShowInscricao(true)}
               onLoginClick={() => user ? navigate("/painel") : setShowLogin(true)}

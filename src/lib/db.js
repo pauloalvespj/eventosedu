@@ -125,10 +125,10 @@ export async function fetchInstituicoes() {
   return { data: data ?? [], error };
 }
 
-export async function inserirInstituicao({ sigla, nome, ativo = true }) {
+export async function inserirInstituicao({ sigla, nome, ativo = true, realizadora = false, ordem = null }) {
   const { data, error } = await supabase
     .from("instituicoes")
-    .insert({ sigla, nome, ativo })
+    .insert({ sigla, nome, ativo, realizadora, ordem })
     .select()
     .single();
   return { data, error };
@@ -148,6 +148,16 @@ export async function deletarInstituicao(id) {
     .delete()
     .eq("id", id);
   return { error };
+}
+
+export async function uploadLogoInstituicao(instId, file) {
+  const ext = file.name.split(".").pop();
+  const path = `instituicao-${instId}/logo.${ext}`;
+  const { error } = await supabase.storage.from("cert-assets").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("cert-assets").getPublicUrl(path);
+  await supabase.from("instituicoes").update({ logo_url: publicUrl }).eq("id", instId);
+  return publicUrl;
 }
 
 export async function fetchEvent() {

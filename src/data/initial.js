@@ -27,14 +27,14 @@ export const INITIAL_EVENT = {
 };
 
 export const INITIAL_INSTITUICOES = [
-  { id: 1, sigla: "UFC",    nome: "Universidade Federal do Ceará",                                             ativo: true },
-  { id: 2, sigla: "IFCE",   nome: "Instituto Federal de Educação, Ciência e Tecnologia do Ceará",             ativo: true },
-  { id: 3, sigla: "UFCA",   nome: "Universidade Federal do Cariri",                                           ativo: true },
-  { id: 4, sigla: "Unilab", nome: "Universidade da Integração Internacional da Lusofonia Afro-Brasileira",   ativo: true },
-  { id: 5, sigla: "CGU",    nome: "Controladoria-Geral da União",                                             ativo: true },
-  { id: 6, sigla: "TCU",    nome: "Tribunal de Contas da União",                                              ativo: true },
-  { id: 7, sigla: "TRE",    nome: "Tribunal Regional Eleitoral",                                              ativo: true },
-  { id: 8, sigla: "CGE-CE", nome: "Controladoria e Ouvidoria Geral do Estado do Ceará",                      ativo: true },
+  { id: 1, sigla: "UFC",    nome: "Universidade Federal do Ceará",                                             ativo: true, realizadora: true,  ordem: 1 },
+  { id: 2, sigla: "IFCE",   nome: "Instituto Federal de Educação, Ciência e Tecnologia do Ceará",             ativo: true, realizadora: true,  ordem: 2 },
+  { id: 3, sigla: "UFCA",   nome: "Universidade Federal do Cariri",                                           ativo: true, realizadora: true,  ordem: 3 },
+  { id: 4, sigla: "Unilab", nome: "Universidade da Integração Internacional da Lusofonia Afro-Brasileira",   ativo: true, realizadora: true,  ordem: 4 },
+  { id: 5, sigla: "CGU",    nome: "Controladoria-Geral da União",                                             ativo: true, realizadora: false, ordem: null },
+  { id: 6, sigla: "TCU",    nome: "Tribunal de Contas da União",                                             ativo: true, realizadora: false, ordem: null },
+  { id: 7, sigla: "TRE",    nome: "Tribunal Regional Eleitoral",                                              ativo: true, realizadora: false, ordem: null },
+  { id: 8, sigla: "CGE-CE", nome: "Controladoria e Ouvidoria Geral do Estado do Ceará",                      ativo: true, realizadora: false, ordem: null },
 ];
 
 export const INITIAL_PALESTRANTES = [

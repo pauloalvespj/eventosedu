@@ -20,7 +20,7 @@ const isLightTheme = (event) =>
   event?.tema?.preset === "verde_claro" ||
   (event?.tema?.preset === "custom" && event?.tema?.mode === "light");
 
-export function LandingPage({ event, atividades, palestrantes, onInscricaoClick, onLoginClick, user }) {
+export function LandingPage({ event, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
   const [diaAtivo, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
   const inscStatus = inscricoesAbertas(event);
@@ -222,25 +222,52 @@ export function LandingPage({ event, atividades, palestrantes, onInscricaoClick,
       </section>
 
       {/* REALIZAÇÃO */}
-      {event.realizacao && (
-        <section className="section" id="realizacao">
-          <div className="container">
-            <div className="section-header centered">
-              <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Instituições</div>
-              <h2 className="section-title">Realização</h2>
+      {(() => {
+        const realizadoras = [...(instituicoes || [])]
+          .filter(i => i.realizadora && i.ativo)
+          .sort((a, b) => (a.ordem ?? 9999) - (b.ordem ?? 9999));
+        const items = realizadoras.length > 0
+          ? realizadoras
+          : (event.realizacao || "").split(",").filter(Boolean).map((r, i) => ({ _text: r, id: i }));
+        if (!items.length) return null;
+        return (
+          <section className="section" id="realizacao">
+            <div className="container">
+              <div className="section-header centered">
+                <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Instituições</div>
+                <h2 className="section-title">Realização</h2>
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
+                {items.map((item) => {
+                  if (item._text) {
+                    const r = item._text;
+                    return (
+                      <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240 }}>
+                        <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🏛</div>
+                        <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{r.trim().split("(")[0].trim()}</div>
+                        {r.includes("(") && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.25rem" }}>({r.split("(")[1].replace(")","").trim()})</div>}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"0.5rem" }}>
+                      {item.logo_url ? (
+                        <img src={item.logo_url} alt={item.sigla} style={{ height:56, maxWidth:160, objectFit:"contain" }} />
+                      ) : (
+                        <>
+                          <div style={{ fontSize:"2rem" }}>🏛</div>
+                          <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{item.sigla}</div>
+                          <div style={{ fontSize:"0.78rem", color:"var(--text3)", lineHeight:1.4 }}>{item.nome}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
-              {event.realizacao.split(",").map((r,i) => (
-                <div key={i} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240 }}>
-                  <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🏛</div>
-                  <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{r.trim().split("(")[0].trim()}</div>
-                  {r.includes("(") && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.25rem" }}>({r.split("(")[1].replace(")","").trim()})</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* LOCAL */}
       <section className="section" data-section="accent" id="local">
