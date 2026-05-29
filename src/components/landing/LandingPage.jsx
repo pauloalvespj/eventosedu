@@ -123,7 +123,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
       </section>
 
       {/* PROGRAMAÇÃO */}
-      <section className="section section-alt" id="programacao">
+      {eventLoaded && <section className="section section-alt" id="programacao">
         <div className="container">
           {event.programacao_visivel === false ? (
             /* ── Em breve ── */
@@ -196,7 +196,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
             </>
           )}
         </div>
-      </section>
+      </section>}
 
       {/* PALESTRANTES */}
       <section className="section" data-section="accent" id="palestrantes">
