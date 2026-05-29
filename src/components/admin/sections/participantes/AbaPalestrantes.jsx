@@ -56,11 +56,16 @@ export function AbaPalestrantes() {
       }
       const atualizado = { ...formPal, foto_url };
       setPalestrantes(palestrantes.map(p => p.id === formPal.id ? atualizado : p));
-      atualizarProfile(formPal.id, {
-        nome: atualizado.nome, titulo: atualizado.titulo,
+      const { error: saveErr } = await atualizarProfile(formPal.id, {
+        nome: atualizado.nome, cargo: atualizado.cargo,
         area: atualizado.area, mini_bio: atualizado.mini_bio, instituicao: atualizado.instituicao,
         destaque: atualizado.destaque ?? false, foto_url: atualizado.foto_url ?? null,
       });
+      if (saveErr) {
+        setSalvando(false);
+        showToast("Erro ao salvar perfil: " + saveErr.message, "error");
+        return;
+      }
       setSalvando(false);
       setModalPal(false);
       showToast("Palestrante salvo!", "success");
@@ -70,7 +75,7 @@ export function AbaPalestrantes() {
       const { data, error } = await adminCriarUsuario({
         nome: formPal.nome,
         email: formPal.email,
-        titulo: formPal.titulo,
+        cargo: formPal.cargo,
         area: formPal.area,
         mini_bio: formPal.mini_bio,
         instituicao: formPal.instituicao,
@@ -85,7 +90,7 @@ export function AbaPalestrantes() {
       }
       // Salva campos extras que a Edge Function pode não ter processado
       const extras = {};
-      if (formPal.titulo)    extras.titulo   = formPal.titulo;
+      if (formPal.cargo)    extras.cargo   = formPal.cargo;
       if (formPal.area)      extras.area     = formPal.area;
       if (formPal.mini_bio)  extras.mini_bio = formPal.mini_bio;
       extras.destaque = formPal.destaque ?? false;
@@ -131,7 +136,7 @@ export function AbaPalestrantes() {
         </div>
         <table>
           <thead>
-            <tr><th>Nome</th><th>Título</th><th>Instituição</th><th>Área</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>Cargo</th><th>Instituição</th><th>Área</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {filtrados.map(p => (
@@ -145,7 +150,7 @@ export function AbaPalestrantes() {
                     <span style={{ fontWeight: 500 }}>{p.nome}</span>
                   </div>
                 </td>
-                <td style={{ fontSize: "0.85rem", color: "var(--text2)" }}>{p.titulo}</td>
+                <td style={{ fontSize: "0.85rem", color: "var(--text2)" }}>{p.cargo}</td>
                 <td style={{ fontSize: "0.85rem" }}>{p.instituicao || <span style={{ color: "var(--text3)" }}>–</span>}</td>
                 <td><span className="badge badge-navy">{p.area}</span></td>
                 <td style={{ textAlign:"center" }}>
@@ -174,7 +179,7 @@ export function AbaPalestrantes() {
         </table>
       </div>
 
-      <Modal show={modalPal} onClose={() => setModalPal(false)} title={formPal.id ? "Editar Palestrante" : "Novo Palestrante"}>
+      <Modal show={modalPal} onClose={() => setModalPal(false)} title={formPal.id ? "Editar Palestrante" : "Novo Palestrante"} wide>
         {formPal.id && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
             <AvatarUpload
@@ -208,16 +213,16 @@ export function AbaPalestrantes() {
           <input className="form-input" value={formPal.nome || ""} onChange={e => setFormPal(f => ({ ...f, nome: e.target.value }))} />
         </div>
         <div className="form-group">
-          <label className="form-label">Título / Formação</label>
-          <input className="form-input" value={formPal.titulo || ""} onChange={e => setFormPal(f => ({ ...f, titulo: e.target.value }))} />
+          <label className="form-label">Instituição</label>
+          <InstSelect value={formPal.instituicao || ""} onChange={v => setFormPal(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Cargo</label>
+          <input className="form-input" value={formPal.cargo || ""} onChange={e => setFormPal(f => ({ ...f, cargo: e.target.value }))} />
         </div>
         <div className="form-group">
           <label className="form-label">Área de Atuação</label>
           <input className="form-input" value={formPal.area || ""} onChange={e => setFormPal(f => ({ ...f, area: e.target.value }))} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Instituição</label>
-          <InstSelect value={formPal.instituicao || ""} onChange={v => setFormPal(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
         </div>
         <div className="form-group">
           <label className="form-label">Mini Biografia</label>

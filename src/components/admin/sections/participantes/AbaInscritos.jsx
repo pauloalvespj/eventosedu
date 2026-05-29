@@ -246,6 +246,15 @@ export function AbaInscritos() {
             <label className="form-label">Nome completo *</label>
             <input className="form-input" value={formPart.nome || ""} onChange={e => setFormPart(f => ({ ...f, nome: e.target.value }))} />
           </div>
+          <div className="form-group" style={{ gridColumn: "1/-1" }}>
+            <label className="form-label">Instituição</label>
+            <InstSelect value={formPart.instituicao || ""} onChange={v => setFormPart(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
+          </div>
+          <div className="form-group" style={{ gridColumn: "1/-1" }}>
+            <label className="form-label">Cargo</label>
+            <input className="form-input" value={formPart.cargo || ""}
+              onChange={e => setFormPart(f => ({ ...f, cargo: e.target.value }))} />
+          </div>
           <div className="form-group">
             <label className="form-label">CPF</label>
             <input className="form-input" style={{ fontFamily: "monospace" }} placeholder="000.000.000-00"
@@ -264,15 +273,6 @@ export function AbaInscritos() {
                 Também participa do evento (certificado, presença)
               </label>
             )}
-          </div>
-          <div className="form-group" style={{ gridColumn: "1/-1" }}>
-            <label className="form-label">Instituição</label>
-            <InstSelect value={formPart.instituicao || ""} onChange={v => setFormPart(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
-          </div>
-          <div className="form-group" style={{ gridColumn: "1/-1" }}>
-            <label className="form-label">Cargo / Título</label>
-            <input className="form-input" value={formPart.cargo || ""}
-              onChange={e => setFormPart(f => ({ ...f, cargo: e.target.value }))} />
           </div>
           <div className="form-group">
             <label className="form-label">E-mail {modalPart === "new" && <span style={{ color: "var(--gold-on-dark)" }}>*</span>}</label>

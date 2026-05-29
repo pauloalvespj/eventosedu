@@ -225,7 +225,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                     : <div className="palestrante-avatar">{p.foto_iniciais}</div>
                   }
                   <div className="palestrante-nome">{p.nome}</div>
-                  <div className="palestrante-titulo">{p.titulo}</div>
+                  <div className="palestrante-titulo">{p.cargo}</div>
                   {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginBottom:"0.4rem" }}>{p.instituicao}</div>}
                   <span className="palestrante-area">{p.area}</span>
                   {p.mini_bio && <p style={{ fontSize:"0.78rem", color:"var(--text2)", marginTop:"0.6rem", lineHeight:1.5 }}>{p.mini_bio}</p>}

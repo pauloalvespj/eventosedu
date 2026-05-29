@@ -13,10 +13,11 @@ import { supabase } from "./supabase";
 export async function uploadAvatar(userId, file) {
   const ext = file.name.split(".").pop();
   const path = `${userId}.${ext}`;
-  const { error } = await supabase.storage.from("avatares").upload(path, file, { upsert: true });
-  if (error) throw error;
+  const { error: uploadError } = await supabase.storage.from("avatares").upload(path, file, { upsert: true });
+  if (uploadError) throw uploadError;
   const { data: { publicUrl } } = supabase.storage.from("avatares").getPublicUrl(path);
-  await supabase.from("profiles").update({ foto_url: publicUrl }).eq("id", userId);
+  const { error: updateError } = await supabase.from("profiles").update({ foto_url: publicUrl }).eq("id", userId);
+  if (updateError) throw new Error("Storage ok, mas falhou ao salvar URL no perfil: " + updateError.message);
   return publicUrl;
 }
 
