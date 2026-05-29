@@ -47,7 +47,7 @@ export function AbaPalestrantes() {
       atualizarProfile(formPal.id, {
         nome: atualizado.nome, titulo: atualizado.titulo,
         area: atualizado.area, mini_bio: atualizado.mini_bio, instituicao: atualizado.instituicao,
-        destaque: atualizado.destaque ?? false,
+        destaque: atualizado.destaque ?? false, foto_url: atualizado.foto_url ?? null,
       });
       setSalvando(false);
       setModalPal(false);
