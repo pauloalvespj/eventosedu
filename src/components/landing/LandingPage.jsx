@@ -205,10 +205,14 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
             <div style={{ textAlign:"center" }}>
               <div style={{ color: "var(--sec3-text-soft)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Convidados</div>
               <h2 className="section-title" style={{ marginBottom:"0.5rem" }}>Palestrantes</h2>
-              {event.palestrantes_subtitulo && <p className="section-sub" style={{ marginBottom:"1.5rem" }}>{event.palestrantes_subtitulo}</p>}
               <span style={{ display:"inline-block", background:"rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.90)", border:"1px solid rgba(255,255,255,0.40)", borderRadius:50, padding:"0.3rem 1rem", fontSize:"0.75rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"1.5rem" }}>
                 Em breve
               </span>
+              {event.palestrantes_subtitulo && (
+                <p style={{ color:"rgba(255,255,255,0.75)", fontSize:"0.92rem", lineHeight:1.75, maxWidth:480, margin:"0 auto" }}>
+                  {event.palestrantes_subtitulo}
+                </p>
+              )}
             </div>
           ) : (
             <>

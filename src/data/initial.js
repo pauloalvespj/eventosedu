@@ -21,7 +21,7 @@ export const INITIAL_EVENT = {
   inscricao_fim: "2026-09-14",
   certificado_disponivel: false,
   palestrantes_visivel: true,
-  palestrantes_subtitulo: "Especialistas em auditoria, governança e controle público",
+  palestrantes_subtitulo: "A grade de atividades, palestrantes e horários será divulgada em breve. Fique atento às atualizações!",
   gamificacao_ativa: true,
   forum_ativo: true,
 };
