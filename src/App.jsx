@@ -130,6 +130,7 @@ export default function App() {
   const [loading, setLoading] = useState(false); // eslint-disable-line no-unused-vars
 
   // ── Estado — inicia com mock, substitui pelo Supabase quando disponível ──
+  const [eventLoaded, setEventLoaded] = useState(false);
   const [event, setEvent] = useState(INITIAL_EVENT);
   useEffect(() => {
     document.title = event.nome_completo
@@ -208,7 +209,7 @@ export default function App() {
       fetchAtividades(),  // 1
       fetchProfiles(),    // 2
     ]);
-    if (get(fase1[0])) setEvent(get(fase1[0]));
+    if (get(fase1[0])) { setEvent(get(fase1[0])); setEventLoaded(true); } else { setEventLoaded(true); }
     if (get(fase1[1])) setAtividades(get(fase1[1]));
     if (get(fase1[2])) setProfiles(get(fase1[2]));
 
@@ -523,6 +524,7 @@ export default function App() {
           ) : (
             <LandingPage
               event={event}
+              eventLoaded={eventLoaded}
               atividades={atividades}
               palestrantes={palestrantes}
               instituicoes={instituicoes}

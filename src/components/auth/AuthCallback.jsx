@@ -8,11 +8,41 @@ export function AuthCallback() {
 
   useEffect(() => {
     async function handle() {
+      // Salva dados de perfil pendentes (CPF, instituição, cargo) coletados antes do login
+      async function salvarPerfilPendente(session) {
+        if (!session) return;
+        try {
+          const raw = localStorage.getItem("enaudin_perfil_pendente");
+          if (!raw) return;
+          const pendente = JSON.parse(raw);
+          if (Object.keys(pendente).length > 0) {
+            // Busca campos atuais para não sobrescrever dados já existentes
+            const { data: prof } = await supabase
+              .from("profiles")
+              .select("cpf, instituicao, cargo")
+              .eq("id", session.user.id)
+              .maybeSingle();
+            const atualizacao = {};
+            if (pendente.cpf        && !prof?.cpf)        atualizacao.cpf = pendente.cpf;
+            if (pendente.instituicao && !prof?.instituicao) atualizacao.instituicao = pendente.instituicao;
+            if (pendente.cargo       && !prof?.cargo)       atualizacao.cargo = pendente.cargo;
+            if (Object.keys(atualizacao).length > 0) {
+              await supabase.from("profiles").update(atualizacao).eq("id", session.user.id);
+            }
+          }
+        } catch (_) {
+          // Falha silenciosa — dado extra não é crítico para o acesso
+        } finally {
+          localStorage.removeItem("enaudin_perfil_pendente");
+        }
+      }
+
       // PKCE flow: troca o code por sessão
       const code = new URLSearchParams(window.location.search).get("code");
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         if (error) { setErro(true); return; }
+        await salvarPerfilPendente(data.session);
         navigate("/painel", { replace: true });
         return;
       }
@@ -20,14 +50,16 @@ export function AuthCallback() {
       // Implicit flow: Supabase lê o hash automaticamente — sessão já está disponível
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        await salvarPerfilPendente(session);
         navigate("/painel", { replace: true });
         return;
       }
 
       // Fallback: aguarda onAuthStateChange (tokens ainda sendo processados)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "SIGNED_IN" && session) {
           subscription.unsubscribe();
+          await salvarPerfilPendente(session);
           navigate("/painel", { replace: true });
         }
         if (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {

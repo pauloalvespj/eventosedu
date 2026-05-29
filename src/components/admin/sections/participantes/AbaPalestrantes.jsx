@@ -4,7 +4,7 @@ import { faPenToSquare, faTrash, faEye, faEyeSlash } from "@fortawesome/free-sol
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, adminCriarUsuario, atualizarEvento } from "../../../../lib/db";
+import { atualizarProfile, adminCriarUsuario, atualizarEvento, uploadAvatar } from "../../../../lib/db";
 
 export function AbaPalestrantes() {
   const { event, setEvent, palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
@@ -19,6 +19,7 @@ export function AbaPalestrantes() {
   const [busca, setBusca]       = useState("");
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
+  const [fotoFile, setFotoFile] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
   function toggleDestaque(p) {
@@ -30,12 +31,25 @@ export function AbaPalestrantes() {
   async function salvar() {
     if (!formPal.nome) { showToast("Nome obrigatório", "error"); return; }
     if (formPal.id) {
-      setPalestrantes(palestrantes.map(p => p.id === formPal.id ? formPal : p));
+      setSalvando(true);
+      let foto_url = formPal.foto_url;
+      if (fotoFile) {
+        try {
+          foto_url = await uploadAvatar(formPal.id, fotoFile);
+        } catch (err) {
+          setSalvando(false);
+          showToast("Erro ao enviar foto: " + (err?.message || String(err)), "error");
+          return;
+        }
+      }
+      const atualizado = { ...formPal, foto_url };
+      setPalestrantes(palestrantes.map(p => p.id === formPal.id ? atualizado : p));
       atualizarProfile(formPal.id, {
-        nome: formPal.nome, titulo: formPal.titulo,
-        area: formPal.area, mini_bio: formPal.mini_bio, instituicao: formPal.instituicao,
-        destaque: formPal.destaque ?? false,
+        nome: atualizado.nome, titulo: atualizado.titulo,
+        area: atualizado.area, mini_bio: atualizado.mini_bio, instituicao: atualizado.instituicao,
+        destaque: atualizado.destaque ?? false,
       });
+      setSalvando(false);
       setModalPal(false);
       showToast("Palestrante salvo!", "success");
     } else {
@@ -92,7 +106,7 @@ export function AbaPalestrantes() {
             <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
             {visivel ? "Visível no site" : "Em breve no site"}
           </button>
-          <button className="btn btn-primary" onClick={() => { setFormPal({}); setModalPal(true); }}>
+          <button className="btn btn-primary" onClick={() => { setFormPal({}); setFotoFile(null); setModalPal(true); }}>
             + Novo Palestrante
           </button>
         </div>
@@ -131,7 +145,7 @@ export function AbaPalestrantes() {
                 </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
-                    <button className="btn btn-sm btn-outline" onClick={() => { setFormPal({ ...p }); setModalPal(true); }}>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setFormPal({ ...p }); setFotoFile(null); setModalPal(true); }}>
                       <FontAwesomeIcon icon={faPenToSquare} />
                     </button>
                     <button className="btn btn-sm btn-danger" onClick={() => {
@@ -156,10 +170,7 @@ export function AbaPalestrantes() {
               fotoUrl={formPal.foto_url}
               iniciais={formPal.foto_iniciais || formPal.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()}
               size={72}
-              onUploaded={url => {
-                setFormPal(f => ({ ...f, foto_url: url }));
-                setPalestrantes(palestrantes.map(p => p.id === formPal.id ? { ...p, foto_url: url } : p));
-              }}
+              onFileSelected={(file) => setFotoFile(file)}
             />
           </div>
         )}

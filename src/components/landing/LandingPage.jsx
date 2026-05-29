@@ -20,7 +20,7 @@ const isLightTheme = (event) =>
   event?.tema?.preset === "verde_claro" ||
   (event?.tema?.preset === "custom" && event?.tema?.mode === "light");
 
-export function LandingPage({ event, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
+export function LandingPage({ event, eventLoaded = false, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
   const [diaAtivo, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
   const inscStatus = inscricoesAbertas(event);
@@ -51,39 +51,55 @@ export function LandingPage({ event, atividades, palestrantes, instituicoes, onI
       {/* HERO */}
       <section className="hero" id="home">
         <div style={{ position:"relative", zIndex:1, width:"100%", maxWidth:860, margin:"0 auto" }}>
-          {event.logo_url ? (
-            <div style={{ marginBottom:"1.25rem" }}>
-              <img src={event.logo_url} alt={event.nome}
-                style={{ width:"100%", maxHeight:200, maxWidth:560, objectFit:"contain", filter: isLightTheme(event) ? "none" : "drop-shadow(0 2px 12px rgba(0,0,0,0.35))" }} />
+          {!eventLoaded ? (
+            /* Skeleton enquanto os dados do Supabase chegam */
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"1.1rem" }}>
+              <div style={{ width:320, height:120, borderRadius:12, background:"rgba(255,255,255,0.08)", animation:"heroPulse 1.4s ease-in-out infinite" }} />
+              <div style={{ width:440, height:22, borderRadius:8, background:"rgba(255,255,255,0.06)", animation:"heroPulse 1.4s ease-in-out .2s infinite" }} />
+              <div style={{ width:260, height:42, borderRadius:8, background:"rgba(201,168,76,0.15)", animation:"heroPulse 1.4s ease-in-out .4s infinite" }} />
+              <div style={{ width:180, height:18, borderRadius:8, background:"rgba(255,255,255,0.06)", animation:"heroPulse 1.4s ease-in-out .6s infinite" }} />
+              <div style={{ display:"flex", gap:"1rem", marginTop:"0.5rem" }}>
+                <div style={{ width:180, height:46, borderRadius:50, background:"rgba(201,168,76,0.2)", animation:"heroPulse 1.4s ease-in-out .8s infinite" }} />
+                <div style={{ width:150, height:46, borderRadius:50, background:"rgba(255,255,255,0.06)", animation:"heroPulse 1.4s ease-in-out 1s infinite" }} />
+              </div>
             </div>
           ) : (
             <>
-              <h1 style={{ fontSize:"clamp(2.8rem,7vw,5rem)", marginBottom:"0.5rem" }}>
-                <em>{event.nome}</em>
-              </h1>
-              {event.nome_completo && (
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(0.9rem,2vw,1.1rem)", color:"var(--hero-subtext)", marginBottom:"1.25rem", lineHeight:1.6, maxWidth:680, margin:"0 auto 1.25rem" }}>
-                  {event.nome_completo}
+              {event.logo_url ? (
+                <div className="hero-anim hero-anim-1" style={{ marginBottom:"1.25rem" }}>
+                  <img src={event.logo_url} alt={event.nome} className="hero-logo-float"
+                    style={{ width:"100%", maxHeight:200, maxWidth:560, objectFit:"contain", filter: isLightTheme(event) ? "none" : "drop-shadow(0 2px 16px rgba(0,0,0,0.4))" }} />
+                </div>
+              ) : (
+                <div className="hero-anim hero-anim-1">
+                  <h1 style={{ fontSize:"clamp(2.8rem,7vw,5rem)", marginBottom:"0.5rem" }}>
+                    <em>{event.nome}</em>
+                  </h1>
+                  {event.nome_completo && (
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(0.9rem,2vw,1.1rem)", color:"var(--hero-subtext)", marginBottom:"1.25rem", lineHeight:1.6, maxWidth:680, margin:"0 auto 1.25rem" }}>
+                      {event.nome_completo}
+                    </div>
+                  )}
                 </div>
               )}
+              <div className="hero-anim hero-anim-2" style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
+                {event.subtitulo}
+              </div>
+              <div className="hero-anim hero-anim-3 hero-date-glow" style={{ fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
+                {formatPeriodo(event.data_inicio, event.data_fim)}{event.data_fim ? ` · ${event.data_fim.split("-")[0]}` : event.data_inicio ? ` · ${event.data_inicio.split("-")[0]}` : ""}
+              </div>
+              <div className="hero-meta hero-anim hero-anim-4" style={{ marginBottom:"2.5rem" }}>
+                <div className="hero-meta-item"><div className="hero-meta-icon">📍</div><span style={{ fontSize:"1.05rem" }}>{event.local}</span></div>
+              </div>
+              <div className="hero-btns hero-anim hero-anim-5">
+                {inscStatus.aberta
+                  ? <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
+                  : <div className="btn-hero-disabled">{inscStatus.msg}</div>
+                }
+                <a href="#programacao" className="btn-hero-outline">Ver Programação</a>
+              </div>
             </>
           )}
-          <div style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
-            {event.subtitulo}
-          </div>
-          <div style={{ fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-            {formatPeriodo(event.data_inicio, event.data_fim)}{event.data_fim ? ` · ${event.data_fim.split("-")[0]}` : event.data_inicio ? ` · ${event.data_inicio.split("-")[0]}` : ""}
-          </div>
-          <div className="hero-meta" style={{ marginBottom:"2.5rem" }}>
-            <div className="hero-meta-item"><div className="hero-meta-icon">📍</div><span style={{ fontSize:"1.05rem" }}>{event.local}</span></div>
-          </div>
-          <div className="hero-btns">
-            {inscStatus.aberta
-              ? <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se Gratuitamente</button>
-              : <div className="btn-hero-disabled">{inscStatus.msg}</div>
-            }
-            <a href="#programacao" className="btn-hero-outline">Ver Programação</a>
-          </div>
         </div>
       </section>
 

@@ -94,6 +94,22 @@ input,select,textarea{font-family:inherit}
 .btn-hero-outline{background:transparent;color:var(--color-primary);padding:0.85rem 2rem;border-radius:50px;font-weight:600;font-size:0.95rem;border:2px solid var(--color-primary);transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center}
 .btn-hero-outline:hover{background:rgba(var(--color-primary-rgb),0.10);transform:translateY(-1px)}
 
+/* ── HERO ANIMATIONS ─────────────────────────────────────────── */
+@keyframes heroFadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes heroPulse{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes heroGlow{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 28px rgba(201,168,76,.45),0 0 8px rgba(201,168,76,.25)}}
+
+.hero-anim{animation:heroFadeUp .75s cubic-bezier(.22,.68,0,1.2) both}
+.hero-anim-1{animation-delay:.05s}
+.hero-anim-2{animation-delay:.22s}
+.hero-anim-3{animation-delay:.38s}
+.hero-anim-4{animation-delay:.52s}
+.hero-anim-5{animation-delay:.66s}
+.hero-logo-float{animation:heroFloat 5s ease-in-out 1.2s infinite}
+.hero-date-glow{animation:heroGlow 3.5s ease-in-out 1.8s infinite}
+@media(prefers-reduced-motion:reduce){.hero-anim,.hero-logo-float,.hero-date-glow{animation:none;opacity:1}}
+
 /* SECTIONS */
 .section{padding:5rem 2rem;background:var(--sec1-bg,#ffffff)}
 .section-alt{background:var(--sec2-bg,var(--surface2))}

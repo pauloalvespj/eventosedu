@@ -5,14 +5,16 @@ import { uploadAvatar } from "../../lib/db";
  * AvatarUpload — exibe avatar (foto ou iniciais) com botão de troca.
  *
  * Props:
- *   userId     — id do profile (para salvar no storage)
- *   fotoUrl    — URL atual da foto (string | null)
- *   iniciais   — fallback de texto quando não há foto
- *   size       — diâmetro em px (padrão 56)
- *   onUploaded — callback(novaUrl) chamado após upload bem-sucedido
- *   readonly   — desativa botão de troca
+ *   userId         — id do profile (para salvar no storage)
+ *   fotoUrl        — URL atual da foto (string | null)
+ *   iniciais       — fallback de texto quando não há foto
+ *   size           — diâmetro em px (padrão 56)
+ *   onUploaded     — callback(novaUrl) após upload imediato bem-sucedido
+ *   onFileSelected — callback(file, previewUrl) — modo diferido: sem upload automático
+ *   onError        — callback(mensagem) quando upload imediato falha
+ *   readonly       — desativa botão de troca
  */
-export function AvatarUpload({ userId, fotoUrl, iniciais = "?", size = 56, onUploaded, readonly = false }) {
+export function AvatarUpload({ userId, fotoUrl, iniciais = "?", size = 56, onUploaded, onFileSelected, onError, readonly = false }) {
   const inputRef = useRef();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(fotoUrl || null);
@@ -20,9 +22,15 @@ export function AvatarUpload({ userId, fotoUrl, iniciais = "?", size = 56, onUpl
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Preview imediato
     const objUrl = URL.createObjectURL(file);
     setPreview(objUrl);
+
+    // Modo diferido: pai decide quando e como fazer o upload
+    if (onFileSelected) {
+      onFileSelected(file, objUrl);
+      return;
+    }
+
     setLoading(true);
     try {
       const url = await uploadAvatar(userId, file);
@@ -31,6 +39,7 @@ export function AvatarUpload({ userId, fotoUrl, iniciais = "?", size = 56, onUpl
     } catch (err) {
       console.error("Erro ao enviar foto:", err);
       setPreview(fotoUrl || null);
+      onError?.(err?.message || String(err));
     } finally {
       setLoading(false);
     }

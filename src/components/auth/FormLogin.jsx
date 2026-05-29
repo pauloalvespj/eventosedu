@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
 export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
-  const [modo, setModo] = useState("senha"); // "senha" | "link"
+  const [modo, setModo] = useState("link"); // "link" | "senha"
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [etapa, setEtapa] = useState("email"); // "email" | "aguardando"
@@ -78,7 +78,7 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     <div>
       {/* Seletor de modo */}
       <div style={{ display: "flex", background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: 3, marginBottom: "1.5rem", gap: 3 }}>
-        {[["senha","🔑 Senha"],["link","📧 Link por e-mail"]].map(([m, l]) => (
+        {[["link","📧 Link por e-mail"],["senha","🔑 Senha"]].map(([m, l]) => (
           <button key={m} onClick={() => { setModo(m); reset(); }}
             style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "none", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", transition: "all 0.2s",
               background: modo === m ? "var(--navy)" : "transparent",
