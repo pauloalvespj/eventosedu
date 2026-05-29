@@ -178,7 +178,7 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
           Não tem conta?{" "}
           <button style={{ background: "transparent", color: "var(--navy)", fontWeight: 700, border: "none", cursor: "pointer" }}
             onClick={() => { onClose(); onInscricaoClick(); }}>
-            Inscreva-se gratuitamente
+            Inscreva-se
           </button>
         </div>
       </div>
