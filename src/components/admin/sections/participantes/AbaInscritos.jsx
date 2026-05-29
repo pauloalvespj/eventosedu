@@ -4,7 +4,7 @@ import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft } from "@fo
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, adicionarComoParticipante, removerComoParticipante } from "../../../../lib/db";
+import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, adicionarComoParticipante, removerComoParticipante, atualizarEmailAuth } from "../../../../lib/db";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -78,8 +78,21 @@ export function AbaInscritos() {
         }
       }
 
+      setSalvando(true);
+      const emailNovo = formPart.email?.trim().toLowerCase();
+      const emailOriginal = original?.email?.trim().toLowerCase();
+      if (emailNovo && emailNovo !== emailOriginal) {
+        const { error: emailErr } = await atualizarEmailAuth(formPart.id, emailNovo);
+        if (emailErr) {
+          setSalvando(false);
+          showToast("Erro ao atualizar e-mail: " + (emailErr.message || JSON.stringify(emailErr)), "error");
+          return;
+        }
+        await atualizarProfile(formPart.id, { email: emailNovo });
+      }
       setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, roles: newRoles } : x));
       atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role });
+      setSalvando(false);
       showToast("Inscrito atualizado!", "success");
     }
     setModalPart(null);

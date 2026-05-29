@@ -4,7 +4,7 @@ import { faPenToSquare, faTrash, faEye, faEyeSlash } from "@fortawesome/free-sol
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, adminCriarUsuario, atualizarEvento, uploadAvatar } from "../../../../lib/db";
+import { atualizarProfile, adminCriarUsuario, atualizarEvento, uploadAvatar, atualizarEmailAuth } from "../../../../lib/db";
 
 export function AbaPalestrantes() {
   const { event, setEvent, palestrantes, setPalestrantes, instituicoes, showToast } = useAdmin();
@@ -41,6 +41,18 @@ export function AbaPalestrantes() {
           showToast("Erro ao enviar foto: " + (err?.message || String(err)), "error");
           return;
         }
+      }
+      const original = palestrantes.find(p => p.id === formPal.id);
+      const emailNovo = formPal.email?.trim().toLowerCase();
+      const emailOriginal = original?.email?.trim().toLowerCase();
+      if (emailNovo && emailNovo !== emailOriginal) {
+        const { error: emailErr } = await atualizarEmailAuth(formPal.id, emailNovo);
+        if (emailErr) {
+          setSalvando(false);
+          showToast("Erro ao atualizar e-mail: " + (emailErr.message || JSON.stringify(emailErr)), "error");
+          return;
+        }
+        await atualizarProfile(formPal.id, { email: emailNovo });
       }
       const atualizado = { ...formPal, foto_url };
       setPalestrantes(palestrantes.map(p => p.id === formPal.id ? atualizado : p));
