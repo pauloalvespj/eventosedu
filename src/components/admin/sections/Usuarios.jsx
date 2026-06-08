@@ -8,13 +8,10 @@ import { RoleBadge } from "../../base/index";
 import { atualizarProfile, atualizarEmailAuth } from "../../../lib/db";
 import { ROLE_LABEL } from "../../../utils/helpers";
 
-const ROLES = ["admin", "credenciador", "palestrante", "participante"];
+const ROLES = ["admin"];
 
 const ROLE_PERMS = {
-  admin:        "Acesso total: gerencia evento, participantes, programação, fórum e relatórios.",
-  credenciador: "Acessa apenas a tela de credenciamento.",
-  palestrante:  "Acesso ao painel do palestrante (palestras, presença).",
-  participante: "Acessa o portal do participante (sem acesso admin).",
+  admin: "Acesso total: gerencia evento, participantes, programação, fórum e relatórios.",
 };
 
 export function Usuarios() {

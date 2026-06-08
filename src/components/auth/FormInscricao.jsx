@@ -194,7 +194,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     const precisaInst  = !jaTemCadastro.instituicao;
     const precisaCargo = !jaTemCadastro.cargo;
     const temFaltando  = precisaCpf || precisaInst || precisaCargo;
-    const isPalestrante = jaTemCadastro.role === "palestrante";
+    const isPalestrante = jaTemCadastro.is_palestrante;
 
     return (
       <div>

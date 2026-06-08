@@ -153,7 +153,7 @@ export const INITIAL_PARTICIPANTES = [
 export const INITIAL_ADMINS = [
   { id: 1, nome: "Comissão Organizadora", email: "admin@enaudin.gov.br",      senha: "admin123", role: "admin",  instituicao: "UFC",    ativo: true,  foto_iniciais: "CO" },
   { id: 2, nome: "Secretaria do Evento",  email: "secretaria@enaudin.gov.br", senha: "sec2026",  role: "admin",        instituicao: "IFCE",   ativo: true,  foto_iniciais: "SE" },
-  { id: 3, nome: "Recepção UFC",          email: "recepcao@enaudin.gov.br",   senha: "rec2026",  role: "credenciador", instituicao: "UFC",    ativo: true,  foto_iniciais: "RU" },
+  { id: 3, nome: "Recepção UFC",          email: "recepcao@enaudin.gov.br",   senha: "rec2026",  role: "participante", is_credenciador: true, instituicao: "UFC",    ativo: true,  foto_iniciais: "RU" },
   { id: 4, nome: "Suporte Técnico",       email: "ti@enaudin.gov.br",         senha: "ti2026",   role: "admin",        instituicao: "Unilab", ativo: false, foto_iniciais: "ST" },
 ];
 

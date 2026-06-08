@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faTrash, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
-import { Modal, AvatarUpload } from "../../../base/index";
+import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
 import { atualizarProfile, adminCriarUsuario, atualizarEvento, uploadAvatar, atualizarEmailAuth } from "../../../../lib/db";
 
@@ -80,7 +80,8 @@ export function AbaPalestrantes() {
         mini_bio: formPal.mini_bio,
         instituicao: formPal.instituicao,
         destaque: formPal.destaque ?? false,
-        role: "palestrante",
+        role: "participante",
+        is_palestrante: true,
         senha: formPal.senha,
       });
       setSalvando(false);
@@ -136,23 +137,25 @@ export function AbaPalestrantes() {
         </div>
         <table>
           <thead>
-            <tr><th>Nome</th><th>Cargo</th><th>Instituição</th><th>Área</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>Cargo</th><th>Instituição</th><th>E-mail</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {filtrados.map(p => (
-              <tr key={p.id}>
+              <tr key={p.id} style={{ ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
                 <td>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {p.foto_url
                       ? <img src={p.foto_url} alt={p.nome} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--gold)", flexShrink: 0 }} />
-                      : <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}>{p.foto_iniciais}</div>
+                      : <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
                     }
-                    <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                    </div>
                   </div>
                 </td>
                 <td style={{ fontSize: "0.85rem", color: "var(--text2)" }}>{p.cargo}</td>
                 <td style={{ fontSize: "0.85rem" }}>{p.instituicao || <span style={{ color: "var(--text3)" }}>–</span>}</td>
-                <td><span className="badge badge-navy">{p.area}</span></td>
+                <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{p.email || "–"}</td>
                 <td style={{ textAlign:"center" }}>
                   <button
                     onClick={() => toggleDestaque(p)}
@@ -167,6 +170,9 @@ export function AbaPalestrantes() {
                     </button>
                     <button className="btn btn-sm btn-danger" onClick={() => {
                       setPalestrantes(palestrantes.filter(x => x.id !== p.id));
+                      if (p.is_palestrante) {
+                        atualizarProfile(p.id, { is_palestrante: false });
+                      }
                       showToast("Palestrante removido", "info");
                     }}>
                       <FontAwesomeIcon icon={faTrash} />
@@ -185,7 +191,7 @@ export function AbaPalestrantes() {
             <AvatarUpload
               userId={formPal.id}
               fotoUrl={formPal.foto_url}
-              iniciais={formPal.foto_iniciais || formPal.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()}
+              iniciais={formPal.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || formPal.foto_iniciais}
               size={72}
               onFileSelected={(file) => setFotoFile(file)}
             />
@@ -219,10 +225,6 @@ export function AbaPalestrantes() {
         <div className="form-group">
           <label className="form-label">Cargo</label>
           <input className="form-input" value={formPal.cargo || ""} onChange={e => setFormPal(f => ({ ...f, cargo: e.target.value }))} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Área de Atuação</label>
-          <input className="form-input" value={formPal.area || ""} onChange={e => setFormPal(f => ({ ...f, area: e.target.value }))} />
         </div>
         <div className="form-group">
           <label className="form-label">Mini Biografia</label>

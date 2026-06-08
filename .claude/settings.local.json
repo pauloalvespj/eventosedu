@@ -10,7 +10,11 @@
       "Bash(npx vite:*)",
       "Bash(Get-ChildItem -Path C:\\\\projetos\\\\enaudin -Recurse -File)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Select-String -Pattern '\\(login|auth|signup|cadastro|register\\)')"
+      "Bash(Select-String -Pattern '\\(login|auth|signup|cadastro|register\\)')",
+      "Bash(dir C:\\\\Projetos\\\\eventosedu\\\\supabase *)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)",
+      "Bash(git pull *)"
     ]
   }
 }

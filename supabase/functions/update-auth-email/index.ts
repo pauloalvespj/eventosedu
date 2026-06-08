@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("id", caller.id)
       .single();
-    if (!["super_admin", "admin"].includes(callerProfile?.role)) {
+    if (callerProfile?.role !== "admin") {
       return new Response(JSON.stringify({ error: "Permissão insuficiente" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

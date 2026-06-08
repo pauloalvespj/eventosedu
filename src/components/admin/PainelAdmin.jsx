@@ -45,7 +45,7 @@ const MENU = [
 
 function MeusDados() {
   const { user: ctxUser, participantes, setParticipantes, instituicoes, showToast } = useAdmin();
-  const isPalestrante = ctxUser?.role === "palestrante";
+  const isPalestrante = ctxUser?.is_palestrante;
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nome: ctxUser?.nome || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" });
   const [salvando, setSalvando] = useState(false);
@@ -79,7 +79,7 @@ function MeusDados() {
             <AvatarUpload
               userId={ctxUser?.id}
               fotoUrl={ctxUser?.foto_url}
-              iniciais={ctxUser?.foto_iniciais || ctxUser?.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()}
+              iniciais={ctxUser?.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || ctxUser?.foto_iniciais}
               size={72}
               onUploaded={url => setParticipantes(participantes.map(p => p.id === ctxUser.id ? { ...p, foto_url: url } : p))}
             />
@@ -216,7 +216,7 @@ export function PainelAdmin(props) {
           </button>
           <span className="mobile-header-title">{event.nome} — Admin</span>
           <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(201,168,76,0.2)", border:"1.5px solid var(--gold)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"var(--gold-light)", flexShrink:0 }}>
-            {user?.foto_iniciais || user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("") || "?"}
+            {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
           </div>
         </div>
 
@@ -250,7 +250,7 @@ export function PainelAdmin(props) {
           <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--gold-light)", flexShrink: 0 }}>
-                {user?.foto_iniciais || user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("") || "?"}
+                {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
               </div>
               <div style={{ overflow: "hidden" }}>
                 <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome}</div>

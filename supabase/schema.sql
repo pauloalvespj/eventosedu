@@ -27,7 +27,7 @@ create table if not exists instituicoes (
 -- PK = auth.users.id (UUID do Supabase Auth)
 create table if not exists profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
-  role          text not null check (role in ('super_admin','admin','credenciador','palestrante','participante')),
+  role          text not null check (role in ('admin', 'participante')),
   nome          text not null,
   email         text not null,
   cpf           text,
@@ -39,6 +39,8 @@ create table if not exists profiles (
   foto_iniciais text,
   foto_url      text,
   sexo          text,
+  is_palestrante   boolean not null default false,
+  is_credenciador  boolean not null default false,
   credenciado   boolean not null default false,
   credenciado_em timestamptz,
   destaque      boolean not null default false,
@@ -96,7 +98,7 @@ create policy "Usuário gerencia próprios follows" on follows for all to authen
 alter table configuracoes_gamificacao enable row level security;
 create policy "Público lê gamificação" on configuracoes_gamificacao for select using (true);
 create policy "Admin gerencia gamificação" on configuracoes_gamificacao for all to authenticated
-  using (exists (select 1 from profiles where id = auth.uid() and role in ('super_admin','admin')));
+  using (current_user_role() = 'admin');
 
 -- ── ATIVIDADES ────────────────────────────────────────────────
 create table if not exists atividades (
@@ -147,11 +149,7 @@ create policy "Admin upload materiais"
   to authenticated
   with check (
     bucket_id = 'materiais'
-    and exists (
-      select 1 from profiles
-      where id = auth.uid()
-      and role in ('super_admin', 'admin')
-    )
+    and current_user_role() = 'admin'
   );
 
 create policy "Admin deleta materiais"
@@ -159,11 +157,7 @@ create policy "Admin deleta materiais"
   to authenticated
   using (
     bucket_id = 'materiais'
-    and exists (
-      select 1 from profiles
-      where id = auth.uid()
-      and role in ('super_admin', 'admin')
-    )
+    and current_user_role() = 'admin'
   );
 
 -- ── PRESENÇAS ────────────────────────────────────────────────
@@ -250,13 +244,18 @@ returns text language sql stable security definer as $$
   select role from profiles where id = auth.uid()
 $$;
 
+create or replace function user_is_credenciador()
+returns boolean language sql stable security definer as $$
+  select coalesce(is_credenciador, false) from profiles where id = auth.uid()
+$$;
+
 -- ── instituicoes ─────────────────────────────────────────────
 create policy "Público lê instituições"
   on instituicoes for select using (true);
 
 create policy "Admin gerencia instituições"
   on instituicoes for all to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── profiles ─────────────────────────────────────────────────
 create policy "Qualquer autenticado lê profiles"
@@ -268,7 +267,7 @@ create policy "Usuário edita próprio perfil"
 
 create policy "Admin gerencia profiles"
   on profiles for all to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── events ───────────────────────────────────────────────────
 create policy "Público lê eventos"
@@ -276,7 +275,7 @@ create policy "Público lê eventos"
 
 create policy "Admin gerencia eventos"
   on events for all to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── atividades ───────────────────────────────────────────────
 create policy "Público lê atividades"
@@ -284,7 +283,7 @@ create policy "Público lê atividades"
 
 create policy "Admin gerencia atividades"
   on atividades for all to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── presencas ────────────────────────────────────────────────
 create policy "Autenticado lê presenças"
@@ -296,11 +295,11 @@ create policy "Participante registra própria presença"
 
 create policy "Admin/credenciador registra presenças"
   on presencas for insert to authenticated
-  with check (current_user_role() in ('super_admin','admin','credenciador'));
+  with check (current_user_role() = 'admin' or user_is_credenciador());
 
 create policy "Admin remove presenças"
   on presencas for delete to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── avaliacoes ───────────────────────────────────────────────
 create policy "Autenticado lê avaliações"
@@ -320,7 +319,7 @@ create policy "Público lê forum_config"
 
 create policy "Admin gerencia forum_config"
   on forum_config for all to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── topicos ──────────────────────────────────────────────────
 create policy "Autenticado lê tópicos"
@@ -332,11 +331,11 @@ create policy "Autenticado cria tópico"
 
 create policy "Autor edita próprio tópico"
   on topicos for update to authenticated
-  using (user_id = auth.uid() or current_user_role() in ('super_admin','admin'));
+  using (user_id = auth.uid() or current_user_role() = 'admin');
 
 create policy "Admin remove tópico"
   on topicos for delete to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── respostas ────────────────────────────────────────────────
 create policy "Autenticado lê respostas"
@@ -348,11 +347,11 @@ create policy "Autenticado cria resposta"
 
 create policy "Autor/admin edita resposta"
   on respostas for update to authenticated
-  using (user_id = auth.uid() or current_user_role() in ('super_admin','admin'));
+  using (user_id = auth.uid() or current_user_role() = 'admin');
 
 create policy "Admin remove resposta"
   on respostas for delete to authenticated
-  using (current_user_role() in ('super_admin','admin'));
+  using (current_user_role() = 'admin');
 
 -- ── pontuacoes ───────────────────────────────────────────────
 create policy "Autenticado lê pontuações"
@@ -360,4 +359,4 @@ create policy "Autenticado lê pontuações"
 
 create policy "Sistema insere pontuação"
   on pontuacoes for insert to authenticated
-  with check (user_id = auth.uid() or current_user_role() in ('super_admin','admin'));
+  with check (user_id = auth.uid() or current_user_role() = 'admin');

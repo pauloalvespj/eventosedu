@@ -38,13 +38,13 @@ Deno.serve(async (req) => {
       .eq("id", caller.id)
       .single();
 
-    if (!["super_admin", "admin"].includes(callerProfile?.role)) {
+    if (callerProfile?.role !== "admin") {
       return new Response(JSON.stringify({ error: "Permissão insuficiente" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { nome, email, cpf, cargo, instituicao, role, senha, titulo, area, mini_bio, destaque } = await req.json();
+    const { nome, email, cpf, cargo, instituicao, role, senha, titulo, area, mini_bio, destaque, is_palestrante, is_credenciador } = await req.json();
 
     if (!nome || !email) {
       return new Response(JSON.stringify({ error: "nome e email são obrigatórios" }), {
@@ -84,6 +84,8 @@ Deno.serve(async (req) => {
       ...(area !== undefined && { area }),
       ...(mini_bio !== undefined && { mini_bio }),
       ...(destaque !== undefined && { destaque }),
+      is_palestrante: !!is_palestrante,
+      is_credenciador: !!is_credenciador,
     });
 
     if (profileError) {
@@ -110,6 +112,8 @@ Deno.serve(async (req) => {
         area: area || "",
         mini_bio: mini_bio || "",
         destaque: destaque ?? false,
+        is_palestrante: !!is_palestrante,
+        is_credenciador: !!is_credenciador,
       },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 

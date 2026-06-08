@@ -55,7 +55,7 @@ function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
 }
 
 export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout, onSwitchRole }) {
-  const isPalestrante = user.role === "palestrante";
+  const isPalestrante = user.is_palestrante;
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
   const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false });

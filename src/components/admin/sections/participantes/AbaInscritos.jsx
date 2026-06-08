@@ -4,11 +4,11 @@ import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft } from "@fo
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, adicionarComoParticipante, removerComoParticipante, atualizarEmailAuth } from "../../../../lib/db";
+import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth } from "../../../../lib/db";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
-  { value: "palestrante",  label: "Palestrante" },
+
   { value: "credenciador", label: "Credenciador" },
   { value: "admin",        label: "Administrador" },
 ];
@@ -28,8 +28,11 @@ export function AbaInscritos() {
       || p.instituicao?.toLowerCase().includes(q) || p.cargo?.toLowerCase().includes(q)
       || p.email?.toLowerCase().includes(q);
     const cancelado = p.ativo === false;
-    const roleMatch = filtroRole === "todos" || p.role === filtroRole
-      || (filtroRole === "participante" && p.roles?.includes("participante"));
+    const roleMatch = filtroRole === "todos"
+      || (filtroRole === "participante" && p.role === "participante")
+      || (filtroRole === "admin" && p.role === "admin")
+      || (filtroRole === "credenciador" && p.is_credenciador)
+      || (filtroRole === "palestrante" && p.is_palestrante);
     return ok && roleMatch && (mostrarCancelados ? cancelado : !cancelado);
   });
 
@@ -37,7 +40,12 @@ export function AbaInscritos() {
 
   async function salvar() {
     if (!formPart.nome) { showToast("Nome obrigatório", "error"); return; }
-    const role = formPart.role || "participante";
+    const _pal  = !!formPart._palestrante;
+    const _adm  = !!formPart._admin;
+    const _cred = !!formPart._credenciador;
+    const role           = _adm ? "admin" : "participante";
+    const is_palestrante = _pal;
+    const is_credenciador = _cred;
     if (modalPart === "new") {
       if (!formPart.email) { showToast("E-mail obrigatório para criar acesso", "error"); return; }
       setSalvando(true);
@@ -49,35 +57,18 @@ export function AbaInscritos() {
         instituicao: formPart.instituicao,
         role,
         senha: formPart.senha,
+        is_palestrante,
+        is_credenciador,
       });
       setSalvando(false);
       if (error) {
         showToast("Erro ao criar usuário: " + (error.message || JSON.stringify(error)), "error");
         return;
       }
-      setParticipantes([...participantes, data.user]);
+      setParticipantes([...participantes, { ...data.user, is_palestrante, is_credenciador }]);
       showToast("Inscrito criado com acesso ao sistema!", "success");
     } else {
-      const ADMIN_ROLES = ["admin", "credenciador"];
-      const isAdminRole = ADMIN_ROLES.includes(role);
       const original = participantes.find(p => p.id === formPart.id);
-      const eraParticipante = original?.roles?.includes("participante") ?? false;
-      const agoraParticipante = isAdminRole ? (formPart.tambemParticipante ?? false) : false;
-
-      let newRoles = formPart.roles ?? original?.roles ?? null;
-
-      if (isAdminRole && eraParticipante !== agoraParticipante) {
-        if (agoraParticipante) {
-          const { roles, error } = await adicionarComoParticipante(formPart.id, role, original?.roles);
-          if (error) { showToast("Erro ao adicionar participação: " + error.message, "error"); setEnviando && setSalvando(false); return; }
-          newRoles = roles;
-        } else {
-          const { roles, error } = await removerComoParticipante(formPart.id, role, original?.roles);
-          if (error) { showToast("Erro ao remover participação: " + error.message, "error"); setSalvando(false); return; }
-          newRoles = roles;
-        }
-      }
-
       setSalvando(true);
       const emailNovo = formPart.email?.trim().toLowerCase();
       const emailOriginal = original?.email?.trim().toLowerCase();
@@ -90,8 +81,8 @@ export function AbaInscritos() {
         }
         await atualizarProfile(formPart.id, { email: emailNovo });
       }
-      setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, roles: newRoles } : x));
-      atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role });
+      setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, is_palestrante, is_credenciador } : x));
+      atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
       setSalvando(false);
       showToast("Inscrito atualizado!", "success");
     }
@@ -107,8 +98,7 @@ export function AbaInscritos() {
     showToast(`Inscrição de ${p.nome.split(" ")[0]} reativada.`, "success");
   }
 
-  const totP = participantes.filter(p => p.role === "participante" && p.ativo !== false).length;
-  const totPal = participantes.filter(p => p.role === "palestrante" && p.ativo !== false).length;
+  const totP = participantes.filter(p => p.ativo !== false).length;
   const totCancelados = participantes.filter(p => p.ativo === false).length;
 
   return (
@@ -117,12 +107,12 @@ export function AbaInscritos() {
         <div>
           <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Inscrições</h2>
           <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
-            {totP} participante{totP !== 1 ? "s" : ""} · {totPal} palestrante{totPal !== 1 ? "s" : ""}
+            {totP} inscrito{totP !== 1 ? "s" : ""}
             {totCancelados > 0 && <span style={{ color: "var(--danger, #c0392b)", marginLeft: 6 }}>· {totCancelados} cancelado{totCancelados !== 1 ? "s" : ""}</span>}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => {
-          setFormPart({ nome: "", cpf: "", email: "", instituicao: "", cargo: "", role: "participante" });
+          setFormPart({ nome: "", cpf: "", email: "", instituicao: "", cargo: "", _palestrante: false, _admin: false, _credenciador: false });
           setModalPart("new");
         }}>
           <FontAwesomeIcon icon={faUsers} style={{ marginRight: 6 }} />Novo Inscrito
@@ -155,40 +145,31 @@ export function AbaInscritos() {
           <thead>
             <tr>
               <th>Nome</th><th>CPF</th><th>Instituição / Cargo</th>
-              <th>E-mail</th><th>Tipo</th><th>Status</th><th style={{ width: 88 }}>Ações</th>
+              <th>E-mail</th><th style={{ width: 88 }}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtrados.map(p => {
               const cancelado = p.ativo === false;
               return (
-                <tr key={p.id} style={cancelado ? { opacity: 0.55 } : undefined}>
+                <tr key={p.id} style={{ ...(cancelado ? { opacity: 0.55 } : {}), ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {p.foto_url
-                        ? <img src={p.foto_url} alt={p.nome} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--gold)", flexShrink: 0 }} />
-                        : <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
+                        ? <img src={p.foto_url} alt={p.nome} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: `2px solid ${p.role === "admin" ? "var(--gold, #c9a84c)" : p.is_credenciador ? "#22c55e" : "transparent"}`, flexShrink: 0 }} />
+                        : <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0, outline: p.role === "admin" ? "2px solid var(--gold, #c9a84c)" : p.is_credenciador ? "2px solid #22c55e" : "none", outlineOffset: 1 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
                       }
-                      <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 0, lineHeight: 1.2 }}>
+                        <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                        {p.is_palestrante && (
+                          <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)", fontWeight: 500 }}>Palestrante</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>{p.cpf}</td>
                   <td><div>{p.instituicao}</div><div style={{ fontSize: "0.78rem", color: "var(--text3)" }}>{p.cargo}</div></td>
                   <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{p.email}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: "0.25rem", alignItems: "center", flexWrap: "wrap" }}>
-                      <RoleBadge role={p.roles?.includes("participante") && p.role !== "participante" ? "participante" : p.role} />
-                      {p.roles?.includes("participante") && p.role !== "participante" && (
-                        <span title={`Também ${p.role}`} style={{ fontSize: "0.68rem", fontWeight: 700, background: "var(--navy)", color: "#fff", borderRadius: "4px", padding: "1px 5px", letterSpacing: "0.03em" }}>A</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    {cancelado
-                      ? <span className="badge badge-danger">Cancelado</span>
-                      : <span className={`badge badge-${p.credenciado ? "success" : "warn"}`}>{p.credenciado ? "Credenciado" : "Inscrito"}</span>
-                    }
-                  </td>
                   <td>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       {cancelado ? (
@@ -199,7 +180,7 @@ export function AbaInscritos() {
                         </button>
                       ) : (
                         <button className="btn btn-sm btn-outline" title="Editar"
-                          onClick={() => { setFormPart({ ...p, tambemParticipante: p.roles?.includes("participante") ?? false }); setModalPart(p.id); }}>
+                          onClick={() => { setFormPart({ ...p, _palestrante: !!p.is_palestrante, _admin: p.role === "admin", _credenciador: !!p.is_credenciador }); setModalPart(p.id); }}>
                           <FontAwesomeIcon icon={faPenToSquare} />
                         </button>
                       )}
@@ -223,6 +204,16 @@ export function AbaInscritos() {
             })}
           </tbody>
         </table>
+        <div style={{ padding: "0.6rem 1rem", display: "flex", gap: "1.25rem", fontSize: "0.75rem", color: "var(--text3)", borderTop: "1px solid var(--border)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid var(--gold, #c9a84c)", outlineOffset: 1, display: "inline-block" }} />
+            Administrador
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #22c55e", outlineOffset: 1, display: "inline-block" }} />
+            Credenciador
+          </span>
+        </div>
       </div>
 
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
@@ -241,6 +232,44 @@ export function AbaInscritos() {
             />
           </div>
         )}
+        <div className="form-group" style={{ marginBottom: "0.75rem" }}>
+          <label className="form-label">Funções no evento</label>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
+            {[
+              { key: "participante", label: "Participante", locked: true },
+              { key: "_palestrante", label: "Palestrante" },
+              { key: "_admin",       label: "Administrador" },
+              { key: "_credenciador",label: "Credenciador" },
+            ].map(({ key, label, locked }) => {
+              const ativo = locked || !!formPart[key];
+              return (
+                <button key={key} type="button"
+                  disabled={locked}
+                  onClick={() => {
+                    if (locked) return;
+                    setFormPart(f => {
+                      const next = { ...f, [key]: !f[key] };
+                      if (key === "_admin"        && next._admin)        next._credenciador = false;
+                      if (key === "_credenciador" && next._credenciador) next._admin = false;
+                      return next;
+                    });
+                  }}
+                  style={{
+                    padding: "0.3rem 0.9rem", borderRadius: 99, fontSize: "0.82rem", fontWeight: 600,
+                    cursor: locked ? "default" : "pointer",
+                    background: ativo ? "var(--navy)" : "transparent",
+                    color: ativo ? "#fff" : "var(--text2)",
+                    border: `2px solid ${ativo ? "var(--navy)" : "var(--border)"}`,
+                    opacity: locked ? 0.55 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="form-grid">
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Nome completo *</label>
@@ -261,20 +290,6 @@ export function AbaInscritos() {
               value={formPart.cpf || ""} onChange={e => setFormPart(f => ({ ...f, cpf: e.target.value }))} />
           </div>
           <div className="form-group">
-            <label className="form-label">Tipo / Categoria</label>
-            <select className="form-input" value={formPart.role || "participante"}
-              onChange={e => setFormPart(f => ({ ...f, role: e.target.value }))}>
-              {ROLE_OPTS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-            {["admin", "credenciador"].includes(formPart.role) && (
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem", fontSize: "0.85rem", cursor: "pointer", color: "var(--text2)" }}>
-                <input type="checkbox" checked={formPart.tambemParticipante ?? false}
-                  onChange={e => setFormPart(f => ({ ...f, tambemParticipante: e.target.checked }))} />
-                Também participa do evento (certificado, presença)
-              </label>
-            )}
-          </div>
-          <div className="form-group">
             <label className="form-label">E-mail {modalPart === "new" && <span style={{ color: "var(--gold-on-dark)" }}>*</span>}</label>
             <input className="form-input" type="email" value={formPart.email || ""}
               onChange={e => setFormPart(f => ({ ...f, email: e.target.value }))} />
@@ -288,11 +303,6 @@ export function AbaInscritos() {
               disabled={modalPart !== "new"} />
           </div>
         </div>
-        {formPart.role === "palestrante" && (
-          <div style={{ padding: "0.6rem 0.85rem", background: "var(--surface2)", borderRadius: "var(--radius-sm)", fontSize: "0.82rem", color: "var(--text2)", marginTop: "0.5rem" }}>
-            💡 Palestrantes também aparecem na lista de certificados e podem ter presenças registradas.
-          </div>
-        )}
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
           <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
             <FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight: 6 }} />{salvando ? "Criando..." : "Salvar"}

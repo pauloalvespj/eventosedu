@@ -38,7 +38,7 @@ import { RoleSelector } from "./components/auth/RoleSelector";
 // Converte dados mock para o formato profiles (array unificado)
 const INITIAL_PROFILES = [
   ...INITIAL_PARTICIPANTES,
-  ...INITIAL_PALESTRANTES.map(p => ({ ...p, role: "palestrante" })),
+  ...INITIAL_PALESTRANTES.map(p => ({ ...p, role: "participante", is_palestrante: true })),
   ...INITIAL_ADMINS,
 ];
 
@@ -158,6 +158,7 @@ export default function App() {
   const loginExplicito = useRef(false);
   const [activeRole, setActiveRole] = useState(null);       // role ativo na sessão
   const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const [roleSelectorOptions, setRoleSelectorOptions] = useState([]);
 
   // Usuário efetivo: mesmo profile mas com o role selecionado na sessão
   const effectiveUser = useMemo(
@@ -267,7 +268,12 @@ export default function App() {
 
     // Verifica se o usuário tem múltiplos perfis e decide o que fazer
     function resolveRole(prof) {
-      const allRoles = prof.roles?.length > 1 ? prof.roles : null;
+      const derivedRoles = [
+        ...(prof.role === "admin" ? ["admin"] : ["participante"]),
+        ...(prof.is_credenciador ? ["credenciador"] : []),
+        ...(prof.is_palestrante  ? ["palestrante"]  : []),
+      ];
+      const allRoles = derivedRoles.length > 1 ? derivedRoles : null;
       if (allRoles) {
         const stored = sessionStorage.getItem("enaudin_active_role");
         const noAdmin = location.pathname.startsWith("/painel");
@@ -275,6 +281,7 @@ export default function App() {
           setActiveRole(stored); // restaura silenciosamente (ex: F5)
         } else if (loginExplicito.current || noAdmin) {
           loginExplicito.current = false;
+          setRoleSelectorOptions(allRoles);
           setShowRoleSelector(true); // mostra seletor de perfil
         } else {
           // sessão restaurada fora do painel — usa o primeiro role sem interromper
@@ -397,10 +404,10 @@ export default function App() {
   }
 
   // ── Derived: split de profiles por role ───────────────────────
-  const palestrantes = profiles.filter(p => p.role === "palestrante");
+  const palestrantes = profiles.filter(p => p.is_palestrante);
   // Participantes = todos os profiles ativos (qualquer role pode receber certificado)
   const participantes = profiles.filter(p => p.ativo !== false);
-  const admins = profiles.filter(p => ["admin", "credenciador"].includes(p.role));
+  const admins = profiles.filter(p => p.role === "admin");
 
   function simularQR(atividadeId) {
     setPresencaAtv(atividadeId);
@@ -413,12 +420,12 @@ export default function App() {
     event, setEvent,
     atividades, setAtividades,
     palestrantes,
-    setPalestrantes: updated => setProfiles(prev => [...prev.filter(p => p.role !== "palestrante"), ...updated]),
+    setPalestrantes: updated => setProfiles(prev => [...prev.filter(p => !p.is_palestrante), ...updated]),
     participantes,
     setParticipantes: updated => setProfiles(() => updated),
     presencas, setPresencas,
     admins,
-    setAdmins: updated => setProfiles(prev => [...prev.filter(p => !["admin","credenciador"].includes(p.role)), ...updated]),
+    setAdmins: updated => setProfiles(prev => [...prev.filter(p => p.role !== "admin"), ...updated]),
     topicos, setTopicos,
     pontuacoes, setPontuacoes,
     pontosConfig, setPontosConfig,
@@ -435,7 +442,7 @@ export default function App() {
       <Toast toast={toast} />
 
       {showRoleSelector && user && (
-        <RoleSelector user={user} roles={user.roles} onSelect={handleSelectRole} />
+        <RoleSelector user={user} roles={roleSelectorOptions} onSelect={handleSelectRole} />
       )}
 
       <Routes>
@@ -453,12 +460,12 @@ export default function App() {
         <Route path="/painel/*" element={
           !effectiveUser
             ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
-            : ["admin","credenciador"].includes(effectiveUser.role)
+            : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
               ? <PainelAdmin {...adminProps} />
               : <AreaUsuario
                   user={effectiveUser}
                   setUser={u => setUser(typeof u === "function" ? u(user) : u)}
-                  onSwitchRole={effectiveUser.roles?.length > 1 ? () => setShowRoleSelector(true) : null}
+                  onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
                   event={event} atividades={atividades} setAtividades={setAtividades}
                   palestrantes={palestrantes} presencas={presencas} setPresencas={setPresencas}
                   topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
