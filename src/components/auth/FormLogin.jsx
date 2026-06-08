@@ -65,9 +65,12 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     });
     setEnviando(false);
     if (error) {
+      console.error("signInWithOtp error:", error.message, error);
       setErro(error.message.includes("not found") || error.message.includes("registered")
         ? "E-mail não encontrado no sistema."
-        : "Erro ao enviar o link. Tente novamente.");
+        : error.message.includes("rate") || error.message.includes("limit")
+          ? "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+          : `Erro: ${error.message}`);
       return;
     }
     setEtapa("aguardando");
