@@ -12,7 +12,7 @@ function traduzirErroAuth(msg) {
   if (m.includes("too many") || m.includes("rate limit") || m.includes("after") || m.includes("limit exceeded"))
     return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
   if (m.includes("disabled") || m.includes("not allowed"))
-    return "Acesso não permitido. Entre em contato com a organização.";
+    return "Não identificamos o seu cadastro. Verifique o e-mail ou faça sua inscrição.";
   if (m.includes("network") || m.includes("fetch"))
     return "Erro de conexão. Verifique sua internet e tente novamente.";
   return "Ocorreu um erro inesperado. Tente novamente.";
