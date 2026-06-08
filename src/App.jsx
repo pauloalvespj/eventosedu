@@ -161,10 +161,17 @@ export default function App() {
   const [roleSelectorOptions, setRoleSelectorOptions] = useState([]);
 
   // Usuário efetivo: mesmo profile mas com o role selecionado na sessão
-  const effectiveUser = useMemo(
-    () => user ? { ...user, role: activeRole ?? user.role } : null,
-    [user, activeRole]
-  );
+  const effectiveUser = useMemo(() => {
+    if (!user) return null;
+    const role = activeRole ?? user.role;
+    return {
+      ...user,
+      role,
+      is_palestrante: role === "palestrante" ? true
+        : role === "participante" ? false
+        : user.is_palestrante,
+    };
+  }, [user, activeRole]);
 
   // ── UI ───────────────────────────────────────────────────────
   const [view, setView] = useState("landing");
@@ -272,6 +279,7 @@ export default function App() {
         ...(prof.role === "admin" ? ["admin"] : ["participante"]),
         ...(prof.is_credenciador ? ["credenciador"] : []),
         ...(prof.is_palestrante  ? ["palestrante"]  : []),
+        ...(prof.role === "admin" ? ["participante"] : []),
       ];
       const allRoles = derivedRoles.length > 1 ? derivedRoles : null;
       if (allRoles) {

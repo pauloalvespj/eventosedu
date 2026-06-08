@@ -163,7 +163,6 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   ];
   const MENU_PALESTRANTE_EXTRA = [
     ["minhas_palestras", "🎙 Minhas Palestras"],
-    ["presentes_pal",    "👥 Presentes"],
   ];
   const ABAS = isPalestrante
     ? [MENU_COMUM[0], ...MENU_PALESTRANTE_EXTRA, ...MENU_COMUM.slice(1)]
