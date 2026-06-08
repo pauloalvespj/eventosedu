@@ -1,6 +1,23 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
+function traduzirErroAuth(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes("not found") || m.includes("not registered") || m.includes("user not found"))
+    return "E-mail não encontrado no sistema.";
+  if (m.includes("email not confirmed") || m.includes("not confirmed"))
+    return "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.";
+  if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("wrong password"))
+    return "E-mail ou senha incorretos.";
+  if (m.includes("too many") || m.includes("rate limit") || m.includes("after") || m.includes("limit exceeded"))
+    return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  if (m.includes("disabled") || m.includes("not allowed"))
+    return "Acesso não permitido. Entre em contato com a organização.";
+  if (m.includes("network") || m.includes("fetch"))
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  return "Ocorreu um erro inesperado. Tente novamente.";
+}
+
 export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
   const [modo, setModo] = useState("link"); // "link" | "senha"
   const [email, setEmail] = useState("");
@@ -34,12 +51,8 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
       const msg = error.message.toLowerCase();
       if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
         setEmailNaoConfirmado(true);
-      } else if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
-        setErro("E-mail ou senha incorretos.");
-      } else if (msg.includes("too many requests")) {
-        setErro("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
       } else {
-        setErro("Erro ao entrar. Tente novamente.");
+        setErro(traduzirErroAuth(error.message));
       }
       return;
     }
@@ -65,12 +78,7 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     });
     setEnviando(false);
     if (error) {
-      console.error("signInWithOtp error:", error.message, error);
-      setErro(error.message.includes("not found") || error.message.includes("registered")
-        ? "E-mail não encontrado no sistema."
-        : error.message.includes("rate") || error.message.includes("limit")
-          ? "Muitas tentativas. Aguarde alguns minutos e tente novamente."
-          : `Erro: ${error.message}`);
+      setErro(traduzirErroAuth(error.message));
       return;
     }
     setEtapa("aguardando");
