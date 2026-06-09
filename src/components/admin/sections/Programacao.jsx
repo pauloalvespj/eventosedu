@@ -120,9 +120,17 @@ export function Programacao() {
                 <td title={a.titulo} style={{ maxWidth: 0 }}>
                   <div style={{ fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.titulo}</div>
                   {getPalestrantes(a).length > 0 && (
-                    <div style={{ fontSize:"0.7rem", color:"var(--text3)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    <div style={{ fontSize:"0.7rem", color:"var(--text3)", marginTop:1 }}>
                       <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:3, fontSize:"0.65rem" }} />
-                      {getPalestrantes(a).map(p => p.nome.split(" ").slice(0,2).join(" ")).join(", ")}
+                      {getPalestrantes(a).map((p, i, arr) => (
+                        <span key={p.id}>
+                          {p.nome.split(" ").slice(0,2).join(" ")}
+                          {(p.instituicao || p.cargo) && (
+                            <span style={{ color:"var(--text3)", fontWeight:400 }}> ({[p.instituicao, p.cargo].filter(Boolean).join(" · ")})</span>
+                          )}
+                          {arr[i+1] ? ", " : ""}
+                        </span>
+                      ))}
                     </div>
                   )}
                   {(a.materiais || []).length > 0 && (
