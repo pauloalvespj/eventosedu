@@ -167,17 +167,30 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   </div>
                 );
                 return (
-                  <div key={a.id} className="prog-item" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)" }}>
+                  <div key={a.id} className="prog-item" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)", gridTemplateColumns:"130px 1fr auto" }}>
                     <div>
                       <div className="prog-hora">{a.horario}</div>
-                      {a.horario_fim && <div style={{ fontSize:"0.72rem", color:"var(--text3)", marginTop:2 }}>até {a.horario_fim}</div>}
                       <div className="prog-local" style={{ marginTop: 4 }}>{a.local}</div>
                     </div>
                     <div>
                       <div style={{ marginBottom:6 }}><TipoBadge tipo={a.tipo} /></div>
                       <div className="prog-titulo">{a.titulo}</div>
                       {a.descricao && <div className="prog-desc">{a.descricao}</div>}
-                      {pals.length > 0 && <div className="prog-palestrante">🎤 {pals.map(p => p.nome).join(" · ")}</div>}
+                      {pals.length > 0 && (
+                        <div className="prog-palestrante">
+                          🎤 {pals.map((p, i, arr) => (
+                            <span key={p.id}>
+                              {p.nome}
+                              {(p.instituicao || p.cargo) && (
+                                <span style={{ display:"block", fontSize:"0.72rem", color:"var(--text2)", fontWeight:400, marginTop:1, paddingLeft:16 }}>
+                                  {[p.instituicao, p.cargo].filter(Boolean).join(" • ")}
+                                </span>
+                              )}
+                              {arr[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {a.convidados && a.convidados.trim() && (
                         <div style={{ marginTop:6 }}>
                           {a.convidados.split("\n").filter(Boolean).map((c,i) => (
@@ -188,7 +201,6 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                     </div>
                     <div style={{ textAlign:"right", flexShrink:0 }}>
                       {a.carga_horaria > 0 && <span className="prog-ch">{a.carga_horaria}h</span>}
-                      {a.conta_certificado && <div style={{ fontSize:"0.72rem", color:"var(--teal)", marginTop:4 }}>✓ Certificado</div>}
                     </div>
                   </div>
                 );
@@ -231,7 +243,6 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   <div className="palestrante-nome">{p.nome}</div>
                   <div className="palestrante-titulo">{p.cargo}</div>
                   {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginBottom:"0.4rem" }}>{p.instituicao}</div>}
-                  <span className="palestrante-area">{p.area}</span>
                   {p.mini_bio && <p style={{ fontSize:"0.78rem", color:"var(--text2)", marginTop:"0.6rem", lineHeight:1.5 }}>{p.mini_bio}</p>}
                 </div>
               ))}

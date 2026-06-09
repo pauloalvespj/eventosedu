@@ -117,7 +117,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
       cpf: formEdit.cpf,
       instituicao: formEdit.instituicao,
       cargo: formEdit.cargo,
-      ...(isPalestrante && { titulo: formEdit.titulo, area: formEdit.area, mini_bio: formEdit.mini_bio }),
+      ...(isPalestrante && { mini_bio: formEdit.mini_bio }),
     };
     if (setUser) setUser(prev => ({ ...prev, ...updates }));
     await atualizarProfile(user.id, updates);
@@ -1005,20 +1005,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                           value={formEdit.instituicao} onChange={e => setFormEdit(f => ({ ...f, instituicao: e.target.value }))} autoFocus />
                       )}
                     </div>
-                    {isPalestrante && (<>
-                      <div className="form-group">
-                        <label className="form-label">Título / Formação</label>
-                        <input className="form-input" value={formEdit.titulo} onChange={e => setFormEdit(f => ({ ...f, titulo: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Área de Atuação</label>
-                        <input className="form-input" value={formEdit.area} onChange={e => setFormEdit(f => ({ ...f, area: e.target.value }))} />
-                      </div>
+                    {isPalestrante && (
                       <div className="form-group" style={{ gridColumn: "1/-1" }}>
                         <label className="form-label">Mini Biografia</label>
                         <textarea className="form-input" rows={3} value={formEdit.mini_bio} onChange={e => setFormEdit(f => ({ ...f, mini_bio: e.target.value }))} />
                       </div>
-                    </>)}
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
                     <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
@@ -1034,8 +1026,6 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     ["Cargo",       user.cargo,       "1/-1"],
                     ["Instituição", user.instituicao, "1/-1"],
                     ...(isPalestrante ? [
-                      ["Título",       user.titulo,   null],
-                      ["Área",         user.area,     null],
                       ["Mini Bio",     user.mini_bio, "1/-1"],
                     ] : []),
                   ].map(([label, val, span]) => (
