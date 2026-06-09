@@ -313,18 +313,20 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                               </div>
                             </div>
                             {/* Conteúdo */}
-                            <div style={{ fontWeight:700, fontSize:"0.97rem", color:"var(--navy)", marginBottom:"0.15rem" }}>{a.titulo}</div>
-                            <div style={{ fontSize:"0.82rem", color:"var(--text3)" }}>{event.nome}</div>
-                            {a.local && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.1rem" }}>📍 {a.local}</div>}
+                            <div style={{ fontWeight:700, fontSize:"0.97rem", color:"var(--navy)", marginBottom:"0.2rem" }}>{a.titulo}</div>
                             {(() => {
                               const pals = (a.palestrantes_ids||[]).map(id=>palestrantes.find(p=>p.id===id)).filter(Boolean);
                               return pals.length > 0 ? (
-                                <div style={{ fontSize:"0.78rem", color:"var(--teal)", marginTop:"0.25rem" }}>
+                                <div style={{ fontSize:"0.78rem", color:"var(--teal)", marginBottom:"0.25rem" }}>
                                   🎤 {pals.map(p => p.nome.split(" ").slice(0,2).join(" ")).join(" · ")}
                                 </div>
                               ) : null;
                             })()}
-                            {(() => { const np = presencas.filter(p=>p.atividade_id===a.id).length; return np > 0 ? <div style={{ fontSize:"0.75rem", color:"var(--text3)", marginTop:"0.1rem" }}>👥 {np} participante{np!==1?"s":""}</div> : null; })()}
+                            {(() => { const np = presencas.filter(p=>p.atividade_id===a.id).length; return np > 0 ? <div style={{ fontSize:"0.75rem", color:"var(--text3)", marginBottom:"0.15rem" }}>👥 {np} participante{np!==1?"s":""}</div> : null; })()}
+                            <div style={{ fontSize:"0.82rem", color:"var(--text3)", display:"flex", flexWrap:"wrap", gap:"0 0.5rem" }}>
+                              <span>{event.nome}</span>
+                              {a.local && <span style={{ whiteSpace:"nowrap" }}>· 📍 {a.local}</span>}
+                            </div>
                           </div>
                         ))
                       }
