@@ -60,6 +60,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const [editando, setEditando] = useState(false);
   const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
+  const [palBio, setPalBio] = useState(null);
   const [navAberta, setNavAberta] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
@@ -69,7 +70,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   useEffect(() => {
     if (aba === "forum"   && event.forum_ativo === false)      setAba("dashboard");
     if (aba === "ranking" && event.gamificacao_ativa === false) setAba("dashboard");
-  }, [event.forum_ativo, event.gamificacao_ativa]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (aba === "rede"    && event.rede_visivel === false)      setAba("dashboard");
+  }, [event.forum_ativo, event.gamificacao_ativa, event.rede_visivel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancelarInscricao() {
     setCancelando(true);
@@ -158,7 +160,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     ...(event.certificado_disponivel ? [["certificado", "🏆 Certificado"]] : []),
     ...(event.forum_ativo !== false ? [["forum", "💬 Fórum"]] : []),
     ...(event.gamificacao_ativa !== false ? [["ranking", "🏅 Ranking"]] : []),
-    ["rede",         "🤝 Rede"],
+    ...(event.rede_visivel !== false ? [["rede", "🤝 Rede"]] : []),
     ["meus_dados",   "👤 Meus Dados"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
@@ -177,6 +179,21 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
 
   return (
     <div className="part-layout">
+      {/* ── POPUP BIO PALESTRANTE ── */}
+      {palBio && (
+        <div onClick={() => setPalBio(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"var(--surface)", borderRadius:"var(--radius-lg)", padding:"1.75rem", maxWidth:480, width:"100%", boxShadow:"0 8px 32px rgba(0,0,0,0.22)", position:"relative" }}>
+            <button onClick={() => setPalBio(null)} style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text3)", lineHeight:1 }}>✕</button>
+            <div style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--navy)", marginBottom:"0.25rem" }}>{palBio.nome}</div>
+            {(palBio.instituicao || palBio.cargo) && (
+              <div style={{ fontSize:"0.8rem", color:"var(--text2)", marginBottom:"1rem" }}>
+                {[palBio.instituicao, palBio.cargo].filter(Boolean).join(" · ")}
+              </div>
+            )}
+            <p style={{ fontSize:"0.9rem", color:"var(--text1)", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap" }}>{palBio.mini_bio}</p>
+          </div>
+        </div>
+      )}
       {/* ── MOBILE HEADER ── */}
       <div className="mobile-header" style={{ background: isPalestrante ? "linear-gradient(90deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)" }}>
         <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
@@ -660,7 +677,19 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                           <div className="prog-palestrante">
                             <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:4, fontSize:"0.75rem" }} />
                             {pals.map((p,i) => (
-                              <span key={p.id}>{p.nome}{pals[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}</span>
+                              <span key={p.id}>
+                                {p.mini_bio ? (
+                                  <button onClick={() => setPalBio(p)} title="Ver mini biografia" style={{ background:"none", border:"none", padding:0, cursor:"pointer", color:"inherit", font:"inherit", fontWeight:"inherit", textDecoration:"underline dotted", textUnderlineOffset:2, textAlign:"left" }}>
+                                    {p.nome}
+                                  </button>
+                                ) : p.nome}
+                                {pals[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}
+                                {(p.cargo || p.instituicao) && (
+                                  <span style={{ display:"block", fontSize:"0.72rem", color:"var(--text2)", fontWeight:400, marginTop:1 }}>
+                                    {[p.instituicao, p.cargo].filter(Boolean).join(" · ")}
+                                  </span>
+                                )}
+                              </span>
                             ))}
                           </div>
                         )}

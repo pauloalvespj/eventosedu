@@ -66,6 +66,10 @@ create table if not exists events (
   carga_horaria_total int not null default 16,
   programacao_visivel     boolean not null default true,
   palestrantes_visivel    boolean not null default true,
+  forum_ativo             boolean not null default true,
+  gamificacao_ativa       boolean not null default true,
+  certificado_disponivel  boolean not null default false,
+  rede_visivel            boolean not null default true,
   logo_url                text,
   palestrantes_subtitulo  text
 );

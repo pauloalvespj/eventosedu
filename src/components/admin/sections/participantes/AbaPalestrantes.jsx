@@ -21,6 +21,7 @@ export function AbaPalestrantes() {
   const [formPal, setFormPal]   = useState({});
   const [fotoFile, setFotoFile] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [palBio, setPalBio]     = useState(null);
 
   function toggleDestaque(p) {
     const novo = { ...p, destaque: !p.destaque };
@@ -109,6 +110,20 @@ export function AbaPalestrantes() {
 
   return (
     <div>
+      {palBio && (
+        <div onClick={() => setPalBio(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"var(--surface)", borderRadius:"var(--radius-lg)", padding:"1.75rem", maxWidth:480, width:"100%", boxShadow:"0 8px 32px rgba(0,0,0,0.22)", position:"relative" }}>
+            <button onClick={() => setPalBio(null)} style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text3)", lineHeight:1 }}>✕</button>
+            <div style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--navy)", marginBottom:"0.25rem" }}>{palBio.nome}</div>
+            {(palBio.instituicao || palBio.cargo) && (
+              <div style={{ fontSize:"0.8rem", color:"var(--text2)", marginBottom:"1rem" }}>
+                {[palBio.instituicao, palBio.cargo].filter(Boolean).join(" · ")}
+              </div>
+            )}
+            <p style={{ fontSize:"0.9rem", color:"var(--text1)", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap" }}>{palBio.mini_bio}</p>
+          </div>
+        </div>
+      )}
       <div className="admin-topbar">
         <div>
           <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Palestrantes</h2>
@@ -137,7 +152,7 @@ export function AbaPalestrantes() {
         </div>
         <table>
           <thead>
-            <tr><th>Nome</th><th>Cargo</th><th>Instituição</th><th>E-mail</th><th style={{ textAlign:"center" }}>Destaque</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>CPF</th><th>Instituição / Cargo</th><th>E-mail</th><th style={{ width: 100 }}>Ações</th></tr>
           </thead>
           <tbody>
             {filtrados.map(p => (
@@ -149,22 +164,27 @@ export function AbaPalestrantes() {
                       : <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
                     }
                     <div>
-                      <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                      {p.mini_bio ? (
+                        <button onClick={() => setPalBio(p)} title="Ver mini biografia" style={{ background:"none", border:"none", padding:0, cursor:"pointer", color:"inherit", font:"inherit", fontWeight:500, textDecoration:"underline dotted", textUnderlineOffset:2, textAlign:"left" }}>
+                          {p.nome}
+                        </button>
+                      ) : (
+                        <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                      )}
                     </div>
                   </div>
                 </td>
-                <td style={{ fontSize: "0.85rem", color: "var(--text2)" }}>{p.cargo}</td>
-                <td style={{ fontSize: "0.85rem" }}>{p.instituicao || <span style={{ color: "var(--text3)" }}>–</span>}</td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{p.cpf || "–"}</td>
+                <td><div>{p.instituicao}</div><div style={{ fontSize: "0.78rem", color: "var(--text3)" }}>{p.cargo}</div></td>
                 <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{p.email || "–"}</td>
-                <td style={{ textAlign:"center" }}>
-                  <button
-                    onClick={() => toggleDestaque(p)}
-                    title={p.destaque ? "Remover destaque" : "Marcar como destaque"}
-                    style={{ background:"none", border:"none", cursor:"pointer", fontSize:"1.3rem", lineHeight:1, padding:"2px 6px", transition:"color 0.15s", color: p.destaque ? "#e4a11b" : "#cbd5e1" }}
-                  >★</button>
-                </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
+                    <button
+                      onClick={() => toggleDestaque(p)}
+                      title={p.destaque ? "Remover destaque" : "Marcar como destaque"}
+                      className="btn btn-sm"
+                      style={{ border: `1px solid ${p.destaque ? "var(--success)" : "var(--border2)"}`, color: p.destaque ? "var(--success)" : "var(--text3)", background: p.destaque ? "var(--success-bg)" : "transparent" }}
+                    >★</button>
                     <button className="btn btn-sm btn-outline" onClick={() => { setFormPal({ ...p }); setFotoFile(null); setModalPal(true); }}>
                       <FontAwesomeIcon icon={faPenToSquare} />
                     </button>

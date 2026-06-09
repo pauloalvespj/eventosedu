@@ -167,7 +167,7 @@ export function AbaInscritos() {
                       </div>
                     </div>
                   </td>
-                  <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>{p.cpf}</td>
+                  <td style={{ fontFamily: "monospace", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{p.cpf}</td>
                   <td><div>{p.instituicao}</div><div style={{ fontSize: "0.78rem", color: "var(--text3)" }}>{p.cargo}</div></td>
                   <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{p.email}</td>
                   <td>

@@ -20,6 +20,14 @@ export function ForumAdmin() {
     showToast(novo ? "Fórum ativado" : "Fórum desativado", novo ? "success" : "info");
   }
 
+  const redeVisivel = event?.rede_visivel !== false;
+  function toggleRede() {
+    const novo = !redeVisivel;
+    setEvent(ev => ({ ...ev, rede_visivel: novo }));
+    atualizarEvento(event.id, { rede_visivel: novo });
+    showToast(novo ? "Rede visível para participantes" : "Rede ocultada dos participantes", novo ? "success" : "info");
+  }
+
   const [modalTopico, setModalTopico] = useState(false);
   const [form, setForm] = useState({ categoria: "geral", titulo: "", corpo: "" });
 
@@ -53,6 +61,11 @@ export function ForumAdmin() {
       <div className="admin-topbar">
         <div><h1>Gestão do Fórum</h1><p>Configuração, moderação e conteúdo</p></div>
         <div style={{ display:"flex", gap:"0.5rem" }}>
+          <button className={`btn btn-sm ${redeVisivel ? "btn-outline" : "btn-danger"}`} onClick={toggleRede}
+            title={redeVisivel ? "Clique para ocultar a Rede dos participantes" : "Clique para tornar a Rede visível"}>
+            <FontAwesomeIcon icon={redeVisivel ? faEye : faEyeSlash} style={{ marginRight:6 }} />
+            {redeVisivel ? "Rede visível" : "Rede oculta"}
+          </button>
           <button className={`btn btn-sm ${forumAtivo ? "btn-outline" : "btn-danger"}`} onClick={toggleForum}
             title={forumAtivo ? "Clique para desativar (oculta fórum dos participantes)" : "Clique para ativar"}>
             <FontAwesomeIcon icon={forumAtivo ? faEye : faEyeSlash} style={{ marginRight:6 }} />
