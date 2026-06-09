@@ -200,8 +200,11 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
           <span/><span/><span/>
         </button>
         <span className="mobile-header-title">{event.nome}</span>
+        {onSwitchRole && (
+          <button onClick={onSwitchRole} title="Trocar perfil" style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:"var(--radius-sm)", color:"#fff", fontSize:"0.72rem", fontWeight:600, padding:"0.3rem 0.55rem", cursor:"pointer", flexShrink:0, whiteSpace:"nowrap" }}>⇄</button>
+        )}
         <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"#fff", flexShrink:0 }}>
-          {user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
+          {user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
         </div>
       </div>
 
@@ -215,7 +218,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             <AvatarUpload
               userId={user.id}
               fotoUrl={user.foto_url}
-              iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")}
+              iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
               size={36}
               onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
             />
@@ -258,7 +261,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             {isPalestrante && (
               <div>
                 <div style={{ background:"linear-gradient(135deg,var(--hero-dark),var(--hero))", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1.5rem", color:"#fff", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
-                  <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")} size={56} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
+                  <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")} size={56} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Bem-vindo(a) · Palestrante</div>
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", marginBottom:"0.15rem" }}>{user.nome}</div>
@@ -299,20 +302,29 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                         .slice()
                         .sort((a,b) => (a.dia||"").localeCompare(b.dia||"") || (a.horario||"").localeCompare(b.horario||""))
                         .map(a => (
-                          <div key={a.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.25rem 1.5rem", display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
-                            <div style={{ background:"var(--hero-gradient)", borderRadius:"var(--radius-sm)", padding:"0.6rem 1rem", textAlign:"center", minWidth:80, flexShrink:0 }}>
-                              <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>{diaSemana(a.dia)}</div>
-                              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1.2 }}>{formatData(a.dia)}</div>
+                          <div key={a.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.25rem 1.5rem" }}>
+                            {/* Data · Hora */}
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0.65rem" }}>
+                              <div style={{ fontWeight:700, fontSize:"0.88rem", color:"var(--navy)" }}>
+                                {diaSemana(a.dia)}, {formatData(a.dia)}
+                              </div>
+                              <div style={{ fontSize:"0.85rem", color:"var(--teal)", fontWeight:600, whiteSpace:"nowrap" }}>
+                                {a.horario}h{a.horario_fim ? ` às ${a.horario_fim}h` : ""}
+                              </div>
                             </div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontWeight:700, fontSize:"0.97rem", color:"var(--navy)", marginBottom:"0.2rem" }}>{a.titulo}</div>
-                              <div style={{ fontSize:"0.82rem", color:"var(--text3)" }}>{event.nome}</div>
-                              {a.local && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.15rem" }}>📍 {a.local}</div>}
-                            </div>
-                            <div style={{ textAlign:"right", flexShrink:0 }}>
-                              <div style={{ fontFamily:"monospace", fontSize:"1.1rem", fontWeight:700, color:"var(--navy)" }}>{a.horario}{a.horario_fim ? ` – ${a.horario_fim}` : ""}</div>
-                              {a.carga_horaria > 0 && <div style={{ fontSize:"0.72rem", color:"var(--text3)", marginTop:"0.15rem" }}>{a.carga_horaria}h</div>}
-                            </div>
+                            {/* Conteúdo */}
+                            <div style={{ fontWeight:700, fontSize:"0.97rem", color:"var(--navy)", marginBottom:"0.15rem" }}>{a.titulo}</div>
+                            <div style={{ fontSize:"0.82rem", color:"var(--text3)" }}>{event.nome}</div>
+                            {a.local && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.1rem" }}>📍 {a.local}</div>}
+                            {(() => {
+                              const pals = (a.palestrantes_ids||[]).map(id=>palestrantes.find(p=>p.id===id)).filter(Boolean);
+                              return pals.length > 0 ? (
+                                <div style={{ fontSize:"0.78rem", color:"var(--teal)", marginTop:"0.25rem" }}>
+                                  🎤 {pals.map(p => p.nome.split(" ").slice(0,2).join(" ")).join(" · ")}
+                                </div>
+                              ) : null;
+                            })()}
+                            {(() => { const np = presencas.filter(p=>p.atividade_id===a.id).length; return np > 0 ? <div style={{ fontSize:"0.75rem", color:"var(--text3)", marginTop:"0.1rem" }}>👥 {np} participante{np!==1?"s":""}</div> : null; })()}
                           </div>
                         ))
                       }
@@ -377,7 +389,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     {/* Coluna esquerda */}
                     <div style={{ padding:"1.5rem", background:"var(--surface)" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", marginBottom:"1rem" }}>
-                        <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.foto_iniciais || user.nome.split(" ").map(n=>n[0]).slice(0,2).join("")} size={48} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
+                        <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")} size={48} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontWeight:700, fontSize:"1rem", color:"var(--navy)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
                           <div style={{ fontSize:"0.8rem", color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
@@ -949,27 +961,25 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Informações do seu perfil no evento</p>
             </div>
 
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem" }}>
-              {/* Avatar + cabeçalho */}
-              <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.75rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", position:"relative" }}>
+              {/* Botão editar — canto superior direito */}
+              {!editando && (
+                <button className="btn btn-outline btn-sm" style={{ position:"absolute", top:"1.25rem", right:"1.25rem" }}
+                  onClick={() => { setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false }); setEditando(true); }}
+                  title="Editar dados"><IconEdit /></button>
+              )}
+
+              {/* Avatar + nome centralizado */}
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:"1.75rem", paddingBottom:"1.25rem", borderBottom:"1px solid var(--border)" }}>
                 <AvatarUpload
                   userId={user.id}
                   fotoUrl={user.foto_url}
-                  iniciais={user.foto_iniciais || user.nome.split(" ").map(n => n[0]).slice(0, 2).join("")}
-                  size={72}
+                  iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais||"?")}
+                  size={80}
                   onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
                 />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.15rem" }}>{user.nome}</div>
-                  <div style={{ fontSize: "0.82rem", color: "var(--text3)" }}>{user.email}</div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text3)", marginTop: 2 }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
-                </div>
-                {!editando && (
-                  <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }}
-                    onClick={() => { setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false }); setEditando(true); }}>
-                    ✏️ Editar
-                  </button>
-                )}
+                <div style={{ fontWeight:700, fontSize:"1.15rem", color:"var(--navy)", marginTop:"0.75rem" }}>{user.nome}</div>
+                <div style={{ fontSize:"0.8rem", color:"var(--text3)", marginTop:"0.2rem" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
               </div>
 
               {editando ? (
@@ -1020,7 +1030,6 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
                   {[
-                    ["Nome",        user.nome,        "1/-1"],
                     ["CPF",         user.cpf,         null],
                     ["E-mail",      user.email,       null],
                     ["Cargo",       user.cargo,       "1/-1"],

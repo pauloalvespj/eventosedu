@@ -413,6 +413,9 @@ tr:hover td{background:var(--surface2)}
   .dash-qr-wrap{justify-content:center !important}
   /* Cards palestrante — 2 colunas no mobile */
   .dash-cards-pal{grid-template-columns:repeat(2,1fr) !important}
+  .pal-prox-card{flex-direction:column !important;align-items:stretch !important;gap:0.5rem !important}
+  .pal-prox-data{flex-direction:row !important;align-items:center !important;gap:0.75rem;width:100%}
+  .pal-prox-hora{text-align:left !important}
   /* Dashboard admin — mobile */
   .dash-metrics{grid-template-columns:repeat(2,1fr)}
   .prog-item{display:flex !important;flex-direction:column;gap:0.5rem}.prog-item > *:last-child{display:none}

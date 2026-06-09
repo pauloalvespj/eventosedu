@@ -283,13 +283,13 @@ export default function App() {
       ];
       const allRoles = derivedRoles.length > 1 ? derivedRoles : null;
       if (allRoles) {
+        setRoleSelectorOptions(allRoles); // sempre disponível para o botão Trocar perfil
         const stored = sessionStorage.getItem("enaudin_active_role");
         const noAdmin = location.pathname.startsWith("/painel");
         if (stored && allRoles.includes(stored) && !loginExplicito.current) {
           setActiveRole(stored); // restaura silenciosamente (ex: F5)
         } else if (loginExplicito.current || noAdmin) {
           loginExplicito.current = false;
-          setRoleSelectorOptions(allRoles);
           setShowRoleSelector(true); // mostra seletor de perfil
         } else {
           // sessão restaurada fora do painel — usa o primeiro role sem interromper
