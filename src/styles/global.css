@@ -415,7 +415,7 @@ tr:hover td{background:var(--surface2)}
   .dash-cards-pal{grid-template-columns:repeat(2,1fr) !important}
   /* Dashboard admin — mobile */
   .dash-metrics{grid-template-columns:repeat(2,1fr)}
-  .prog-item{grid-template-columns:60px 1fr;}.prog-item > *:last-child{grid-column:1/-1}
+  .prog-item{display:flex !important;flex-direction:column;gap:0.5rem}.prog-item > *:last-child{display:none}
   .navbar-nav .navbar-link{display:none}
   .navbar-nav .btn-inscricao{display:none}
   .navbar-nav .btn-login-mobile{display:flex}
