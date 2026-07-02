@@ -2,11 +2,13 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
-  faDownload, faClock, faFileAlt, faEye, faEyeSlash,
+  faDownload, faClock, faFileAlt, faEye, faEyeSlash, faFilePdf,
 } from "@fortawesome/free-solid-svg-icons";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
-import { formatData, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue } from "../../../utils/helpers";
+import { formatData, formatPeriodo, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, diaSemana } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
   inserirPresenca, uploadMaterial, deletarMaterial, atualizarEvento,
@@ -79,6 +81,135 @@ export function Programacao() {
     showToast(novoValor ? "Programação liberada no site!" : "Programação bloqueada (Em breve)", novoValor ? "success" : "warn");
   }
 
+  async function gerarPDF() {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const NAVY    = [15, 52, 96];
+    const WHITE   = [255, 255, 255];
+    const GOLD    = [201, 168, 76];
+    const DAY_BG  = [224, 232, 248];
+    const INT_BG  = [242, 244, 248];
+    const INT_TEXT = [130, 140, 160];
+
+    // Logo para assinatura no rodapé
+    let logoDataUrl = null;
+    if (event.logo_url) {
+      try {
+        logoDataUrl = await new Promise(resolve => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+          };
+          img.onerror = () => resolve(null);
+          img.src = event.logo_url;
+        });
+      } catch { logoDataUrl = null; }
+    }
+
+    // Cabeçalho
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 32, "F");
+    doc.setFillColor(...GOLD);
+    doc.rect(0, 29, pageW, 3, "F");
+
+    doc.setTextColor(...WHITE);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text(event.nome || "Evento", 14, 12);
+
+    if (event.nome_completo) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(event.nome_completo, 14, 20);
+    }
+
+    const ano = event.data_inicio ? event.data_inicio.split("-")[0] : "";
+    const periodo = event.data_inicio
+      ? `${formatPeriodo(event.data_inicio, event.data_fim)}${ano ? ` de ${ano}` : ""}`
+      : "";
+    const localStr = event.local || "";
+    const infoLinha = [periodo, localStr].filter(Boolean).join("  ·  ");
+    if (infoLinha) {
+      doc.setFontSize(7.5);
+      doc.setTextColor(180, 200, 230);
+      doc.text(infoLinha, 14, 27);
+    }
+
+    // Dias
+    const dias = [...new Set(atividades.map(a => a.dia))].sort();
+    let curY = 36;
+
+    dias.forEach((dia, idx) => {
+      if (idx > 0) curY += 3;
+      const atvsNoDia = atividades
+        .filter(a => a.dia === dia && a.tipo !== "intervalo")
+        .sort((a, b) => a.horario.localeCompare(b.horario));
+
+      autoTable(doc, {
+        startY: curY,
+        head: [[{
+          content: `${diaSemana(dia)}, ${formatData(dia)}`,
+          colSpan: 3,
+          styles: { fillColor: NAVY, textColor: WHITE, fontStyle: "bold", fontSize: 9, halign: "left", cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
+        }]],
+        body: atvsNoDia.map(a => {
+          const pals = getPalestrantes(a);
+          const palNomes = pals.map(p => p.nome + (p.instituicao ? ` – ${p.instituicao}` : "")).join("\n");
+          const convs = (a.convidados || "").split("\n").filter(Boolean).join("\n");
+          const pessoas = [palNomes, convs].filter(Boolean).join("\n");
+          const horario = a.horario + (a.horario_fim ? ` – ${a.horario_fim}` : "");
+          const conteudo = a.titulo + (pessoas ? "\n" + pessoas : "");
+          return [horario, TIPO_LABEL[a.tipo] || a.tipo || "", conteudo];
+        }),
+        theme: "grid",
+        styles: { fontSize: 7.5, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, overflow: "linebreak", minCellHeight: 7 },
+        columnStyles: {
+          0: { cellWidth: 24, halign: "center", fontStyle: "bold" },
+          1: { cellWidth: 28 },
+          2: { cellWidth: "auto" },
+        },
+        didParseCell: (data) => {
+          if (data.section !== "body") return;
+          const a = atvsNoDia[data.row.index];
+          if (!a) return;
+          if (a.tipo === "intervalo") {
+            data.cell.styles.fillColor = INT_BG;
+            data.cell.styles.textColor = INT_TEXT;
+          }
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      curY = doc.lastAutoTable.finalY;
+    });
+
+    // Rodapé
+    const total = doc.getNumberOfPages();
+    const logoFootH = logoDataUrl ? 16 : 0;
+    const logoFootW = logoFootH * 3;
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(220, 224, 230);
+      doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+      doc.setFontSize(6.5);
+      doc.setTextColor(170, 175, 185);
+      doc.text(`${event.nome || "Evento"} — Programação Completa`, 14, pageH - 10);
+      doc.text(`${i} / ${total}`, pageW - 14, pageH - 10, { align: "right" });
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, "PNG", (pageW - logoFootW) / 2, pageH - 34, logoFootW, logoFootH, undefined, "FAST");
+      }
+    }
+
+    const slug = (event.nome || "programacao").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    doc.save(`${slug}-programacao.pdf`);
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -93,7 +224,11 @@ export function Programacao() {
             <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
             {visivel ? "Visível no site" : "Em breve no site"}
           </button>
-          <button className="btn btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+          <button className="btn btn-sm btn-outline" onClick={gerarPDF} style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <FontAwesomeIcon icon={faFilePdf} />
+            Exportar PDF
+          </button>
+          <button className="btn btn-sm btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
         </div>
       </div>
 
