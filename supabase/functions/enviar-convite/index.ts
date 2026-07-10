@@ -26,7 +26,7 @@ function json(body: unknown, status = 200) {
 
 const DEFAULT_MENSAGEM = "É com grande satisfação que convidamos você a participar do nosso evento. A participação é gratuita e garante certificado de participação. Faça sua inscrição agora mesmo!";
 
-function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem }: any) {
+function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome }: any) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -41,11 +41,9 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem }
       </td></tr>` : `
       <tr><td style="background:linear-gradient(135deg,#0a1f40,#1d6a6a);padding:40px 48px;text-align:center;">
         <div style="font-size:28px;font-weight:700;color:#c9a84c;letter-spacing:1px;">${event.nome}</div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:8px;">${event.nome_completo || ""}</div>
       </td></tr>`}
       <tr><td style="padding:40px 48px;">
         <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagem || DEFAULT_MENSAGEM}</p>
-        ${event.subtitulo ? `<p style="font-size:14px;color:#718096;font-style:italic;border-left:3px solid #c9a84c;padding-left:12px;margin:0 0 20px;">"${event.subtitulo}"</p>` : ""}
         <table cellpadding="0" cellspacing="0" style="background:#f7f9fc;border-radius:8px;padding:20px;margin:0 0 28px;width:100%;">
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📍 <strong>Local:</strong> ${event.local || ""}</td></tr>
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${event.data_inicio || ""} a ${event.data_fim || ""}</td></tr>
@@ -58,9 +56,17 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem }
             </a>
           </td></tr>
         </table>
-        <p style="font-size:13px;color:#a0aec0;text-align:center;margin:0;">
+        <p style="font-size:13px;color:#a0aec0;text-align:center;margin:0 0 ${anexoUrl ? "20" : "0"}px;">
           Se o botão não funcionar, acesse: <a href="${inscricaoUrl}" style="color:#0a1f40;">${inscricaoUrl}</a>
         </p>
+        ${anexoUrl ? `
+        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+          <tr><td align="center" style="border-radius:8px;border:1.5px solid #0a1f40;">
+            <a href="${anexoUrl}" style="display:inline-block;padding:12px 32px;font-size:14px;font-weight:700;color:#0a1f40;text-decoration:none;">
+              📎 Baixar ${anexoNome || "anexo"}
+            </a>
+          </td></tr>
+        </table>` : ""}
       </td></tr>
       <tr><td style="background:#0a1f40;padding:24px 48px;text-align:center;">
         <div style="font-size:13px;color:rgba(255,255,255,0.5);">
@@ -100,27 +106,6 @@ Deno.serve(async (req) => {
       return json({ error: "leads é obrigatório e não pode ser vazio" }, 400);
     }
 
-    // Baixa o anexo uma única vez (reaproveitado em todos os envios)
-    let attachments: { filename: string; content: string; encoding: "base64"; contentType: string }[] = [];
-    if (anexoUrl) {
-      try {
-        const res = await fetch(anexoUrl);
-        if (res.ok) {
-          const bytes = new Uint8Array(await res.arrayBuffer());
-          let binary = "";
-          for (const b of bytes) binary += String.fromCharCode(b);
-          attachments = [{
-            filename: anexoNome || "anexo",
-            content: btoa(binary),
-            encoding: "base64",
-            contentType: res.headers.get("content-type") || "application/octet-stream",
-          }];
-        }
-      } catch (_err) {
-        // Se não conseguir baixar o anexo, envia sem ele em vez de falhar tudo
-      }
-    }
-
     const SMTP_HOST = Deno.env.get("SMTP_HOST");
     const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") || "465");
     const SMTP_USER = Deno.env.get("SMTP_USER");
@@ -146,15 +131,43 @@ Deno.serve(async (req) => {
     const sent: (string | number)[] = [];
     const failed: { id: string | number; email: string; error: string }[] = [];
 
+    const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome });
+
+    // Base64 evita o bug de quoted-printable do denomailer que deixava "=20" visível no corpo do e-mail
+    function toBase64Utf8(str: string): string {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      for (const b of bytes) binary += String.fromCharCode(b);
+      return btoa(binary);
+    }
+    const mimeContent = [{
+      mimeType: 'text/html; charset="utf-8"',
+      content: toBase64Utf8(html),
+      transferEncoding: "base64",
+    }];
+
+    // Reenvia até 2x em caso de falha transitória de rede/SMTP antes de marcar como falho
+    async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
+      let ultimoErro: unknown;
+      for (let i = 0; i < tentativas; i++) {
+        try {
+          await client.send(payload);
+          return;
+        } catch (err) {
+          ultimoErro = err;
+          if (i < tentativas - 1) await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+      throw ultimoErro;
+    }
+
     for (const lead of leads) {
       try {
-        const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem });
-        await client.send({
+        await enviarComRetry({
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: lead.email,
           subject: assunto || `Convite — ${event?.nome || "Evento"}`,
-          html,
-          attachments,
+          mimeContent,
         });
         sent.push(lead.id);
       } catch (err) {

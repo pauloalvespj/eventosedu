@@ -21,7 +21,8 @@
       "Bash(git commit -m ' *)",
       "Bash(npm ls *)",
       "Bash(npm view *)",
-      "Bash(npm audit *)"
+      "Bash(npm audit *)",
+      "WebFetch(domain:deno.land)"
     ]
   }
 }

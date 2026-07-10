@@ -191,6 +191,7 @@ export function AbaPreConvidados() {
       lead: leadPreview, event: event || {},
       bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
       assunto: convite.assunto, mensagem: convite.mensagem,
+      anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
     });
   }
 

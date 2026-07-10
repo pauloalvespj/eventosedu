@@ -93,6 +93,8 @@ export function AbaConfigEmail() {
       inscricaoUrl: ativo.inscricaoUrl,
       assunto: ativo.assunto,
       mensagem: ativo.mensagem,
+      anexoUrl: ativo.anexoUrl,
+      anexoNome: ativo.anexoNome,
     });
   }
 
