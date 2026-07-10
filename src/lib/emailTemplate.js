@@ -1,5 +1,11 @@
 export const DEFAULT_MENSAGEM = "É com grande satisfação que convidamos você a participar do nosso evento. A participação é gratuita e garante certificado de participação. Faça sua inscrição agora mesmo!";
 
+function formatDataBR(d) {
+  if (!d) return "";
+  const [y, m, dia] = d.split("-");
+  return `${dia}/${m}/${y}`;
+}
+
 export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao }) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
@@ -24,7 +30,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
         <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagem || DEFAULT_MENSAGEM}</p>
         <table cellpadding="0" cellspacing="0" style="background:#f7f9fc;border-radius:8px;padding:20px;margin:0 0 28px;width:100%;">
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📍 <strong>Local:</strong> ${event.local || ""}</td></tr>
-          <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${event.data_inicio || ""} a ${event.data_fim || ""}</td></tr>
+          <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${formatDataBR(event.data_inicio)} a ${formatDataBR(event.data_fim)}</td></tr>
           ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
         </table>
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
