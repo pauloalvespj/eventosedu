@@ -9,7 +9,7 @@ const ABAS = [
   { key: "inscritos",     label: "Inscritos"           },
   { key: "palestrantes",  label: "Palestrantes"         },
   { key: "pre-convidados", label: "Pré-Convidados (Leads)" },
-  { key: "config-email", label: "Configurar E-mail" },
+  { key: "config-email", label: "Modelos de E-mail" },
 ];
 
 export function GestaoParticipantes() {

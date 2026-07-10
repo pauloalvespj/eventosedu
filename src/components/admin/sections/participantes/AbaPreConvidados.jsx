@@ -32,7 +32,14 @@ export function AbaPreConvidados() {
   const [formAdd, setFormAdd]       = useState({ nome: "", email: "", instituicao: "" });
   const [importando, setImportando] = useState(false);
   const [enviando, setEnviando]     = useState(false);
+  const [templateId, setTemplateId] = useState("");
   const fileRef = useRef();
+
+  const templates = event?.convite_templates?.length
+    ? event.convite_templates
+    : (event?.convite_config && Object.keys(event.convite_config).length
+      ? [{ id: "default", nome: "Convite", ...event.convite_config }]
+      : []);
 
   // Deriva status a partir dos profiles já inscritos
   const emailsInscritos = new Set(participantes.map(p => p.email?.toLowerCase()).filter(Boolean));
@@ -176,7 +183,7 @@ export function AbaPreConvidados() {
   }
 
   // ── Preview e envio de convites ──────────────────────────────
-  const convite = event?.convite_config || {};
+  const convite = templates.find(t => t.id === templateId) || templates[0] || {};
   const leadPreview = filtrados.find(c => selecionados.has(c.id)) || filtrados[0] || { nome: "Convidado", email: "" };
 
   function htmlPreview() {
@@ -412,48 +419,65 @@ export function AbaPreConvidados() {
 
       {/* Modal: preview e envio de convite */}
       <Modal show={modalEmail} onClose={() => setModalEmail(false)} title={`Enviar Convites (${selecionados.size} lead${selecionados.size !== 1 ? "s" : ""})`}>
-        <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem" }}>
-          O preview abaixo mostra como ficará para o lead <strong>{leadPreview.nome}</strong>, usando o assunto, mensagem
-          {convite.anexoNome ? " e anexo " : " "}configurados na aba <strong>Configurar E-mail</strong>.
-          {convite.anexoNome && <> Anexo: <strong>{convite.anexoNome}</strong>.</>}
-        </p>
+        {templates.length === 0 ? (
+          <p style={{ fontSize: "0.85rem", color: "var(--text2)" }}>
+            Nenhum modelo de e-mail criado ainda. Vá na aba <strong>Modelos de E-mail</strong> para criar um antes de enviar.
+          </p>
+        ) : (
+          <>
+            <div className="form-group">
+              <label className="form-label">Modelo de E-mail</label>
+              <select className="search-input" style={{ width: "100%" }}
+                value={convite.id} onChange={e => setTemplateId(e.target.value)}>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.nome || "Sem nome"}</option>
+                ))}
+              </select>
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem" }}>
+              Preview para o lead <strong>{leadPreview.nome}</strong>.
+              {convite.anexoNome && <> Anexo: <strong>{convite.anexoNome}</strong>.</>}
+              {" "}Edite o conteúdo na aba <strong>Modelos de E-mail</strong>.
+            </p>
 
-        {/* Preview do e-mail */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden", marginBottom: "1rem" }}>
-          <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
-            <FontAwesomeIcon icon={faEye} />Preview do E-mail
-          </div>
-          <iframe
-            title="preview-email"
-            srcDoc={htmlPreview()}
-            style={{ width: "100%", height: 700, border: 0, display: "block" }}
-            sandbox="allow-same-origin"
-          />
-        </div>
+            {/* Preview do e-mail */}
+            <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden", marginBottom: "1rem" }}>
+              <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
+                <FontAwesomeIcon icon={faEye} />Preview do E-mail
+              </div>
+              <iframe
+                title="preview-email"
+                srcDoc={htmlPreview()}
+                style={{ width: "100%", height: 700, border: 0, display: "block" }}
+                sandbox="allow-same-origin"
+              />
+            </div>
 
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <button className="btn btn-primary" onClick={enviarConvites} disabled={enviando}>
-            <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 6 }} />
-            {enviando ? "Enviando…" : "Enviar via SMTP"}
-          </button>
-          <button className="btn btn-outline" onClick={baixarHTML}>
-            <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar HTML
-          </button>
-          <button className="btn btn-outline" onClick={async () => {
-            const ids = [...selecionados];
-            setConvidados(prev => prev.map(c => ids.includes(c.id) ? { ...c, email_enviado: true } : c));
-            await marcarEmailEnviado(ids);
-            setSelecionados(new Set());
-            setModalEmail(false);
-            showToast("Leads marcados como e-mail enviado.", "success");
-          }}>
-            <FontAwesomeIcon icon={faCheckDouble} style={{ marginRight: 6 }} />Marcar como Enviado
-          </button>
-        </div>
-        <p style={{ fontSize: "0.75rem", color: "var(--text3)", marginTop: "0.75rem" }}>
-          "Enviar via SMTP" requer a Edge Function <code>enviar-convite</code> e os secrets de SMTP configurados no projeto.
-          Use "Baixar HTML" para enviar manualmente pelo seu cliente de e-mail.
-        </p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button className="btn btn-primary" onClick={enviarConvites} disabled={enviando}>
+                <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 6 }} />
+                {enviando ? "Enviando…" : "Enviar via SMTP"}
+              </button>
+              <button className="btn btn-outline" onClick={baixarHTML}>
+                <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar HTML
+              </button>
+              <button className="btn btn-outline" onClick={async () => {
+                const ids = [...selecionados];
+                setConvidados(prev => prev.map(c => ids.includes(c.id) ? { ...c, email_enviado: true } : c));
+                await marcarEmailEnviado(ids);
+                setSelecionados(new Set());
+                setModalEmail(false);
+                showToast("Leads marcados como e-mail enviado.", "success");
+              }}>
+                <FontAwesomeIcon icon={faCheckDouble} style={{ marginRight: 6 }} />Marcar como Enviado
+              </button>
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "var(--text3)", marginTop: "0.75rem" }}>
+              "Enviar via SMTP" requer a Edge Function <code>enviar-convite</code> e os secrets de SMTP configurados no projeto.
+              Use "Baixar HTML" para enviar manualmente pelo seu cliente de e-mail.
+            </p>
+          </>
+        )}
       </Modal>
     </div>
   );

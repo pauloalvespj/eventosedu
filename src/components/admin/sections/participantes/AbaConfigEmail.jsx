@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faUpload, faTrash, faEye, faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faUpload, faTrash, faEye, faPaperclip, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { atualizarEvento, uploadConviteAnexo } from "../../../../lib/db";
 import { gerarTemplateHTML, DEFAULT_MENSAGEM } from "../../../../lib/emailTemplate";
 
-const DEFAULTS = {
+const TEMPLATE_DEFAULTS = {
   assunto: "",
   mensagem: DEFAULT_MENSAGEM,
   bannerUrl: "",
@@ -14,16 +14,43 @@ const DEFAULTS = {
   anexoNome: "",
 };
 
+function seedTemplates(event) {
+  if (Array.isArray(event.convite_templates) && event.convite_templates.length) {
+    return event.convite_templates;
+  }
+  if (event.convite_config && Object.keys(event.convite_config).length) {
+    return [{ id: "default", nome: "Convite", ...TEMPLATE_DEFAULTS, ...event.convite_config }];
+  }
+  return [{ id: `tpl-${Date.now()}`, nome: "Convite", ...TEMPLATE_DEFAULTS }];
+}
+
 export function AbaConfigEmail() {
   const { event, setEvent, showToast } = useAdmin();
 
-  const [cfg, setCfg] = useState(() => ({ ...DEFAULTS, ...(event.convite_config || {}) }));
-  const [salvando, setSalvando] = useState(false);
+  const [templates, setTemplates] = useState(() => seedTemplates(event));
+  const [ativoId, setAtivoId]     = useState(() => templates[0]?.id);
+  const [salvando, setSalvando]   = useState(false);
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
   const fileRef = useRef();
 
+  const ativo = templates.find(t => t.id === ativoId) || templates[0];
+
   function set(field, value) {
-    setCfg(prev => ({ ...prev, [field]: value }));
+    setTemplates(prev => prev.map(t => t.id === ativo.id ? { ...t, [field]: value } : t));
+  }
+
+  function novoModelo() {
+    const novo = { id: `tpl-${Date.now()}`, nome: "Novo Modelo", ...TEMPLATE_DEFAULTS };
+    setTemplates(prev => [...prev, novo]);
+    setAtivoId(novo.id);
+  }
+
+  function removerModelo(id) {
+    if (templates.length <= 1) { showToast("Mantenha ao menos um modelo.", "warn"); return; }
+    if (!confirm("Remover este modelo de e-mail?")) return;
+    const restantes = templates.filter(t => t.id !== id);
+    setTemplates(restantes);
+    if (ativoId === id) setAtivoId(restantes[0]?.id);
   }
 
   async function handleAnexo(e) {
@@ -32,7 +59,7 @@ export function AbaConfigEmail() {
     setEnviandoAnexo(true);
     try {
       const url = await uploadConviteAnexo(event.id, file);
-      setCfg(prev => ({ ...prev, anexoUrl: url, anexoNome: file.name }));
+      setTemplates(prev => prev.map(t => t.id === ativo.id ? { ...t, anexoUrl: url, anexoNome: file.name } : t));
       showToast("Anexo enviado!", "success");
     } catch (err) {
       showToast("Erro ao enviar anexo: " + err.message, "error");
@@ -43,29 +70,29 @@ export function AbaConfigEmail() {
   }
 
   function removerAnexo() {
-    setCfg(prev => ({ ...prev, anexoUrl: "", anexoNome: "" }));
+    set("anexoUrl", "");
+    set("anexoNome", "");
   }
 
   async function salvar() {
     setSalvando(true);
-    const { error } = await atualizarEvento(event.id, { convite_config: cfg });
+    const { error } = await atualizarEvento(event.id, { convite_templates: templates });
     if (error) {
-      showToast("Erro ao salvar configuração de e-mail.", "error");
+      showToast("Erro ao salvar modelos de e-mail.", "error");
     } else {
-      setEvent(prev => ({ ...prev, convite_config: cfg }));
-      showToast("Configuração de e-mail salva!", "success");
+      setEvent(prev => ({ ...prev, convite_templates: templates }));
+      showToast("Modelos de e-mail salvos!", "success");
     }
     setSalvando(false);
   }
 
   function htmlPreview() {
     return gerarTemplateHTML({
-      lead: { nome: "Convidado Exemplo" },
       event: event || {},
-      bannerUrl: cfg.bannerUrl,
-      inscricaoUrl: cfg.inscricaoUrl,
-      assunto: cfg.assunto,
-      mensagem: cfg.mensagem,
+      bannerUrl: ativo.bannerUrl,
+      inscricaoUrl: ativo.inscricaoUrl,
+      assunto: ativo.assunto,
+      mensagem: ativo.mensagem,
     });
   }
 
@@ -73,43 +100,67 @@ export function AbaConfigEmail() {
     <div>
       <div className="admin-topbar">
         <div>
-          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Configurar E-mail de Convite</h2>
+          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Modelos de E-mail</h2>
           <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
-            Defina assunto, mensagem e anexo usados ao enviar convites na aba Pré-Convidados.
+            Crie modelos (convite, lembrete, etc.) — na hora de enviar, escolha qual usar na aba Pré-Convidados.
           </p>
         </div>
         <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
           <FontAwesomeIcon icon={faSave} style={{ marginRight: 6 }} />
-          {salvando ? "Salvando…" : "Salvar Configuração"}
+          {salvando ? "Salvando…" : "Salvar Modelos"}
+        </button>
+      </div>
+
+      {/* Seletor de modelos */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+        {templates.map(t => (
+          <button key={t.id}
+            className={`btn btn-sm ${ativoId === t.id ? "btn-primary" : "btn-outline"}`}
+            onClick={() => setAtivoId(t.id)}>
+            {t.nome || "Sem nome"}
+          </button>
+        ))}
+        <button className="btn btn-sm btn-outline" onClick={novoModelo}>
+          <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Novo Modelo
         </button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
         <div>
           <div className="form-group">
+            <label className="form-label">Nome do Modelo</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="form-input" type="text" placeholder="Ex: Convite, Lembrete, Última Chamada..."
+                value={ativo.nome} onChange={e => set("nome", e.target.value)} />
+              <button className="btn btn-sm btn-danger" title="Remover modelo" onClick={() => removerModelo(ativo.id)}>
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            </div>
+          </div>
+          <div className="form-group">
             <label className="form-label">Assunto do E-mail</label>
             <input className="form-input" type="text" placeholder={`Convite — ${event?.nome || "Evento"}`}
-              value={cfg.assunto} onChange={e => set("assunto", e.target.value)} />
+              value={ativo.assunto} onChange={e => set("assunto", e.target.value)} />
           </div>
           <div className="form-group">
             <label className="form-label">Mensagem</label>
-            <textarea className="form-input" rows={6} value={cfg.mensagem} onChange={e => set("mensagem", e.target.value)} />
+            <textarea className="form-input" rows={6} value={ativo.mensagem} onChange={e => set("mensagem", e.target.value)} />
           </div>
           <div className="form-group">
             <label className="form-label">URL do Banner do Evento (opcional)</label>
             <input className="form-input" type="url" placeholder="https://exemplo.com/banner.jpg"
-              value={cfg.bannerUrl} onChange={e => set("bannerUrl", e.target.value)} />
+              value={ativo.bannerUrl} onChange={e => set("bannerUrl", e.target.value)} />
           </div>
           <div className="form-group">
             <label className="form-label">URL da Página de Inscrição *</label>
-            <input className="form-input" type="url" value={cfg.inscricaoUrl} onChange={e => set("inscricaoUrl", e.target.value)} />
+            <input className="form-input" type="url" value={ativo.inscricaoUrl} onChange={e => set("inscricaoUrl", e.target.value)} />
           </div>
           <div className="form-group">
             <label className="form-label">Anexo (PDF, imagem, etc.)</label>
-            {cfg.anexoNome ? (
+            {ativo.anexoNome ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem" }}>
                 <FontAwesomeIcon icon={faPaperclip} />
-                <a href={cfg.anexoUrl} target="_blank" rel="noreferrer">{cfg.anexoNome}</a>
+                <a href={ativo.anexoUrl} target="_blank" rel="noreferrer">{ativo.anexoNome}</a>
                 <button className="btn btn-sm btn-danger" title="Remover anexo" onClick={removerAnexo}>
                   <FontAwesomeIcon icon={faTrash} />
                 </button>
@@ -127,7 +178,7 @@ export function AbaConfigEmail() {
         <div>
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
             <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
-              <FontAwesomeIcon icon={faEye} />Preview do E-mail
+              <FontAwesomeIcon icon={faEye} />Preview do E-mail — {ativo.nome}
             </div>
             <iframe
               title="preview-config-email"
