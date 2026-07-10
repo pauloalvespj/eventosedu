@@ -4,7 +4,7 @@ import { supabase } from "../../../../lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUpload, faEnvelope, faTrash, faPlus, faEye,
-  faDownload, faCheckDouble, faPenToSquare, faFloppyDisk,
+  faDownload, faCheckDouble, faPenToSquare, faFloppyDisk, faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal } from "../../../base/index";
@@ -12,65 +12,12 @@ import {
   inserirConvidado, inserirConvidadosLote,
   atualizarConvidado, deletarConvidado, marcarEmailEnviado,
 } from "../../../../lib/db";
+import { gerarTemplateHTML } from "../../../../lib/emailTemplate";
 
 const STATUS_CONFIG = {
   pendente: { label: "Pendente", cls: "badge-warn"    },
   inscrito: { label: "Inscrito", cls: "badge-success" },
 };
-
-function gerarTemplateHTML({ lead, event, bannerUrl, inscricaoUrl }) {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Convite — ${event.nome}</title></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:32px 0;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-      ${bannerUrl ? `
-      <tr><td>
-        <img src="${bannerUrl}" alt="Banner do evento" width="600" style="display:block;width:100%;max-height:240px;object-fit:cover;" />
-      </td></tr>` : `
-      <tr><td style="background:linear-gradient(135deg,#0a1f40,#1d6a6a);padding:40px 48px;text-align:center;">
-        <div style="font-size:28px;font-weight:700;color:#c9a84c;letter-spacing:1px;">${event.nome}</div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:8px;">${event.nome_completo || ""}</div>
-      </td></tr>`}
-      <tr><td style="padding:40px 48px;">
-        <p style="font-size:16px;color:#1a2e4a;margin:0 0 16px;">Olá, <strong>${lead.nome}</strong>!</p>
-        <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 16px;">
-          É com grande satisfação que convidamos você a participar do <strong>${event.nome}</strong>${event.nome_completo ? ` — ${event.nome_completo}` : ""}.
-        </p>
-        ${event.subtitulo ? `<p style="font-size:14px;color:#718096;font-style:italic;border-left:3px solid #c9a84c;padding-left:12px;margin:0 0 20px;">"${event.subtitulo}"</p>` : ""}
-        <table cellpadding="0" cellspacing="0" style="background:#f7f9fc;border-radius:8px;padding:20px;margin:0 0 28px;width:100%;">
-          <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📍 <strong>Local:</strong> ${event.local || ""}</td></tr>
-          <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${event.data_inicio || ""} a ${event.data_fim || ""}</td></tr>
-          ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
-        </table>
-        <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 28px;">
-          A participação é <strong>gratuita</strong> e garante certificado de participação. Faça sua inscrição agora mesmo!
-        </p>
-        <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-          <tr><td align="center" style="border-radius:8px;background:#0a1f40;">
-            <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
-              Quero me inscrever →
-            </a>
-          </td></tr>
-        </table>
-        <p style="font-size:13px;color:#a0aec0;text-align:center;margin:0;">
-          Se o botão não funcionar, acesse: <a href="${inscricaoUrl}" style="color:#0a1f40;">${inscricaoUrl}</a>
-        </p>
-      </td></tr>
-      <tr><td style="background:#0a1f40;padding:24px 48px;text-align:center;">
-        <div style="font-size:13px;color:rgba(255,255,255,0.5);">
-          ${event.nome} · ${event.local || ""}<br/>
-          Este é um convite pessoal. Encaminhe com cuidado.
-        </div>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
-}
 
 export function AbaPreConvidados() {
   const { convidados, setConvidados, participantes, event, showToast } = useAdmin();
@@ -83,8 +30,6 @@ export function AbaPreConvidados() {
   const [formEdit, setFormEdit]     = useState({});
   const [modalEmail, setModalEmail] = useState(false);
   const [formAdd, setFormAdd]       = useState({ nome: "", email: "", instituicao: "" });
-  const [bannerUrl, setBannerUrl]   = useState("");
-  const [inscricaoUrl, setInscricaoUrl] = useState(typeof window !== "undefined" ? window.location.origin : "");
   const [importando, setImportando] = useState(false);
   const [enviando, setEnviando]     = useState(false);
   const fileRef = useRef();
@@ -106,6 +51,32 @@ export function AbaPreConvidados() {
       c.status === filtroStatus;
     return ok && passaStatus;
   });
+
+  // ── Exportar / copiar leads filtrados ────────────────────────
+  function baixarLeadsFiltrados() {
+    if (!filtrados.length) { showToast("Nenhum lead para exportar.", "warn"); return; }
+    const header = "Nome,E-mail,Instituição,Status,E-mail Enviado\n";
+    const rows = filtrados.map(c => {
+      const status = (STATUS_CONFIG[c.status] || STATUS_CONFIG.pendente).label;
+      return `"${c.nome || ""}","${c.email || ""}","${c.instituicao || ""}","${status}","${c.email_enviado ? "Sim" : "Não"}"`;
+    }).join("\n");
+    // BOM garante acentuação correta ao abrir no Excel
+    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const nomeEvento = event?.nome?.replace(/\s+/g, "_") || "evento";
+    const data = new Date().toISOString().slice(0, 10);
+    a.download = `leads_${nomeEvento}_${data}.csv`;
+    a.click();
+    showToast(`${filtrados.length} lead${filtrados.length !== 1 ? "s" : ""} exportado${filtrados.length !== 1 ? "s" : ""}!`, "success");
+  }
+
+  function copiarEmailsFiltrados() {
+    const emails = filtrados.map(c => c.email).filter(Boolean);
+    if (!emails.length) { showToast("Nenhum e-mail para copiar.", "warn"); return; }
+    navigator.clipboard.writeText(emails.join("; "));
+    showToast(`${emails.length} e-mail${emails.length !== 1 ? "s" : ""} copiado${emails.length !== 1 ? "s" : ""}! Cole no campo Cco do Gmail.`, "success");
+  }
 
   // ── Importar planilha ────────────────────────────────────────
   async function handleImport(e) {
@@ -205,10 +176,15 @@ export function AbaPreConvidados() {
   }
 
   // ── Preview e envio de convites ──────────────────────────────
+  const convite = event?.convite_config || {};
   const leadPreview = filtrados.find(c => selecionados.has(c.id)) || filtrados[0] || { nome: "Convidado", email: "" };
 
   function htmlPreview() {
-    return gerarTemplateHTML({ lead: leadPreview, event: event || {}, bannerUrl, inscricaoUrl });
+    return gerarTemplateHTML({
+      lead: leadPreview, event: event || {},
+      bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
+      assunto: convite.assunto, mensagem: convite.mensagem,
+    });
   }
 
   function baixarHTML() {
@@ -224,21 +200,37 @@ export function AbaPreConvidados() {
     if (!ids.length) { showToast("Selecione ao menos um lead.", "warn"); return; }
     setEnviando(true);
     try {
-      // Tenta chamar Edge Function do Supabase
       const leadsParaEnviar = convidados.filter(c => ids.includes(c.id));
-      const { error } = await supabase.functions.invoke("enviar-convite", {
-        body: { leads: leadsParaEnviar, event, bannerUrl, inscricaoUrl },
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("enviar-convite", {
+        body: {
+          leads: leadsParaEnviar, event,
+          bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
+          assunto: convite.assunto, mensagem: convite.mensagem,
+          anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
+        },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (error) throw error;
-      // Marca email como enviado
-      setConvidados(prev => prev.map(c => ids.includes(c.id) ? { ...c, email_enviado: true } : c));
-      await marcarEmailEnviado(ids);
-      showToast(`Convites enviados para ${ids.length} lead${ids.length !== 1 ? "s" : ""}!`, "success");
+      if (data?.error) throw new Error(data.error);
+
+      const enviados = data?.sent || [];
+      const falhas = data?.failed || [];
+      if (enviados.length) {
+        setConvidados(prev => prev.map(c => enviados.includes(c.id) ? { ...c, email_enviado: true } : c));
+        await marcarEmailEnviado(enviados);
+      }
+      if (falhas.length) {
+        showToast(`${enviados.length} enviado${enviados.length !== 1 ? "s" : ""}, ${falhas.length} falharam. Veja o console para detalhes.`, "warn");
+        console.warn("Falhas ao enviar convites:", falhas);
+      } else {
+        showToast(`Convites enviados para ${enviados.length} lead${enviados.length !== 1 ? "s" : ""}!`, "success");
+      }
       setSelecionados(new Set());
       setModalEmail(false);
     } catch (err) {
-      // Edge Function não configurada — orienta o admin
-      showToast("Edge Function 'enviar-convite' não configurada. Baixe o HTML e envie manualmente.", "warn");
+      // Edge Function não configurada ou SMTP com erro — orienta o admin
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + "). Baixe o HTML e envie manualmente.", "warn");
     } finally {
       setEnviando(false);
     }
@@ -309,6 +301,12 @@ export function AbaPreConvidados() {
               <option value="sem_email">Sem e-mail enviado</option>
             </select>
             <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
+            <button className="btn btn-sm btn-outline" title="Copiar e-mails dos leads filtrados" onClick={copiarEmailsFiltrados}>
+              <FontAwesomeIcon icon={faCopy} style={{ marginRight: 6 }} />Copiar E-mails
+            </button>
+            <button className="btn btn-sm btn-outline" title="Baixar CSV com os leads filtrados" onClick={baixarLeadsFiltrados}>
+              <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar CSV
+            </button>
           </div>
         </div>
         <table style={{ width: "100%", fontSize: "0.83rem" }}>
@@ -338,7 +336,6 @@ export function AbaPreConvidados() {
                         if (e.target.checked) s.add(c.id); else s.delete(c.id);
                         setSelecionados(s);
                       }}
-                      disabled={c.status === "inscrito"}
                     />
                   </td>
                   <td style={{ fontWeight: 500 }}>{c.nome}</td>
@@ -416,18 +413,10 @@ export function AbaPreConvidados() {
       {/* Modal: preview e envio de convite */}
       <Modal show={modalEmail} onClose={() => setModalEmail(false)} title={`Enviar Convites (${selecionados.size} lead${selecionados.size !== 1 ? "s" : ""})`}>
         <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem" }}>
-          Configure o e-mail de convite antes de enviar. O preview abaixo mostra como ficará para o lead <strong>{leadPreview.nome}</strong>.
+          O preview abaixo mostra como ficará para o lead <strong>{leadPreview.nome}</strong>, usando o assunto, mensagem
+          {convite.anexoNome ? " e anexo " : " "}configurados na aba <strong>Configurar E-mail</strong>.
+          {convite.anexoNome && <> Anexo: <strong>{convite.anexoNome}</strong>.</>}
         </p>
-
-        <div className="form-group">
-          <label className="form-label">URL do Banner do Evento (opcional)</label>
-          <input className="form-input" type="url" placeholder="https://exemplo.com/banner.jpg"
-            value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">URL da Página de Inscrição *</label>
-          <input className="form-input" type="url" value={inscricaoUrl} onChange={e => setInscricaoUrl(e.target.value)} />
-        </div>
 
         {/* Preview do e-mail */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden", marginBottom: "1rem" }}>
@@ -437,7 +426,7 @@ export function AbaPreConvidados() {
           <iframe
             title="preview-email"
             srcDoc={htmlPreview()}
-            style={{ width: "100%", height: 340, border: 0, display: "block" }}
+            style={{ width: "100%", height: 700, border: 0, display: "block" }}
             sandbox="allow-same-origin"
           />
         </div>
@@ -445,7 +434,7 @@ export function AbaPreConvidados() {
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button className="btn btn-primary" onClick={enviarConvites} disabled={enviando}>
             <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 6 }} />
-            {enviando ? "Enviando…" : "Enviar via Supabase"}
+            {enviando ? "Enviando…" : "Enviar via SMTP"}
           </button>
           <button className="btn btn-outline" onClick={baixarHTML}>
             <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar HTML
@@ -462,7 +451,7 @@ export function AbaPreConvidados() {
           </button>
         </div>
         <p style={{ fontSize: "0.75rem", color: "var(--text3)", marginTop: "0.75rem" }}>
-          "Enviar via Supabase" requer a Edge Function <code>enviar-convite</code> configurada no seu projeto.
+          "Enviar via SMTP" requer a Edge Function <code>enviar-convite</code> e os secrets de SMTP configurados no projeto.
           Use "Baixar HTML" para enviar manualmente pelo seu cliente de e-mail.
         </p>
       </Modal>

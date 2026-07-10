@@ -418,6 +418,17 @@ export async function atualizarAtividade(id, updates) {
   return { error };
 }
 
+// ── CONVITE (Storage) ─────────────────────────────────────────
+
+export async function uploadConviteAnexo(eventId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const path = `${eventId}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("convite-anexos").upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("convite-anexos").getPublicUrl(path);
+  return publicUrl;
+}
+
 // ── MATERIAIS (Storage) ──────────────────────────────────────
 
 export async function uploadMaterial(atvId, file) {

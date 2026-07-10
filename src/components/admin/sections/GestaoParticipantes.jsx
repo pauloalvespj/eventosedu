@@ -3,11 +3,13 @@ import { useAdmin } from "./AdminContext";
 import { AbaInscritos }     from "./participantes/AbaInscritos";
 import { AbaPalestrantes }  from "./participantes/AbaPalestrantes";
 import { AbaPreConvidados } from "./participantes/AbaPreConvidados";
+import { AbaConfigEmail } from "./participantes/AbaConfigEmail";
 
 const ABAS = [
   { key: "inscritos",     label: "Inscritos"           },
   { key: "palestrantes",  label: "Palestrantes"         },
   { key: "pre-convidados", label: "Pré-Convidados (Leads)" },
+  { key: "config-email", label: "Configurar E-mail" },
 ];
 
 export function GestaoParticipantes() {
@@ -57,18 +59,20 @@ export function GestaoParticipantes() {
             }}
           >
             {a.label}
-            <span style={{
-              background: aba === a.key ? "var(--navy)" : "var(--surface2)",
-              color: aba === a.key ? "#fff" : "var(--text3)",
-              borderRadius: 99,
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              padding: "1px 7px",
-              minWidth: 20,
-              textAlign: "center",
-            }}>
-              {contagens[a.key]}
-            </span>
+            {contagens[a.key] !== undefined && (
+              <span style={{
+                background: aba === a.key ? "var(--navy)" : "var(--surface2)",
+                color: aba === a.key ? "#fff" : "var(--text3)",
+                borderRadius: 99,
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                padding: "1px 7px",
+                minWidth: 20,
+                textAlign: "center",
+              }}>
+                {contagens[a.key]}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -77,6 +81,7 @@ export function GestaoParticipantes() {
       {aba === "inscritos"      && <AbaInscritos />}
       {aba === "palestrantes"   && <AbaPalestrantes />}
       {aba === "pre-convidados" && <AbaPreConvidados />}
+      {aba === "config-email"   && <AbaConfigEmail />}
     </div>
   );
 }
