@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     }
 
     // Baixa o anexo uma única vez (reaproveitado em todos os envios)
-    let attachments: { filename: string; content: string; encoding: string }[] = [];
+    let attachments: { filename: string; content: string; encoding: "base64"; contentType: string }[] = [];
     if (anexoUrl) {
       try {
         const res = await fetch(anexoUrl);
@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
             filename: anexoNome || "anexo",
             content: btoa(binary),
             encoding: "base64",
+            contentType: res.headers.get("content-type") || "application/octet-stream",
           }];
         }
       } catch (_err) {
