@@ -1,6 +1,9 @@
 export const DEFAULT_MENSAGEM = "É com grande satisfação que convidamos você a participar do nosso evento. A participação é gratuita e garante certificado de participação. Faça sua inscrição agora mesmo!";
 
-export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome }) {
+export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao }) {
+  const corTopo = corCabecalho || "#0a1f40";
+  const corBase = corRodape || "#0a1f40";
+  const corCta = corBotao || "#0a1f40";
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -13,8 +16,9 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
       <tr><td>
         <img src="${bannerUrl}" alt="Banner do evento" width="600" style="display:block;width:100%;max-height:240px;object-fit:cover;" />
       </td></tr>` : `
-      <tr><td style="background:linear-gradient(135deg,#0a1f40,#1d6a6a);padding:40px 48px;text-align:center;">
-        <div style="font-size:28px;font-weight:700;color:#c9a84c;letter-spacing:1px;">${event.nome}</div>
+      <tr><td style="background:${corTopo};padding:40px 48px;text-align:center;">
+        <div style="font-size:28px;font-weight:700;color:#ffffff;letter-spacing:1px;">${event.nome}</div>
+        ${event.nome_completo ? `<div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:8px;">${event.nome_completo}</div>` : ""}
       </td></tr>`}
       <tr><td style="padding:40px 48px;">
         <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagem || DEFAULT_MENSAGEM}</p>
@@ -24,7 +28,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
           ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
         </table>
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-          <tr><td align="center" style="border-radius:8px;background:#0a1f40;">
+          <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
               Quero me inscrever →
             </a>
@@ -42,7 +46,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
           </td></tr>
         </table>` : ""}
       </td></tr>
-      <tr><td style="background:#0a1f40;padding:24px 48px;text-align:center;">
+      <tr><td style="background:${corBase};padding:24px 48px;text-align:center;">
         <div style="font-size:13px;color:rgba(255,255,255,0.5);">
           ${event.nome}
         </div>

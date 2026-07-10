@@ -12,7 +12,32 @@ const TEMPLATE_DEFAULTS = {
   inscricaoUrl: typeof window !== "undefined" ? window.location.origin : "",
   anexoUrl: "",
   anexoNome: "",
+  corCabecalho: "#0a1f40",
+  corRodape: "#0a1f40",
+  corBotao: "#0a1f40",
 };
+
+function CorField({ label, value, onChange }) {
+  const cor = value || "#0a1f40";
+  const [editando, setEditando] = useState(false);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <input type="color" value={cor} onChange={e => onChange(e.target.value)}
+        style={{ width: 32, height: 32, padding: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer" }} />
+      <div>
+        <button type="button" onClick={() => setEditando(v => !v)}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.72rem", color: "var(--text3)", textDecoration: "underline dotted" }}>
+          {label}
+        </button>
+        {editando && (
+          <input className="form-input" type="text" value={cor} onChange={e => onChange(e.target.value)}
+            onBlur={() => setEditando(false)} autoFocus
+            style={{ display: "block", width: 90, padding: "2px 6px", fontSize: "0.8rem" }} />
+        )}
+      </div>
+    </div>
+  );
+}
 
 function seedTemplates(event) {
   if (Array.isArray(event.convite_templates) && event.convite_templates.length) {
@@ -95,6 +120,9 @@ export function AbaConfigEmail() {
       mensagem: ativo.mensagem,
       anexoUrl: ativo.anexoUrl,
       anexoNome: ativo.anexoNome,
+      corCabecalho: ativo.corCabecalho,
+      corRodape: ativo.corRodape,
+      corBotao: ativo.corBotao,
     });
   }
 
@@ -152,6 +180,14 @@ export function AbaConfigEmail() {
             <label className="form-label">URL do Banner do Evento (opcional)</label>
             <input className="form-input" type="url" placeholder="https://exemplo.com/banner.jpg"
               value={ativo.bannerUrl} onChange={e => set("bannerUrl", e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Cores (identidade do evento)</label>
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <CorField label="Cabeçalho" value={ativo.corCabecalho} onChange={v => set("corCabecalho", v)} />
+              <CorField label="Botão" value={ativo.corBotao} onChange={v => set("corBotao", v)} />
+              <CorField label="Rodapé" value={ativo.corRodape} onChange={v => set("corRodape", v)} />
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">URL da Página de Inscrição *</label>

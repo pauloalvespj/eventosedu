@@ -192,6 +192,7 @@ export function AbaPreConvidados() {
       bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
       assunto: convite.assunto, mensagem: convite.mensagem,
       anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
+      corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
     });
   }
 
@@ -216,6 +217,7 @@ export function AbaPreConvidados() {
           bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
           assunto: convite.assunto, mensagem: convite.mensagem,
           anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
+          corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
         },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
