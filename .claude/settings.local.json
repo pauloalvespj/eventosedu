@@ -17,7 +17,11 @@
       "Bash(git pull *)",
       "Bash(npx eslint *)",
       "Bash(npx supabase *)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(npm audit *)"
     ]
   }
 }
