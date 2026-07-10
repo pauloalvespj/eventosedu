@@ -93,11 +93,11 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                 <div className="hero-meta-item"><div className="hero-meta-icon">📍</div><span style={{ fontSize:"1.05rem" }}>{event.local}</span></div>
               </div>
               <div className="hero-btns hero-anim hero-anim-5">
+                <a href="#programacao" className="btn-hero-outline">Ver Programação</a>
                 {inscStatus.aberta
-                  ? <button className="btn-hero-primary" onClick={onInscricaoClick}>Inscrever-se</button>
+                  ? <button className="btn-hero-primary" onClick={onInscricaoClick}>Realizar Inscrição</button>
                   : <div className="btn-hero-disabled">{inscStatus.msg}</div>
                 }
-                <a href="#programacao" className="btn-hero-outline">Ver Programação</a>
               </div>
             </>
           )}
@@ -406,7 +406,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
             Evento gratuito · {formatData(event.data_inicio)} a {formatData(event.data_fim)} · {event.local}
           </p>
           {inscStatus.aberta
-            ? <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Inscrever-se</button>
+            ? <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Realizar Inscrição</button>
             : <div style={{ display:"inline-block", background:"rgba(255,255,255,0.12)", border:"1.5px solid rgba(255,255,255,0.30)", color:"rgba(255,255,255,0.70)", padding:"0.9rem 2.5rem", borderRadius:50, fontSize:"1rem", fontWeight:600 }}>{inscStatus.msg}</div>
           }
         </div>

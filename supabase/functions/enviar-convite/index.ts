@@ -64,8 +64,7 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem }
       </td></tr>
       <tr><td style="background:#0a1f40;padding:24px 48px;text-align:center;">
         <div style="font-size:13px;color:rgba(255,255,255,0.5);">
-          ${event.nome} · ${event.local || ""}<br/>
-          Este é um convite pessoal. Encaminhe com cuidado.
+          ${event.nome}
         </div>
       </td></tr>
     </table>
