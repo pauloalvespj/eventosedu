@@ -418,7 +418,7 @@ export function AbaPreConvidados() {
       </Modal>
 
       {/* Modal: preview e envio de convite */}
-      <Modal show={modalEmail} onClose={() => setModalEmail(false)} title={`Enviar Convites (${selecionados.size} lead${selecionados.size !== 1 ? "s" : ""})`}>
+      <Modal show={modalEmail} onClose={() => setModalEmail(false)} wide title={`Enviar Convites (${selecionados.size} lead${selecionados.size !== 1 ? "s" : ""})`}>
         {templates.length === 0 ? (
           <p style={{ fontSize: "0.85rem", color: "var(--text2)" }}>
             Nenhum modelo de e-mail criado ainda. Vá na aba <strong>Modelos de E-mail</strong> para criar um antes de enviar.
