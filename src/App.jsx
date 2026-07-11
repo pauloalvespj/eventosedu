@@ -551,7 +551,7 @@ export default function App() {
         } />
       </Routes>
 
-      <Modal show={showInscricao} onClose={() => setShowInscricao(false)} title="Inscrição no Evento">
+      <Modal show={showInscricao} onClose={() => setShowInscricao(false)} title="Inscrição no Evento" wide>
         <FormInscricao showToast={showToast} onClose={() => setShowInscricao(false)} instituicoes={instituicoes} />
       </Modal>
 

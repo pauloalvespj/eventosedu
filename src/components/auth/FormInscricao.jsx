@@ -13,6 +13,9 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
   const [emailCheck, setEmailCheck] = useState({ status: "idle", profile: null });
   // status: "idle" | "checking" | "exists" | "free"
 
+  // Verificação de CPF em tempo real (onBlur)
+  const [cpfCheck, setCpfCheck] = useState({ status: "idle" });
+
   // Fluxo: e-mail já existe → "já tem cadastro"
   const [jaTemCadastro, setJaTemCadastro] = useState(null);
   const [extra, setExtra] = useState({ cpf: "", instituicao: "", instituicaoOutra: "", cargo: "" });
@@ -31,6 +34,21 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
       setEmailCheck({ status: "exists", profile: data });
     } else {
       setEmailCheck({ status: "free", profile: null });
+    }
+  }
+
+  async function handleCpfBlur() {
+    const cpfDigits = form.cpf.replace(/\D/g, "");
+    if (cpfDigits.length !== 11 || !validateCPF(form.cpf)) return;
+    setCpfCheck({ status: "checking" });
+    const { data } = await supabase.rpc("verificar_cadastro", {
+      p_email: "",
+      p_cpf: formatCPF(cpfDigits),
+    });
+    if (data?.match_type === "cpf") {
+      setCpfCheck({ status: "exists" });
+    } else {
+      setCpfCheck({ status: "free" });
     }
   }
 
@@ -67,6 +85,11 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     if (emailCheck.status === "exists") {
       setEnviando(false);
       irParaJaTemCadastro(emailCheck.profile);
+      return;
+    }
+    if (cpfCheck.status === "exists") {
+      setEnviando(false);
+      setErros({ cpf: "CPF já cadastrado neste evento." });
       return;
     }
 
@@ -327,12 +350,6 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           {erros.nome && <div className="form-error">{erros.nome}</div>}
         </div>
         <div className="form-group">
-          <label className="form-label">CPF *</label>
-          <input className={`form-input${erros.cpf ? " error" : ""}`} placeholder="000.000.000-00"
-            value={form.cpf} onChange={e => set("cpf", formatCPF(e.target.value))} maxLength={14} />
-          {erros.cpf && <div className="form-error">{erros.cpf}</div>}
-        </div>
-        <div className="form-group">
           <label className="form-label">E-mail *</label>
           <input
             className={`form-input${erros.email || emailCheck.status === "exists" ? " error" : ""}`}
@@ -369,6 +386,33 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           {erros.email && <div className="form-error">{erros.email}</div>}
         </div>
         <div className="form-group">
+          <label className="form-label">CPF *</label>
+          <input
+            className={`form-input${erros.cpf || cpfCheck.status === "exists" ? " error" : ""}`}
+            placeholder="000.000.000-00"
+            value={form.cpf}
+            onChange={e => { set("cpf", formatCPF(e.target.value)); setCpfCheck({ status: "idle" }); setErros(er => ({ ...er, cpf: undefined })); }}
+            onBlur={handleCpfBlur}
+            maxLength={14}
+          />
+          {cpfCheck.status === "checking" && (
+            <div style={{ fontSize: "0.8rem", color: "var(--text3)", marginTop: "0.3rem" }}>
+              Verificando…
+            </div>
+          )}
+          {cpfCheck.status === "exists" && (
+            <div style={{ marginTop: "0.3rem", background: "var(--danger-bg)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem", fontSize: "0.82rem", color: "var(--danger)", fontWeight: 500 }}>
+              CPF já cadastrado — você já tem um cadastro neste evento. Use seu e-mail para acessar.
+            </div>
+          )}
+          {cpfCheck.status === "free" && (
+            <div style={{ fontSize: "0.8rem", color: "var(--success)", marginTop: "0.3rem" }}>
+              ✓ CPF disponível
+            </div>
+          )}
+          {erros.cpf && <div className="form-error">{erros.cpf}</div>}
+        </div>
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
           <label className="form-label">Instituição *</label>
           <select className={`form-input${erros.instituicao ? " error" : ""}`} value={form.instituicao} onChange={e => set("instituicao", e.target.value)}>
             <option value="">Selecione a instituição</option>
@@ -383,7 +427,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           )}
           {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
         </div>
-        <div className="form-group">
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
           <label className="form-label">Cargo / Função *</label>
           <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Auditor(a), Analista..."
             value={form.cargo} onChange={e => set("cargo", e.target.value)} />

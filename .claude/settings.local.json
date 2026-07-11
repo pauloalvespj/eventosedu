@@ -22,7 +22,8 @@
       "Bash(npm ls *)",
       "Bash(npm view *)",
       "Bash(npm audit *)",
-      "WebFetch(domain:deno.land)"
+      "WebFetch(domain:deno.land)",
+      "PowerShell(npm run *)"
     ]
   }
 }
