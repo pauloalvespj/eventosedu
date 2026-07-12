@@ -181,11 +181,20 @@ export async function fetchAtividades() {
 }
 
 export async function fetchProfiles() {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("nome");
-  return { data: data ?? [], error };
+  // A tabela completa (com CPF/e-mail) só é visível para admin/credenciador,
+  // além da própria linha e dos palestrantes públicos. Os demais perfis vêm
+  // da view profiles_rede (sem dados pessoais) e são mesclados por id.
+  const [{ data: completos, error }, { data: rede }] = await Promise.all([
+    supabase.from("profiles").select("*").order("nome"),
+    supabase.from("profiles_rede").select("*").order("nome"),
+  ]);
+  if ((completos?.length ?? 0) >= (rede?.length ?? 0)) {
+    return { data: completos ?? [], error };
+  }
+  const porId = new Map(rede.map(p => [p.id, p]));
+  for (const p of completos ?? []) porId.set(p.id, { ...porId.get(p.id), ...p });
+  const merged = [...porId.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  return { data: merged, error: null };
 }
 
 export async function fetchPresencas() {
@@ -199,7 +208,9 @@ export async function fetchAvaliacoes() {
   const { data, error } = await supabase
     .from("avaliacoes")
     .select("*");
-  return { data: data ?? [], error };
+  // A UI usa estrelas/participante_id; o banco usa nota/user_id
+  const normalizadas = (data ?? []).map(a => ({ ...a, estrelas: a.nota, participante_id: a.user_id }));
+  return { data: normalizadas, error };
 }
 
 export async function fetchForumConfig() {
@@ -233,10 +244,10 @@ export async function fetchTopicos() {
     .from("topicos")
     .select(`
       *,
-      autor:profiles!user_id(id,nome,role,foto_iniciais),
+      autor:profiles_rede!user_id(id,nome,role,foto_iniciais),
       respostas(
         *,
-        autor:profiles!user_id(id,nome,role,foto_iniciais)
+        autor:profiles_rede!user_id(id,nome,role,foto_iniciais)
       )
     `)
     .order("fixado", { ascending: false })
@@ -255,6 +266,29 @@ export async function fetchPontuacoes() {
 
 // ── PRESENÇAS ─────────────────────────────────────────────────
 
+// Check-in via QR Code: o servidor valida o token e resolve o participante
+// (usuário logado ou CPF no fluxo anônimo). Pontos vêm do trigger.
+export async function registrarPresencaQR(atividadeId, token, cpf = null) {
+  const { data, error } = await supabase.rpc("registrar_presenca_qr", {
+    p_atividade_id: Number(atividadeId),
+    p_token: token ?? "",
+    ...(cpf ? { p_cpf: cpf } : {}),
+  });
+  return { data, error };
+}
+
+// Token do QR de uma atividade — visível para admin, credenciador e
+// palestrantes da atividade (RLS em atividade_qr_tokens)
+export async function fetchQrToken(atividadeId) {
+  const { data } = await supabase
+    .from("atividade_qr_tokens")
+    .select("token")
+    .eq("atividade_id", atividadeId)
+    .maybeSingle();
+  return data?.token ?? null;
+}
+
+// Registro direto (admin/credenciador via painel)
 export async function inserirPresenca(participante_id, atividade_id) {
   const { data, error } = await supabase
     .from("presencas")
@@ -284,15 +318,8 @@ export async function salvarAvaliacao({ user_id, atividade_id, nota, comentario 
 }
 
 // ── PONTUAÇÕES ────────────────────────────────────────────────
-
-export async function inserirPontuacao({ user_id, tipo, valor, desc }) {
-  const { data, error } = await supabase
-    .from("pontuacoes")
-    .insert({ user_id, tipo, valor, descricao: desc })
-    .select()
-    .single();
-  return { data, error };
-}
+// Pontos são concedidos por triggers no banco (presença, tópico,
+// resposta, curtida, avaliação, seguir) — o cliente não insere mais.
 
 // ── FÓRUM — TÓPICOS ───────────────────────────────────────────
 
@@ -300,19 +327,15 @@ export async function criarTopico({ event_id = 1, user_id, categoria, titulo, co
   const { data, error } = await supabase
     .from("topicos")
     .insert({ event_id, user_id, categoria, titulo, corpo })
-    .select(`*, autor:profiles!user_id(id,nome,role,foto_iniciais)`)
+    .select(`*, autor:profiles_rede!user_id(id,nome,role,foto_iniciais)`)
     .single();
   return { data, error };
 }
 
-export async function curtirTopico(topicoId, uid, curtidas) {
-  // curtidas é o array local já atualizado (adiciona ou remove uid)
-  const { data, error } = await supabase
-    .from("topicos")
-    .update({ curtidas })
-    .eq("id", topicoId)
-    .select("curtidas")
-    .single();
+export async function curtirTopico(topicoId) {
+  // RPC no servidor: alterna a curtida do usuário logado e concede/estorna
+  // os pontos do autor (update direto era bloqueado pelo RLS para não-autores)
+  const { data, error } = await supabase.rpc("curtir_topico", { p_topico_id: topicoId });
   return { data, error };
 }
 
@@ -346,18 +369,13 @@ export async function criarResposta({ topico_id, user_id, corpo }) {
   const { data, error } = await supabase
     .from("respostas")
     .insert({ topico_id, user_id, corpo })
-    .select(`*, autor:profiles!user_id(id,nome,role,foto_iniciais)`)
+    .select(`*, autor:profiles_rede!user_id(id,nome,role,foto_iniciais)`)
     .single();
   return { data, error };
 }
 
-export async function curtirResposta(respostaId, curtidas) {
-  const { data, error } = await supabase
-    .from("respostas")
-    .update({ curtidas })
-    .eq("id", respostaId)
-    .select("curtidas")
-    .single();
+export async function curtirResposta(respostaId) {
+  const { data, error } = await supabase.rpc("curtir_resposta", { p_resposta_id: respostaId });
   return { data, error };
 }
 
@@ -545,7 +563,7 @@ export async function adminCriarUsuario({ nome, email, cpf, cargo, instituicao, 
     try {
       const body = await error.context?.json?.();
       if (body?.error) return { data: null, error: { message: body.error } };
-    } catch {}
+    } catch { /* corpo não é JSON — mantém o erro original */ }
   }
   return { data, error };
 }

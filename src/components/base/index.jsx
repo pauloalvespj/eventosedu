@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, forwardRef } from "react";
 import { PONTOS } from "../../config/gamificacao";
 import { TIPO_BG, TIPO_COLOR, TIPO_ICON, TIPO_LABEL, ROLE_LABEL } from "../../utils/helpers";
+import { salvarAvaliacao } from "../../lib/db";
 export { AvatarUpload } from "./AvatarUpload";
 export { DatePickerInput } from "./DatePickerInput";
 
@@ -76,36 +77,46 @@ export function StarRating({ value, onChange, size = 28, readonly = false }) {
 }
 
 // ── AvaliacaoWidget ───────────────────────────────────────────
-export function AvaliacaoWidget({ atividadeId, participanteId, avaliacoes, setAvaliacoes, pontuacoes, setPontuacoes }) {
+export function AvaliacaoWidget({ atividadeId, participanteId, avaliacoes, setAvaliacoes, setPontuacoes }) {
   const jaAvaliou = avaliacoes.find(a => a.atividade_id === atividadeId && a.participante_id === participanteId);
   const [estrelas, setEstrelas] = useState(jaAvaliou?.estrelas || 0);
   const [comentario, setComentario] = useState(jaAvaliou?.comentario || "");
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(!!jaAvaliou);
+  const [erro, setErro] = useState(false);
 
-  function salvar() {
+  async function salvar() {
     if (!estrelas) return;
     setSalvando(true);
-    setTimeout(() => {
-      if (jaAvaliou) {
-        setAvaliacoes(prev => prev.map(a =>
-          a.atividade_id === atividadeId && a.participante_id === participanteId
-            ? { ...a, estrelas, comentario, created_at: new Date().toISOString() } : a
-        ));
-      } else {
-        setAvaliacoes(prev => [...prev, {
-          id: Date.now(), participante_id: participanteId, atividade_id: atividadeId,
-          estrelas, comentario, created_at: new Date().toISOString()
-        }]);
-        setPontuacoes(prev => [...prev, {
-          id: Date.now() + 1, user_id: `participante:${participanteId}`,
-          tipo: "avaliacao", valor: PONTOS.avaliacao,
-          desc: "Avaliação de palestra", created_at: new Date().toISOString()
-        }]);
-      }
-      setSalvo(true);
-      setSalvando(false);
-    }, 400);
+    setErro(false);
+    const { error } = await salvarAvaliacao({
+      user_id: participanteId, atividade_id: atividadeId, nota: estrelas, comentario,
+    });
+    setSalvando(false);
+    if (error) {
+      console.error("Erro ao salvar avaliação:", error.message);
+      setErro(true);
+      return;
+    }
+    if (jaAvaliou) {
+      setAvaliacoes(prev => prev.map(a =>
+        a.atividade_id === atividadeId && a.participante_id === participanteId
+          ? { ...a, nota: estrelas, estrelas, comentario, created_at: new Date().toISOString() } : a
+      ));
+    } else {
+      setAvaliacoes(prev => [...prev, {
+        id: Date.now(), user_id: participanteId, participante_id: participanteId,
+        atividade_id: atividadeId, nota: estrelas, estrelas, comentario,
+        created_at: new Date().toISOString(),
+      }]);
+      // Ponto real vem do trigger do banco; aqui só o otimista
+      setPontuacoes(prev => [...prev, {
+        id: Date.now() + 1, user_id: participanteId,
+        tipo: "avaliacao", valor: PONTOS.avaliacao,
+        desc: "Avaliação de palestra", created_at: new Date().toISOString(),
+      }]);
+    }
+    setSalvo(true);
   }
 
   if (salvo && !salvando) return (
@@ -140,6 +151,11 @@ export function AvaliacaoWidget({ atividadeId, participanteId, avaliacoes, setAv
           <button className="btn btn-primary btn-sm" onClick={salvar} disabled={salvando || !estrelas}>
             {salvando ? "Salvando..." : "Enviar avaliação"}
           </button>
+          {erro && (
+            <div style={{ fontSize: "0.8rem", color: "var(--danger)", marginTop: "0.4rem" }}>
+              Não foi possível salvar. Tente novamente.
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -180,7 +196,7 @@ export const QRCodeCanvas = forwardRef(function QRCodeCanvas({ value, size = 200
           }
         }
         setReady(true);
-      } catch (e) {
+      } catch {
         setError(true);
       }
     }

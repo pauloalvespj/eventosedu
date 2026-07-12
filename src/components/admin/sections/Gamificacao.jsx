@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMedal, faDownload, faTrophy, faGear, faFloppyDisk, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faTrophy, faGear, faFloppyDisk, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { atualizarEvento } from "../../../lib/db";
 import { NIVEL_LABELS } from "../../../config/gamificacao";
@@ -40,7 +40,8 @@ export function Gamificacao() {
   }
 
   async function salvarConfig() {
-    const { id, ...campos } = formConfig;
+    const campos = { ...formConfig };
+    delete campos.id;
     setPontosConfig({ ...formConfig });
     setEditandoConfig(false);
     await salvarGamificacaoConfig(pontosConfig.id, campos);

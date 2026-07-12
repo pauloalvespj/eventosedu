@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { read, utils } from "xlsx";
 import { supabase } from "../../../../lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -91,6 +90,8 @@ export function AbaPreConvidados() {
     if (!file) return;
     setImportando(true);
     try {
+      // xlsx é pesado — carrega só quando o admin importa uma planilha
+      const { read, utils } = await import("xlsx");
       const buffer = await file.arrayBuffer();
       const wb = read(buffer, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];

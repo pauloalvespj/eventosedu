@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import enaudinMapa from "../../assets/enaudin-mapa.png";
 import { FAQ_ITEMS } from "../../data/initial";
 import { TIPO_COLOR } from "../../utils/helpers";
@@ -21,16 +21,15 @@ const isLightTheme = (event) =>
   (event?.tema?.preset === "custom" && event?.tema?.mode === "light");
 
 export function LandingPage({ event, eventLoaded = false, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
-  const [diaAtivo, setDiaAtivo] = useState(null);
+  const [diaSelecionado, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
   const [palPopup, setPalPopup] = useState(null);
   const inscStatus = inscricoesAbertas(event);
 
   const dias = [...new Set(atividades.map(a => a.dia))].sort();
-  useEffect(() => { if (dias.length) setDiaAtivo(dias[0]); }, []);
+  // Derivado: primeiro dia por padrão (funciona mesmo com atividades chegando depois)
+  const diaAtivo = diaSelecionado ?? dias[0] ?? null;
   const atividadesDia = atividades.filter(a => a.dia === diaAtivo).sort((a,b) => a.horario.localeCompare(b.horario));
-  const atividadesPublicas = atividades.filter(a => a.tipo !== "intervalo");
-  const chTotal = atividades.filter(a=>a.conta_certificado).reduce((s,a)=>s+a.carga_horaria,0);
 
   return (
     <div>

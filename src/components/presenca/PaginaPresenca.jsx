@@ -1,53 +1,47 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { formatCPF, formatData, TIPO_LABEL, validarTokenQR } from "../../utils/helpers";
-import { inserirPresenca } from "../../lib/db";
+import { formatCPF, formatData, TIPO_LABEL } from "../../utils/helpers";
+import { registrarPresencaQR } from "../../lib/db";
 
-export function PaginaPresenca({ atividadeId, atividades, participantes, presencas, setPresencas, user, onVoltar, onLoginClick, skipTokenCheck = false }) {
+export function PaginaPresenca({ atividadeId, atividades, presencas, setPresencas, user, onVoltar, onLoginClick }) {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("t");
-  const tokenValido = skipTokenCheck || validarTokenQR(Number(atividadeId), token);
 
   const atividade = atividades.find(a => a.id === Number(atividadeId));
   const [cpf, setCpf] = useState("");
-  const [status, setStatus] = useState(null); // null | "sucesso" | "duplicado" | "nao_encontrado" | "erro"
+  const [status, setStatus] = useState(null); // null | "sucesso" | "duplicado" | "nao_encontrado" | "token_invalido" | "erro"
   const [nomeSucesso, setNomeSucesso] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const jaConfirmadoLogado = user && user.role === "participante" &&
     presencas.find(p => p.participante_id === user.id && p.atividade_id === Number(atividadeId));
 
-  async function confirmarPorParticipante(part) {
-    if (presencas.find(p => p.participante_id === part.id && p.atividade_id === Number(atividadeId))) {
-      setStatus("duplicado");
-      setNomeSucesso(part.nome);
+  // O servidor valida o token do QR, resolve o participante (logado ou CPF)
+  // e registra presença + pontos. Nada é decidido no cliente.
+  async function confirmar(cpfInformado = null) {
+    setSalvando(true);
+    const { data, error } = await registrarPresencaQR(atividadeId, token, cpfInformado);
+    setSalvando(false);
+
+    if (error || !data?.status) {
+      console.error("Erro ao registrar presença:", error?.message);
+      setStatus("erro");
       return;
     }
-    setSalvando(true);
-    const novaPresenca = {
-      id: Date.now(),
-      participante_id: part.id,
-      atividade_id: Number(atividadeId),
-      data_hora: new Date().toISOString(),
-    };
-    // Otimista
-    setPresencas(prev => [...prev, novaPresenca]);
-    setNomeSucesso(part.nome);
-    setStatus("sucesso");
-
-    // Persiste
-    const { error } = await inserirPresenca(part.id, Number(atividadeId));
-    setSalvando(false);
-    if (error && !error.message?.includes("unique")) {
-      console.error("Erro ao registrar presença:", error.message);
+    if (data.status === "sucesso") {
+      setPresencas(prev => [...prev, {
+        id: Date.now(),
+        participante_id: data.participante_id,
+        atividade_id: Number(atividadeId),
+        data_hora: new Date().toISOString(),
+      }]);
     }
+    setNomeSucesso(data.nome || "");
+    setStatus(data.status);
   }
 
-  async function confirmarViaCPF() {
-    const cpfLimpo = cpf.replace(/\D/g, "");
-    const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpfLimpo);
-    if (!part) { setStatus("nao_encontrado"); return; }
-    await confirmarPorParticipante(part);
+  function confirmarViaCPF() {
+    return confirmar(cpf);
   }
 
   if (!atividade) return (
@@ -61,7 +55,7 @@ export function PaginaPresenca({ atividadeId, atividades, participantes, presenc
     </div>
   );
 
-  if (!tokenValido) return (
+  if (status === "token_invalido") return (
     <div className="qr-page">
       <div className="qr-card">
         <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🚫</div>
@@ -120,6 +114,12 @@ export function PaginaPresenca({ atividadeId, atividades, participantes, presenc
           </div>
         </div>
 
+        {status === "erro" && (
+          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.75rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>
+            ⚠️ Não foi possível registrar. Verifique sua conexão e tente novamente.
+          </div>
+        )}
+
         {/* Usuário logado: 1 clique */}
         {user && user.role === "participante" && (
           <div>
@@ -139,7 +139,7 @@ export function PaginaPresenca({ atividadeId, atividades, participantes, presenc
                 <p style={{ fontSize: "0.82rem", color: "var(--text3)", marginBottom: "1.5rem" }}>{user.instituicao} · {user.cargo}</p>
                 <button className="btn btn-primary btn-block btn-lg"
                   style={{ background: "var(--success)", borderColor: "var(--success)", fontSize: "1rem" }}
-                  onClick={() => confirmarPorParticipante(user)} disabled={salvando}>
+                  onClick={() => confirmar()} disabled={salvando}>
                   {salvando ? "Registrando…" : "✓ Confirmar minha presença"}
                 </button>
                 <p style={{ fontSize: "0.75rem", color: "var(--text3)", marginTop: "0.75rem" }}>1 clique — sem digitar nada</p>

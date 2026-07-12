@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faCircleUser, faScroll,
+  faArrowRightFromBracket, faBuilding, faCircleUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";

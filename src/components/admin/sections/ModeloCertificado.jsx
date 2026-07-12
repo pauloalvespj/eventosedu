@@ -6,7 +6,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { atualizarEvento, uploadCertAsset } from "../../../lib/db";
-import { formatData, gerarHtmlCertificado } from "../../../utils/helpers";
+import { gerarHtmlCertificado } from "../../../utils/helpers";
 
 const DEFAULTS = {
   logo_esq_url:          "",

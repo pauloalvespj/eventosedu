@@ -66,6 +66,21 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     if (!error) setReenvioOk(true);
   }
 
+  async function handleRecuperarSenha() {
+    setErro("");
+    setEnviando(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    });
+    setEnviando(false);
+    if (error) {
+      setErro(traduzirErroAuth(error.message));
+      return;
+    }
+    setEtapa("aguardando");
+    setCountdown(60);
+  }
+
   async function handleEnviarLink() {
     setErro("");
     setEnviando(true);
@@ -138,6 +153,64 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
           <button className="btn btn-primary btn-block" onClick={handleLoginSenha} disabled={enviando}>
             {enviando ? "Entrando…" : "Entrar"}
           </button>
+          <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
+            <button
+              style={{ background: "transparent", color: "var(--text2)", fontSize: "0.82rem", border: "none", cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => { setModo("recuperar"); setErro(""); setEtapa("email"); }}>
+              Esqueci minha senha
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODO RECUPERAR SENHA ── */}
+      {modo === "recuperar" && (
+        <div>
+          {etapa === "email" && (
+            <div>
+              <p style={{ fontSize: "0.88rem", color: "var(--text2)", lineHeight: 1.6, marginBottom: "1rem" }}>
+                Informe seu e-mail cadastrado e enviaremos um link para você <strong>criar uma nova senha</strong>.
+              </p>
+              <div className="form-group">
+                <label className="form-label">Seu e-mail cadastrado</label>
+                <input className="form-input" type="email" placeholder="seu@email.com" value={email}
+                  onChange={e => { setEmail(e.target.value); setErro(""); }} autoFocus
+                  onKeyDown={e => e.key === "Enter" && !enviando && email.includes("@") && handleRecuperarSenha()} />
+              </div>
+              {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
+              <button className="btn btn-primary btn-block" onClick={handleRecuperarSenha} disabled={enviando || !email.includes("@")}>
+                {enviando ? "Enviando…" : "Enviar link de recuperação"}
+              </button>
+              <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
+                <button style={{ background: "transparent", color: "var(--text2)", fontSize: "0.82rem", border: "none", cursor: "pointer" }}
+                  onClick={() => { setModo("senha"); setErro(""); }}>
+                  ← Voltar ao login
+                </button>
+              </div>
+            </div>
+          )}
+
+          {etapa === "aguardando" && (
+            <div>
+              <div style={{ background: "var(--success-bg)", border: "1px solid var(--success)", borderRadius: "var(--radius-sm)", padding: "1.1rem 1.2rem", marginBottom: "1.25rem", fontSize: "0.88rem", textAlign: "center" }}>
+                <div style={{ fontWeight: 700, color: "var(--success)", marginBottom: "0.5rem", fontSize: "1rem" }}>📧 Link enviado!</div>
+                <div style={{ color: "var(--text2)", lineHeight: 1.6 }}>
+                  Enviamos um link de recuperação para <strong>{email}</strong>.<br />
+                  Clique no link para definir uma nova senha. Verifique também a pasta de spam.
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem" }}>
+                <button style={{ background: "transparent", color: "var(--text2)", fontSize: "0.82rem", border: "none", cursor: "pointer" }}
+                  onClick={() => { setEtapa("email"); setErro(""); }}>
+                  ← Trocar e-mail
+                </button>
+                <button style={{ background: "transparent", color: countdown > 0 ? "var(--text3)" : "var(--navy)", fontSize: "0.82rem", border: "none", cursor: countdown > 0 ? "default" : "pointer", fontWeight: 600 }}
+                  disabled={countdown > 0 || enviando} onClick={handleRecuperarSenha}>
+                  {countdown > 0 ? `Reenviar em ${countdown}s` : "Reenviar link"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

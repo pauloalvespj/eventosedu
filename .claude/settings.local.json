@@ -23,7 +23,18 @@
       "Bash(npm view *)",
       "Bash(npm audit *)",
       "WebFetch(domain:deno.land)",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "PowerShell(Get-ChildItem -Recurse src, supabase, scripts -File | Select-Object @{n='Path';e={$_.FullName.Replace\\('C:\\\\projetos\\\\enaudin\\\\',''\\)}}, @{n='KB';e={[math]::Round\\($_.Length/1KB,1\\)}} | Sort-Object KB -Descending | Format-Table -AutoSize)",
+      "PowerShell(npm audit *)",
+      "PowerShell(supabase *)",
+      "PowerShell(supabase db dump --linked -s public -f \"$env:LOCALAPPDATA\\\\Temp\\\\claude\\\\C--projetos-enaudin\\\\8113a62f-b247-4f40-b26f-ddbbd20af11b\\\\scratchpad\\\\prod_schema.sql\" 2>&1 | Select-Object -Last 5)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(supabase projects *)",
+      "PowerShell(node \"$env:LOCALAPPDATA\\\\Temp\\\\claude\\\\C--projetos-enaudin\\\\8113a62f-b247-4f40-b26f-ddbbd20af11b\\\\scratchpad\\\\test_security.mjs\")",
+      "PowerShell(Copy-Item *)",
+      "PowerShell($c = [System.IO.File]::ReadAllText\\(\"C:\\\\projetos\\\\enaudin\\\\keys.json\"\\); [System.IO.File]::WriteAllText\\(\"C:\\\\projetos\\\\enaudin\\\\keys.json\", $c.TrimStart\\([char]0xFEFF\\), \\(New-Object System.Text.UTF8Encoding $false\\)\\); node C:\\\\projetos\\\\enaudin\\\\.tmp-test-security.mjs)",
+      "PowerShell(node C:\\\\projetos\\\\enaudin\\\\.tmp-test-curtir.mjs)",
+      "PowerShell(node C:\\\\projetos\\\\enaudin\\\\.tmp-test-forum.mjs)"
     ]
   }
 }

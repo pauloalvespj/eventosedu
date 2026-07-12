@@ -1,6 +1,14 @@
 -- ============================================================
 -- ENAUDIN — Schema Supabase (PostgreSQL)
--- Execute no SQL Editor do Supabase Cloud ou via psql na VPS
+--
+-- ATENÇÃO: este arquivo é um retrato INICIAL e está DESATUALIZADO
+-- em relação ao banco de produção. Objetos criados depois
+-- (event_enrollments, convidados_prospeccao, atividade_qr_tokens,
+-- profiles_rede, verificar_cadastro, triggers de pontuação e de
+-- proteção de profiles, etc.) vivem em supabase/migrations/ ou
+-- foram aplicados via SQL Editor. A fonte da verdade é o banco;
+-- para reconstruí-lo use `supabase db dump` / `supabase db pull`
+-- (requer Docker), não este arquivo.
 -- ============================================================
 
 -- Extensões

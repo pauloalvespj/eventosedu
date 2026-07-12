@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from "react-router-dom";
 import "./styles/global.css";
 
@@ -11,14 +11,9 @@ import {
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
   fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
   seguirUsuario, desseguirUsuario,
-  inserirPontuacao, inserirEnrollment,
+  inserirEnrollment,
 } from "./lib/db";
-import {
-  INITIAL_EVENT, INITIAL_ATIVIDADES, INITIAL_PALESTRANTES, INITIAL_PARTICIPANTES,
-  INITIAL_PRESENCAS, INITIAL_ADMINS, INITIAL_TOPICOS, INITIAL_PONTUACOES,
-  INITIAL_FORUM_CONFIG, INITIAL_AVALIACOES, INITIAL_INSTITUICOES,
-  INITIAL_GAMIFICACAO_CONFIG, INITIAL_FOLLOWS, INITIAL_CONVIDADOS,
-} from "./data/initial";
+import { INITIAL_EVENT, INITIAL_FORUM_CONFIG, INITIAL_GAMIFICACAO_CONFIG } from "./data/initial";
 import { PONTOS } from "./config/gamificacao";
 import { TIPO_ICON } from "./utils/helpers";
 import { applyTheme } from "./lib/themes";
@@ -27,31 +22,36 @@ import { Toast, Modal } from "./components/base/index";
 import { FormInscricao } from "./components/auth/FormInscricao";
 import { FormLogin } from "./components/auth/FormLogin";
 import { LandingPage } from "./components/landing/LandingPage";
-import { AreaUsuario } from "./components/usuario/AreaUsuario";
-import { PainelAdmin } from "./components/admin/PainelAdmin";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
-import { ValidarCertificado } from "./components/ValidarCertificado";
 import { AuthCallback } from "./components/auth/AuthCallback";
 import { RoleSelector } from "./components/auth/RoleSelector";
 
-// Converte dados mock para o formato profiles (array unificado)
-const INITIAL_PROFILES = [
-  ...INITIAL_PARTICIPANTES,
-  ...INITIAL_PALESTRANTES.map(p => ({ ...p, role: "participante", is_palestrante: true })),
-  ...INITIAL_ADMINS,
-];
+// Painéis pesados carregam sob demanda (code splitting) — visitante da
+// landing não baixa o painel admin nem a área do usuário
+const AreaUsuario = lazy(() => import("./components/usuario/AreaUsuario").then(m => ({ default: m.AreaUsuario })));
+const PainelAdmin = lazy(() => import("./components/admin/PainelAdmin").then(m => ({ default: m.PainelAdmin })));
+const ValidarCertificado = lazy(() => import("./components/ValidarCertificado").then(m => ({ default: m.ValidarCertificado })));
 
-function PresencaRoute({ atividades, participantes, presencas, setPresencas, user, onLoginClick, registrarPresencaComPontos }) {
+function CarregandoPainel() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text2)" }}>
+      Carregando…
+    </div>
+  );
+}
+
+function PresencaRoute({ atividades, presencas, setPresencas, user, onLoginClick, registrarPresencaComPontos }) {
   const { atividadeId } = useParams();
   const navigate = useNavigate();
 
-  function handleSetPresencas(newPresencas) {
+  function handleSetPresencas(updater) {
+    const newPresencas = typeof updater === "function" ? updater(presencas) : updater;
     if (Array.isArray(newPresencas)) {
       const ultima = newPresencas[newPresencas.length - 1];
       if (ultima && !presencas.find(p => p.id === ultima.id)) {
-        const uid = user?.id ?? ultima.participante_id;
-        if (uid) registrarPresencaComPontos(uid);
+        // Pontuação local otimista — no banco o trigger de presenças já pontuou
+        registrarPresencaComPontos(ultima.participante_id);
       }
     }
     setPresencas(newPresencas);
@@ -61,7 +61,6 @@ function PresencaRoute({ atividades, participantes, presencas, setPresencas, use
     <PaginaPresenca
       atividadeId={atividadeId}
       atividades={atividades}
-      participantes={participantes}
       presencas={presencas}
       setPresencas={handleSetPresencas}
       user={user}
@@ -140,17 +139,19 @@ export default function App() {
   // Só aplica tema quando vier do Supabase (event.tema !== undefined).
   // O módulo themes.js já aplica o cache do localStorage sincronicamente antes do React renderizar.
   useEffect(() => { if (event.tema !== undefined) applyTheme(event.tema); }, [event.tema]);
-  const [atividades, setAtividades] = useState(INITIAL_ATIVIDADES);
-  const [profiles, setProfiles] = useState(INITIAL_PROFILES);
-  const [presencas, setPresencas] = useState(INITIAL_PRESENCAS);
-  const [avaliacoes, setAvaliacoes] = useState(INITIAL_AVALIACOES);
+  // Listas começam vazias e são preenchidas pelo Supabase — nada de
+  // dados fictícios aparecendo para o usuário durante o carregamento
+  const [atividades, setAtividades] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [presencas, setPresencas] = useState([]);
+  const [avaliacoes, setAvaliacoes] = useState([]);
   const [forumConfig, setForumConfig] = useState(INITIAL_FORUM_CONFIG);
-  const [topicos, setTopicos] = useState(INITIAL_TOPICOS);
-  const [pontuacoes, setPontuacoes] = useState(INITIAL_PONTUACOES);
-  const [instituicoes, setInstituicoes] = useState(INITIAL_INSTITUICOES);
+  const [topicos, setTopicos] = useState([]);
+  const [pontuacoes, setPontuacoes] = useState([]);
+  const [instituicoes, setInstituicoes] = useState([]);
   const [pontosConfig, setPontosConfig] = useState(INITIAL_GAMIFICACAO_CONFIG);
-  const [follows, setFollows] = useState(INITIAL_FOLLOWS);
-  const [convidados, setConvidados] = useState(INITIAL_CONVIDADOS);
+  const [follows, setFollows] = useState([]);
+  const [convidados, setConvidados] = useState([]);
 
   // ── Auth ─────────────────────────────────────────────────────
   const [user, setUser] = useState(null);         // profile do usuário logado
@@ -174,8 +175,6 @@ export default function App() {
   }, [user, activeRole]);
 
   // ── UI ───────────────────────────────────────────────────────
-  const [view, setView] = useState("landing");
-  const [presencaAtv, setPresencaAtv] = useState(null);
   const [showInscricao, setShowInscricao] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [linkExpirado, setLinkExpirado] = useState(null); // { email } quando link de confirmação expirou
@@ -205,7 +204,7 @@ export default function App() {
       // Não limpa o hash aqui: o Supabase precisa ler os tokens para criar a sessão
       setConfirmandoEmail(true);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Carga inicial de dados ────────────────────────────────────
   async function loadData() {
@@ -262,12 +261,11 @@ export default function App() {
       if (event === "SIGNED_OUT") {
         setAuthUser(null);
         setUser(null);
-        setView("landing");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Quando authUser muda E profiles estiver carregado, resolve o profile
   useEffect(() => {
@@ -395,20 +393,18 @@ export default function App() {
     showToast("Até logo!", "info");
   }
 
-  // ── Pontuação por presença ────────────────────────────────────
-  async function registrarPresencaComPontos(userId) {
-    const ponto = {
+  // ── Pontuação por presença (só estado local — o trigger do banco
+  //    concede os pontos reais junto com o insert da presença) ──
+  function registrarPresencaComPontos(userId) {
+    if (!userId) return;
+    setPontuacoes(prev => [...prev, {
       id: Date.now(),
       user_id: userId,
       tipo: "presenca",
       valor: PONTOS.presenca,
       desc: "Presença confirmada",
       created_at: new Date().toISOString(),
-    };
-    // Otimista
-    setPontuacoes(prev => [...prev, ponto]);
-    // Persiste
-    await inserirPontuacao({ user_id: userId, tipo: "presenca", valor: PONTOS.presenca, desc: "Presença confirmada" });
+    }]);
   }
 
   // ── Derived: split de profiles por role ───────────────────────
@@ -416,11 +412,6 @@ export default function App() {
   // Participantes = todos os profiles ativos (qualquer role pode receber certificado)
   const participantes = profiles.filter(p => p.ativo !== false);
   const admins = profiles.filter(p => p.role === "admin");
-
-  function simularQR(atividadeId) {
-    setPresencaAtv(atividadeId);
-    setView("presenca");
-  }
 
   const adminProps = {
     user: effectiveUser,
@@ -453,6 +444,7 @@ export default function App() {
         <RoleSelector user={user} roles={roleSelectorOptions} onSelect={handleSelectRole} />
       )}
 
+      <Suspense fallback={<CarregandoPainel />}>
       <Routes>
         {/* Callback de autenticação por magic link */}
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -475,7 +467,7 @@ export default function App() {
                   setUser={u => setUser(typeof u === "function" ? u(user) : u)}
                   onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
                   event={event} atividades={atividades} setAtividades={setAtividades}
-                  palestrantes={palestrantes} presencas={presencas} setPresencas={setPresencas}
+                  palestrantes={palestrantes} presencas={presencas}
                   topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
                   forumConfig={forumConfig} participantes={participantes} admins={admins}
                   instituicoes={instituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
@@ -484,18 +476,21 @@ export default function App() {
                     const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
                     setFollows(prev => [...prev, novo]);
                     seguirUsuario(user.id, followingId);
+                    // Pontos reais vêm do trigger de follows; aqui só o otimista
                     const pts = pontosConfig.seguir ?? 5;
                     if (pts > 0) {
-                      const p = { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" };
-                      setPontuacoes(prev => [...prev, p]);
-                      inserirPontuacao(p);
+                      setPontuacoes(prev => [...prev, { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" }]);
                     }
                   }}
                   onDesseguir={(followingId) => {
                     setFollows(prev => prev.filter(f => !(f.follower_id === user.id && f.following_id === followingId)));
                     desseguirUsuario(user.id, followingId);
+                    // Estorno local do ponto de seguir (o trigger estorna no banco)
+                    setPontuacoes(prev => {
+                      const idx = prev.findLastIndex(p => p.user_id === user.id && p.tipo === "seguir");
+                      return idx === -1 ? prev : prev.filter((_, i) => i !== idx);
+                    });
                   }}
-                  registrarPresencaComPontos={registrarPresencaComPontos}
                   onLogout={handleLogout}
                 />
         } />
@@ -504,7 +499,6 @@ export default function App() {
         <Route path="/presenca/:atividadeId" element={
           <PresencaRoute
             atividades={atividades}
-            participantes={participantes}
             presencas={presencas}
             setPresencas={setPresencas}
             user={user}
@@ -513,30 +507,9 @@ export default function App() {
           />
         } />
 
-        {/* Landing page e presença (via state) */}
+        {/* Landing page */}
         <Route path="*" element={
-          view === "presenca" ? (
-            <PaginaPresenca
-              atividadeId={presencaAtv}
-              atividades={atividades}
-              participantes={participantes}
-              presencas={presencas}
-              setPresencas={(newPresencas) => {
-                if (Array.isArray(newPresencas)) {
-                  const ultima = newPresencas[newPresencas.length - 1];
-                  if (ultima && !presencas.find(p => p.id === ultima.id)) {
-                    const uid = user?.id ?? ultima.participante_id;
-                    if (uid) registrarPresencaComPontos(uid);
-                  }
-                }
-                setPresencas(newPresencas);
-              }}
-              user={user}
-              onVoltar={() => user ? navigate("/painel") : setView("landing")}
-              onLoginClick={() => setShowLogin(true)}
-              skipTokenCheck
-            />
-          ) : (
+          (
             <LandingPage
               event={event}
               eventLoaded={eventLoaded}
@@ -550,6 +523,7 @@ export default function App() {
           )
         } />
       </Routes>
+      </Suspense>
 
       <Modal show={showInscricao} onClose={() => setShowInscricao(false)} title="Inscrição no Evento" wide>
         <FormInscricao showToast={showToast} onClose={() => setShowInscricao(false)} instituicoes={instituicoes} />

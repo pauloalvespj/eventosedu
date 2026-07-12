@@ -7,7 +7,7 @@ import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, Icon
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
-import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao } from "../../lib/db";
+import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao, fetchQrToken } from "../../lib/db";
 
 function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
   const instList = instituicoes.filter(i => i.ativo);
@@ -54,7 +54,7 @@ function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
   );
 }
 
-export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, setPresencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, registrarPresencaComPontos, onLogout, onSwitchRole }) {
+export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
   const isPalestrante = user.is_palestrante;
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
@@ -65,6 +65,20 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const [cancelando, setCancelando] = useState(false);
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
   const fileRefs = useRef({});
+
+  // Tokens de QR das atividades do palestrante (lidos do banco; o RLS
+  // permite para palestrantes da atividade, admin e credenciador)
+  const [qrTokens, setQrTokens] = useState({});
+  useEffect(() => {
+    if (!user.is_palestrante) return;
+    const minhas = atividades.filter(a => (a.palestrantes_ids || []).includes(user.id));
+    minhas.forEach(a => {
+      if (qrTokens[a.id] !== undefined) return;
+      fetchQrToken(a.id).then(token => {
+        setQrTokens(prev => ({ ...prev, [a.id]: token }));
+      });
+    });
+  }, [user.id, user.is_palestrante, atividades]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redireciona para dashboard se a aba atual for desativada pelo admin
   useEffect(() => {
@@ -169,13 +183,6 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const ABAS = isPalestrante
     ? [MENU_COMUM[0], ...MENU_PALESTRANTE_EXTRA, ...MENU_COMUM.slice(1)]
     : MENU_COMUM;
-
-  // Cor do topbar
-  const topbarBg = isPalestrante
-    ? "linear-gradient(90deg,var(--hero-dark),var(--hero))"
-    : "var(--navy)";
-
-  const abaLabel = ABAS.find(([k]) => k === aba)?.[1] || "";
 
   return (
     <div className="part-layout">
@@ -549,7 +556,9 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                   {/* QR Code */}
                   <div style={{ background:"var(--surface2)", borderRadius:"var(--radius)", padding:"1.25rem", display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap", marginBottom:"1rem" }}>
                     <div style={{ textAlign:"center", flexShrink:0 }}>
-                      <QRCodeCanvas ref={el => { fileRefs.current[`qr-${a.id}`] = el; }} value={qrPresencaValue(a.id)} size={140}/>
+                      {qrTokens[a.id]
+                        ? <QRCodeCanvas ref={el => { fileRefs.current[`qr-${a.id}`] = el; }} value={qrPresencaValue(a.id, qrTokens[a.id])} size={140}/>
+                        : <div style={{ width:140, height:140, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface)", borderRadius:8, color:"var(--text3)", fontSize:"0.8rem" }}>Carregando QR…</div>}
                       <button className="btn btn-sm btn-outline" style={{ marginTop:"0.6rem", width:"100%" }}
                         onClick={() => {
                           const canvas = fileRefs.current[`qr-${a.id}`];

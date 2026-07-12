@@ -137,7 +137,10 @@ export function Evento() {
   function iniciarEdicao() { setForm({ ...event }); setEditando(true); }
   function salvar() {
     // Remove sec_bg customizados — cores de seção seguem o preset fixo
-    const { sec1_bg, sec2_bg, sec3_bg, ...temaClean } = form.tema || {};
+    const temaClean = { ...(form.tema || {}) };
+    delete temaClean.sec1_bg;
+    delete temaClean.sec2_bg;
+    delete temaClean.sec3_bg;
     const cleanForm = { ...form, tema: temaClean };
     setEvent(cleanForm);
     setEditando(false);

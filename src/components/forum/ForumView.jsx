@@ -10,7 +10,6 @@ import {
   fixarTopico as dbFixarTopico,
   deletarTopico as dbDeletarTopico,
   deletarResposta as dbDeletarResposta,
-  inserirPontuacao,
   normalizeTopicoSingle,
 } from "../../lib/db";
 
@@ -34,21 +33,19 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
     setTimeout(() => setFloats(f => f.filter(ff => ff.id !== id)), 1600);
   }
 
+  // Pontuação real é concedida por triggers no banco; aqui só o estado
+  // local otimista para a UI responder na hora.
   function addPonto(tipo) {
     const val = PONTOS[tipo] || 0;
     if (!uid) return;
-    const ponto = { id: Date.now(), user_id: uid, tipo, valor: val, desc: tipo, created_at: new Date().toISOString() };
-    setPontuacoes(prev => [...prev, ponto]);
+    setPontuacoes(prev => [...prev, { id: Date.now(), user_id: uid, tipo, valor: val, desc: tipo, created_at: new Date().toISOString() }]);
     showFloat(val);
-    inserirPontuacao({ user_id: uid, tipo, valor: val, desc: tipo });
   }
 
   function addPontoParaOutro(userId, tipo) {
     const val = PONTOS[tipo] || 0;
     if (!userId) return;
-    const ponto = { id: Date.now(), user_id: userId, tipo, valor: val, desc: tipo, created_at: new Date().toISOString() };
-    setPontuacoes(prev => [...prev, ponto]);
-    inserirPontuacao({ user_id: userId, tipo, valor: val, desc: tipo });
+    setPontuacoes(prev => [...prev, { id: Date.now(), user_id: userId, tipo, valor: val, desc: tipo, created_at: new Date().toISOString() }]);
   }
 
   async function criarTopico() {
@@ -109,32 +106,39 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
     }
   }
 
-  async function curtirItem(topicoId, respostaId = null) {
-    if (!uid) return;
+  // Curtida otimista + RPC no servidor (que alterna a curtida e cuida dos
+  // pontos do autor). O retorno da RPC reconcilia o estado local.
+  function aplicarCurtidas(topicoId, respostaId, curtidas) {
     setTopicos(prev => prev.map(t => {
       if (t.id !== topicoId) return t;
-      if (!respostaId) {
-        const jaCurtiu = t.curtidas.includes(uid);
-        const novas = jaCurtiu ? t.curtidas.filter(c => c !== uid) : [...t.curtidas, uid];
-        if (!jaCurtiu && t.autor_id !== uid) addPontoParaOutro(t.autor_id, "curtida_recebida");
-        const up = { ...t, curtidas: novas };
-        if (topicoAberto?.id === topicoId) setTopicoAberto(up);
-        dbCurtirTopico(topicoId, uid, novas);
-        return up;
-      } else {
-        const rs = t.respostas.map(r => {
-          if (r.id !== respostaId) return r;
-          const jaCurtiu = r.curtidas.includes(uid);
-          const novas = jaCurtiu ? r.curtidas.filter(c => c !== uid) : [...r.curtidas, uid];
-          if (!jaCurtiu && r.autor_id !== uid) addPontoParaOutro(r.autor_id, "curtida_recebida");
-          dbCurtirResposta(respostaId, novas);
-          return { ...r, curtidas: novas };
-        });
-        const up = { ...t, respostas: rs };
-        if (topicoAberto?.id === topicoId) setTopicoAberto(up);
-        return up;
-      }
+      const up = respostaId
+        ? { ...t, respostas: t.respostas.map(r => r.id === respostaId ? { ...r, curtidas } : r) }
+        : { ...t, curtidas };
+      setTopicoAberto(ab => ab?.id === topicoId ? up : ab);
+      return up;
     }));
+  }
+
+  async function curtirItem(topicoId, respostaId = null) {
+    if (!uid) return;
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+    const item = respostaId ? topico.respostas.find(r => r.id === respostaId) : topico;
+    if (!item) return;
+
+    const jaCurtiu = item.curtidas.includes(uid);
+    const otimistas = jaCurtiu ? item.curtidas.filter(c => c !== uid) : [...item.curtidas, uid];
+    aplicarCurtidas(topicoId, respostaId, otimistas);
+    if (!jaCurtiu && item.autor_id !== uid) addPontoParaOutro(item.autor_id, "curtida_recebida");
+
+    const { data, error } = respostaId
+      ? await dbCurtirResposta(respostaId)
+      : await dbCurtirTopico(topicoId);
+    if (!error && Array.isArray(data)) {
+      aplicarCurtidas(topicoId, respostaId, data);
+    } else if (error) {
+      aplicarCurtidas(topicoId, respostaId, item.curtidas); // desfaz otimista
+    }
   }
 
   async function toggleFixado(topicoId) {

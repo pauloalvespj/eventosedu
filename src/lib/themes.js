@@ -99,7 +99,7 @@ const STATIC_DEFAULTS = {
 export function applyTheme(tema, { persist = true } = {}) {
   const root = document.documentElement;
   if (persist && tema) {
-    try { localStorage.setItem("enaudin_tema", JSON.stringify(tema)); } catch {}
+    try { localStorage.setItem("enaudin_tema", JSON.stringify(tema)); } catch { /* storage indisponível — segue sem cache */ }
   }
 
   let cfg;
@@ -216,4 +216,4 @@ export function applyTheme(tema, { persist = true } = {}) {
 try {
   const cached = localStorage.getItem("enaudin_tema");
   if (cached) applyTheme(JSON.parse(cached), { persist: false });
-} catch {}
+} catch { /* storage indisponível — usa o tema padrão */ }

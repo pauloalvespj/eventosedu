@@ -1,17 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
   faDownload, faClock, faFileAlt, faEye, faEyeSlash, faFilePdf,
 } from "@fortawesome/free-solid-svg-icons";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
 import { formatData, formatPeriodo, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, diaSemana } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
   inserirPresenca, uploadMaterial, deletarMaterial, atualizarEvento,
+  fetchQrToken,
 } from "../../../lib/db";
 
 function formatBytes(b) {
@@ -28,6 +27,13 @@ export function Programacao() {
   const [modalAtv, setModalAtv]                 = useState(false);
   const [formAtv, setFormAtv]                   = useState({});
   const [modalQR, setModalQR]                   = useState(null);
+  const [qrToken, setQrToken]                   = useState(null);
+
+  // Token do QR vem do banco (tabela atividade_qr_tokens, visível só p/ equipe)
+  useEffect(() => {
+    if (!modalQR) { setQrToken(null); return; }
+    fetchQrToken(modalQR.id).then(setQrToken);
+  }, [modalQR]);
   const [modalPresManual, setModalPresManual]   = useState(null);
   const [presencaCPF, setPresencaCPF]           = useState("");
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -82,6 +88,11 @@ export function Programacao() {
   }
 
   async function gerarPDF() {
+    // Carregadas sob demanda — jspdf/autotable ficam fora do bundle inicial
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -395,11 +406,15 @@ export function Programacao() {
             <p style={{ marginBottom: "1rem", color: "var(--text2)", fontSize: "0.9rem", fontWeight: 600 }}>{modalQR.titulo}</p>
             <p style={{ marginBottom: "1.25rem", fontSize: "0.8rem", color: "var(--text3)" }}>{formatData(modalQR.dia)} · {modalQR.horario} · {modalQR.local}</p>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
-              <QRCodeCanvas value={qrPresencaValue(modalQR.id)} size={200} />
+              {qrToken
+                ? <QRCodeCanvas value={qrPresencaValue(modalQR.id, qrToken)} size={200} />
+                : <div style={{ width: 200, height: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderRadius: 8, color: "var(--text3)", fontSize: "0.85rem" }}>Carregando…</div>}
             </div>
-            <div style={{ padding: "0.5rem 0.75rem", background: "var(--gold-pale)", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--warn)", fontFamily: "monospace", marginBottom: "1rem" }}>
-              {qrPresencaValue(modalQR.id)}
-            </div>
+            {qrToken && (
+              <div style={{ padding: "0.5rem 0.75rem", background: "var(--gold-pale)", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--warn)", fontFamily: "monospace", marginBottom: "1rem", wordBreak: "break-all" }}>
+                {qrPresencaValue(modalQR.id, qrToken)}
+              </div>
+            )}
             <button className="btn btn-sm btn-outline" onClick={() => {
               const canvas = document.querySelector("canvas");
               if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-atividade-${modalQR.id}.png`; a.click(); }

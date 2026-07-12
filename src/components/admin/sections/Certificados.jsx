@@ -54,7 +54,6 @@ export function Certificados() {
   const cargaHorariaTotal = atividades.filter(a => a.conta_certificado).reduce((s, a) => s + a.carga_horaria, 0);
   const aptos = participantes.filter(p => calcPresenca(p.id, atividades, presencas, event).apto);
 
-  const buscaNorm = busca.trim().toLowerCase().replace(/\D/g, x => x === "" ? "" : x);
   const participantesFiltrados = busca.trim()
     ? participantes.filter(p => {
         const termo = busca.trim().toLowerCase();

@@ -14,7 +14,7 @@ function periodoCompacto(ini, fim) {
 
 function abreviarLocal(local) {
   if (!local) return "–";
-  const parts = local.split(/\s*[–\-]\s*/);
+  const parts = local.split(/\s*[–-]\s*/);
   if (parts.length >= 2) {
     const venue = parts[0].trim().split(" ").slice(0, 2).join(" ");
     return `${venue} · ${parts[parts.length - 1].trim()}`;
@@ -27,16 +27,17 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
+const Dot = ({ c }) => <span style={{ width:6, height:6, borderRadius:"50%", background:c, display:"inline-block", flexShrink:0 }}/>;
+const B = ({ color, bg, border, label }) => (
+  <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:"0.75rem", color, background:bg, border:`1px solid ${border}`, borderRadius:50, padding:"0.2rem 0.65rem" }}>
+    <Dot c={color}/>{label}
+  </span>
+);
+
 function InscricoesBadge({ event }) {
   const hoje = new Date().toISOString().split("T")[0];
   const { inscricao_inicio: ini, inscricao_fim: fim } = event;
   if (!ini && !fim) return <span style={{ fontSize:"0.82rem", color:"var(--white-low)" }}>–</span>;
-  const Dot = ({ c }) => <span style={{ width:6, height:6, borderRadius:"50%", background:c, display:"inline-block", flexShrink:0 }}/>;
-  const B = ({ color, bg, border, label }) => (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:"0.75rem", color, background:bg, border:`1px solid ${border}`, borderRadius:50, padding:"0.2rem 0.65rem" }}>
-      <Dot c={color}/>{label}
-    </span>
-  );
   if (ini && hoje < ini) return <B color="var(--gold-on-dark)" bg="var(--gold-tint)" border="var(--gold-border)" label={`Abre ${fmtDate(ini)}`}/>;
   if (fim && hoje > fim) return <B color="#f87171" bg="rgba(248,113,113,0.1)" border="rgba(248,113,113,0.3)" label="Encerradas"/>;
   return <B color="#4ade80" bg="rgba(74,222,128,0.1)" border="rgba(74,222,128,0.3)" label="Abertas"/>;
@@ -44,7 +45,7 @@ function InscricoesBadge({ event }) {
 
 // ── componente principal ───────────────────────────────────────
 export function Dashboard() {
-  const { event, atividades, participantes, palestrantes, presencas } = useAdmin();
+  const { event, participantes, palestrantes, presencas } = useAdmin();
   const inscricoes = [...participantes]
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     .slice(0, 20);
