@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faTrash, faBuilding, faStar, faImage } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faTrash, faBuilding, faStar } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { Modal } from "../../base/index";
+import { Modal, AvatarUpload } from "../../base/index";
 import { inserirInstituicao, atualizarInstituicao, deletarInstituicao, uploadLogoInstituicao } from "../../../lib/db";
 
 export function Instituicoes() {
@@ -12,7 +12,6 @@ export function Instituicoes() {
   const [logoFile, setLogoFile]   = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const logoInputRef = useRef();
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -28,13 +27,6 @@ export function Instituicoes() {
     setLogoFile(null);
     setLogoPreview(inst.logo_url || null);
     setModal(true);
-  }
-
-  function handleLogoChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
   }
 
   async function salvar() {
@@ -160,15 +152,16 @@ export function Instituicoes() {
                   }}
                 >
                   <td>
-                    {inst.logo_url
-                      ? <img src={inst.logo_url} alt={inst.sigla} style={{ height: 32, maxWidth: 56, objectFit: "contain", display: "block" }} />
-                      : <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>sem logo</span>
+                    {inst.logo_url &&
+                      <img src={inst.logo_url} alt={inst.sigla} style={{ height: 32, maxWidth: 56, objectFit: "contain", display: "block" }} />
                     }
                   </td>
                   <td>
                     <span style={{ fontWeight: 700, fontFamily: "monospace", fontSize: "0.9rem", color: "var(--navy)" }}>
                       {inst.realizadora && (
-                        <FontAwesomeIcon icon={faStar} style={{ color: "var(--gold, #f0a500)", marginRight: 6 }} title="Instituição realizadora" />
+                        <span title="Instituição realizadora">
+                          <FontAwesomeIcon icon={faStar} style={{ color: "var(--gold, #f0a500)", marginRight: 6 }} />
+                        </span>
                       )}
                       {inst.sigla}
                     </span>
@@ -206,7 +199,16 @@ export function Instituicoes() {
       </div>
 
       {/* ── Modal: Criar / Editar ─────────────────────────────── */}
-      <Modal show={modal} onClose={() => setModal(false)} title={form.id ? "Editar Instituição" : "Nova Instituição"}>
+      <Modal show={modal} onClose={() => setModal(false)} title={form.id ? "Editar Instituição" : "Nova Instituição"} wide>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+          <AvatarUpload
+            fotoUrl={logoPreview}
+            iniciais={form.sigla || "?"}
+            size={96}
+            onFileSelected={(file, previewUrl) => { setLogoFile(file); setLogoPreview(previewUrl); }}
+            readonly={uploadingLogo}
+          />
+        </div>
         <div className="form-grid">
           <div className="form-group">
             <label className="form-label">Sigla *</label>
@@ -218,6 +220,13 @@ export function Instituicoes() {
               maxLength={20}
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">Status</label>
+            <select className="form-input" value={form.ativo !== false ? "true" : "false"} onChange={e => set("ativo", e.target.value === "true")}>
+              <option value="true">Ativa</option>
+              <option value="false">Inativa</option>
+            </select>
+          </div>
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Nome Completo *</label>
             <input
@@ -226,13 +235,6 @@ export function Instituicoes() {
               value={form.nome || ""}
               onChange={e => set("nome", e.target.value)}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select className="form-input" value={form.ativo !== false ? "true" : "false"} onChange={e => set("ativo", e.target.value === "true")}>
-              <option value="true">Ativa</option>
-              <option value="false">Inativa</option>
-            </select>
           </div>
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", userSelect: "none" }}>
@@ -252,71 +254,18 @@ export function Instituicoes() {
             </p>
           </div>
           {form.realizadora && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Ordem de exibição</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="ex: 1"
-                  min={1}
-                  value={form.ordem ?? ""}
-                  onChange={e => set("ordem", e.target.value)}
-                  style={{ maxWidth: 120 }}
-                />
-              </div>
-              <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                <label className="form-label">
-                  <FontAwesomeIcon icon={faImage} style={{ marginRight: 4 }} />
-                  Logo
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-                  {logoPreview
-                    ? (
-                      <div style={{
-                        width: 120, height: 56,
-                        border: "1px solid var(--border)",
-                        borderRadius: 6,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        background: "#f8f9fa", overflow: "hidden", flexShrink: 0,
-                      }}>
-                        <img src={logoPreview} alt="preview" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-                      </div>
-                    ) : (
-                      <div style={{
-                        width: 120, height: 56,
-                        border: "1px dashed var(--border)",
-                        borderRadius: 6,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "var(--text3)", fontSize: "0.75rem", flexShrink: 0,
-                      }}>
-                        sem logo
-                      </div>
-                    )
-                  }
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={uploadingLogo}
-                    >
-                      {uploadingLogo ? "Enviando…" : logoPreview ? "Trocar logo" : "Selecionar logo"}
-                    </button>
-                    {logoFile && (
-                      <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>{logoFile.name}</span>
-                    )}
-                  </div>
-                </div>
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handleLogoChange}
-                />
-              </div>
-            </>
+            <div className="form-group">
+              <label className="form-label">Ordem de exibição</label>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="ex: 1"
+                min={1}
+                value={form.ordem ?? ""}
+                onChange={e => set("ordem", e.target.value)}
+                style={{ maxWidth: 120 }}
+              />
+            </div>
           )}
         </div>
         <button className="btn btn-primary btn-block" style={{ marginTop: "0.5rem" }} onClick={salvar} disabled={uploadingLogo}>
