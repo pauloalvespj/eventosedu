@@ -97,7 +97,18 @@ export function Instituicoes() {
     .sort((a, b) => (a.ordem ?? 9999) - (b.ordem ?? 9999));
 
   const outras = instituicoes.filter(i => !i.realizadora);
+  const todasOrdenadas = [...realizadoras, ...outras];
   const ativas = instituicoes.filter(i => i.ativo).length;
+
+  function contarInscritos(inst) {
+    return (participantes || []).filter(p =>
+      p.instituicao && (
+        p.instituicao === inst.nome ||
+        p.instituicao === inst.sigla ||
+        p.instituicao.toLowerCase().includes(inst.sigla.toLowerCase())
+      )
+    ).length;
+  }
 
   function renderAcoes(inst) {
     return (
@@ -121,77 +132,15 @@ export function Instituicoes() {
         </button>
       </div>
 
-      {/* ── Tabela: Realizadoras ──────────────────────────────── */}
-      {realizadoras.length > 0 && (
-        <div className="table-wrap" style={{ marginBottom: "1.5rem" }}>
-          <div className="table-header">
-            <span className="table-title">
-              <FontAwesomeIcon icon={faStar} style={{ color: "var(--gold, #f0a500)", marginRight: 6 }} />
-              Instituições Realizadoras
-            </span>
-            <span style={{ fontSize: "0.8rem", color: "var(--text3)" }}>
-              exibidas na landing page
-            </span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 60, textAlign: "center" }}>Ordem</th>
-                <th style={{ width: 64 }}>Logo</th>
-                <th>Sigla</th>
-                <th>Nome Completo</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {realizadoras.map(inst => (
-                <tr key={inst.id} style={{ opacity: inst.ativo ? 1 : 0.5 }}>
-                  <td style={{ textAlign: "center" }}>
-                    <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--navy)" }}>
-                      {inst.ordem ?? "—"}
-                    </span>
-                  </td>
-                  <td>
-                    {inst.logo_url
-                      ? <img src={inst.logo_url} alt={inst.sigla} style={{ height: 32, maxWidth: 56, objectFit: "contain", display: "block" }} />
-                      : <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>sem logo</span>
-                    }
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 700, fontFamily: "monospace", fontSize: "0.9rem", color: "var(--navy)" }}>
-                      {inst.sigla}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 500 }}>{inst.nome}</td>
-                  <td>
-                    <button
-                      className={`badge badge-${inst.ativo ? "success" : "danger"}`}
-                      style={{ cursor: "pointer", border: "none", background: "none", padding: 0 }}
-                      onClick={() => toggleAtivo(inst)}
-                      title="Clique para alternar"
-                    >
-                      {inst.ativo ? "Ativa" : "Inativa"}
-                    </button>
-                  </td>
-                  <td>{renderAcoes(inst)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── Tabela: Demais Instituições ───────────────────────── */}
+      {/* ── Tabela única, realizadoras em destaque no topo ───── */}
       <div className="table-wrap">
         <div className="table-header">
-          <span className="table-title">
-            {realizadoras.length > 0 ? "Demais Instituições" : "Lista de Instituições"}
-          </span>
+          <span className="table-title">Lista de Instituições</span>
         </div>
         <table>
           <thead>
             <tr>
+              <th style={{ width: 64 }}>Logo</th>
               <th>Sigla</th>
               <th>Nome Completo</th>
               <th style={{ textAlign: "center" }}>Inscritos</th>
@@ -200,18 +149,27 @@ export function Instituicoes() {
             </tr>
           </thead>
           <tbody>
-            {outras.map(inst => {
-              const inscritos = (participantes || []).filter(p =>
-                p.instituicao && (
-                  p.instituicao === inst.nome ||
-                  p.instituicao === inst.sigla ||
-                  p.instituicao.toLowerCase().includes(inst.sigla.toLowerCase())
-                )
-              ).length;
+            {todasOrdenadas.map(inst => {
+              const inscritos = contarInscritos(inst);
               return (
-                <tr key={inst.id} style={{ opacity: inst.ativo ? 1 : 0.5 }}>
+                <tr
+                  key={inst.id}
+                  style={{
+                    opacity: inst.ativo ? 1 : 0.5,
+                    background: inst.realizadora ? "var(--gold-tint)" : undefined,
+                  }}
+                >
+                  <td>
+                    {inst.logo_url
+                      ? <img src={inst.logo_url} alt={inst.sigla} style={{ height: 32, maxWidth: 56, objectFit: "contain", display: "block" }} />
+                      : <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>sem logo</span>
+                    }
+                  </td>
                   <td>
                     <span style={{ fontWeight: 700, fontFamily: "monospace", fontSize: "0.9rem", color: "var(--navy)" }}>
+                      {inst.realizadora && (
+                        <FontAwesomeIcon icon={faStar} style={{ color: "var(--gold, #f0a500)", marginRight: 6 }} title="Instituição realizadora" />
+                      )}
                       {inst.sigla}
                     </span>
                   </td>
@@ -236,10 +194,10 @@ export function Instituicoes() {
                 </tr>
               );
             })}
-            {outras.length === 0 && (
+            {todasOrdenadas.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>
-                  Nenhuma outra instituição cadastrada.
+                <td colSpan={6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>
+                  Nenhuma instituição cadastrada.
                 </td>
               </tr>
             )}
