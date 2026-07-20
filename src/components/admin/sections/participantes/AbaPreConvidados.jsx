@@ -126,15 +126,14 @@ export function AbaPreConvidados() {
       const validos = rows.map(normalize).filter(r => r.nome && r.email);
       if (!validos.length) { showToast("Nenhum dado válido encontrado na planilha.", "error"); return; }
 
-      // Atualiza localmente evitando duplicatas de e-mail
-      const novos = validos.filter(v => !convidados.some(c => c.email === v.email));
-      const locais = novos.map((c, i) => ({ ...c, id: `imp-${Date.now()}-${i}` }));
-      setConvidados(prev => [...prev, ...locais]);
-
-      // Persiste em lote
-      const { error } = await inserirConvidadosLote(validos);
-      if (error) showToast(`Importado localmente — erro ao salvar: ${error.message}`, "warn");
-      else showToast(`${novos.length} lead${novos.length !== 1 ? "s" : ""} importado${novos.length !== 1 ? "s" : ""}!`, "success");
+      // Persiste em lote primeiro para obter os ids reais do banco (o upsert
+      // já ignora duplicatas de e-mail) — usar id local falso aqui fazia o
+      // "marcar e-mail enviado" gravar em um id inexistente e não persistir.
+      const { data, error } = await inserirConvidadosLote(validos);
+      if (error) { showToast(`Erro ao salvar: ${error.message}`, "error"); return; }
+      const novos = data ?? [];
+      setConvidados(prev => [...prev, ...novos]);
+      showToast(`${novos.length} lead${novos.length !== 1 ? "s" : ""} importado${novos.length !== 1 ? "s" : ""}!`, "success");
     } catch (err) {
       showToast("Erro ao ler a planilha: " + err.message, "error");
     } finally {
@@ -149,9 +148,9 @@ export function AbaPreConvidados() {
     if (convidados.some(c => c.email.toLowerCase() === formAdd.email.toLowerCase())) {
       showToast("Já existe um lead com este e-mail.", "warn"); return;
     }
-    const novo = { ...formAdd, id: `local-${Date.now()}`, event_id: event?.id ?? 1, status: "pendente" };
-    setConvidados(prev => [...prev, novo]);
-    inserirConvidado(formAdd);
+    const { data, error } = await inserirConvidado(formAdd);
+    if (error) { showToast(`Erro ao adicionar: ${error.message}`, "error"); return; }
+    setConvidados(prev => [...prev, data]);
     showToast("Lead adicionado!", "success");
     setFormAdd({ nome: "", email: "", instituicao: "" });
     setModalAdd(false);
@@ -227,11 +226,16 @@ export function AbaPreConvidados() {
 
       const enviados = data?.sent || [];
       const falhas = data?.failed || [];
+      let erroPersistencia = null;
       if (enviados.length) {
         setConvidados(prev => prev.map(c => enviados.includes(c.id) ? { ...c, email_enviado: true } : c));
-        await marcarEmailEnviado(enviados);
+        const { error: erroMarcar } = await marcarEmailEnviado(enviados);
+        if (erroMarcar) erroPersistencia = erroMarcar;
       }
-      if (falhas.length) {
+      if (erroPersistencia) {
+        showToast(`E-mails enviados, mas houve erro ao salvar o status: ${erroPersistencia.message}`, "error");
+        console.error("Erro ao marcar email_enviado:", erroPersistencia);
+      } else if (falhas.length) {
         showToast(`${enviados.length} enviado${enviados.length !== 1 ? "s" : ""}, ${falhas.length} falharam. Veja o console para detalhes.`, "warn");
         console.warn("Falhas ao enviar convites:", falhas);
       } else {
@@ -468,7 +472,11 @@ export function AbaPreConvidados() {
               <button className="btn btn-outline" onClick={async () => {
                 const ids = [...selecionados];
                 setConvidados(prev => prev.map(c => ids.includes(c.id) ? { ...c, email_enviado: true } : c));
-                await marcarEmailEnviado(ids);
+                const { error } = await marcarEmailEnviado(ids);
+                if (error) {
+                  showToast(`Erro ao salvar: ${error.message}`, "error");
+                  return;
+                }
                 setSelecionados(new Set());
                 setModalEmail(false);
                 showToast("Leads marcados como e-mail enviado.", "success");
