@@ -202,7 +202,7 @@ input,select,textarea{font-family:inherit}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,0.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
-.modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;overscroll-behavior:contain;box-shadow:var(--shadow-lg)}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
 .modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy)}
 .modal-close{background:transparent;color:var(--text3);font-size:1.4rem;padding:0.25rem;border-radius:50%;line-height:1;transition:all 0.2s}

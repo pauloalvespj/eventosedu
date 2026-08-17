@@ -2,9 +2,10 @@ import { useState } from "react";
 import { formatCPF, validateCPF } from "../../utils/helpers";
 import { supabase } from "../../lib/supabase";
 import { inserirEnrollment } from "../../lib/db";
+import { InstSelect } from "../admin/sections/InstSelect";
 
 export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
-  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", instituicaoOutra: "", cargo: "", email: "", senha: "", confirmSenha: "" });
+  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", cargo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -18,7 +19,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
 
   // Fluxo: e-mail já existe → "já tem cadastro"
   const [jaTemCadastro, setJaTemCadastro] = useState(null);
-  const [extra, setExtra] = useState({ cpf: "", instituicao: "", instituicaoOutra: "", cargo: "" });
+  const [extra, setExtra] = useState({ cpf: "", instituicao: "", cargo: "" });
   const [errosExtra, setErrosExtra] = useState({});
   const [aguardandoLink, setAguardandoLink] = useState(false);
 
@@ -63,9 +64,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     const e = {};
     if (!validateCPF(form.cpf)) e.cpf = "CPF inválido";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
-    const instValor = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
-    if (!instValor) e.instituicao = "Instituição obrigatória";
-    if (form.instituicao === "Outra" && !form.instituicaoOutra.trim()) e.instituicao = "Informe o nome da instituição";
+    if (!form.instituicao.trim()) e.instituicao = "Instituição obrigatória";
     if (!form.cargo.trim()) e.cargo = "Cargo obrigatório";
     if (!form.email.includes("@")) e.email = "E-mail inválido";
     if (form.senha.length < 6) e.senha = "Senha mínima de 6 caracteres";
@@ -109,7 +108,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
       return;
     }
 
-    const instituicaoFinal = form.instituicao === "Outra" ? form.instituicaoOutra.trim() : form.instituicao;
+    const instituicaoFinal = form.instituicao.trim();
     const profileData = {
       nome:        form.nome.trim(),
       cpf:         cpfFormatado,
@@ -165,12 +164,15 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     if (precisaCpf && extra.cpf && !validateCPF(extra.cpf.replace(/\D/g, ""))) {
       e.cpf = "CPF inválido";
     }
+    if (precisaInst && !extra.instituicao.trim()) {
+      e.instituicao = "Instituição obrigatória";
+    }
     if (Object.keys(e).length) { setErrosExtra(e); return; }
 
     const pendente = {};
     if (precisaCpf  && extra.cpf) pendente.cpf = formatCPF(extra.cpf.replace(/\D/g, ""));
-    if (precisaInst && extra.instituicao) {
-      pendente.instituicao = extra.instituicao === "Outra" ? extra.instituicaoOutra.trim() : extra.instituicao;
+    if (precisaInst && extra.instituicao.trim()) {
+      pendente.instituicao = extra.instituicao.trim();
     }
     if (precisaCargo && extra.cargo.trim()) pendente.cargo = extra.cargo.trim();
     if (Object.keys(pendente).length > 0) {
@@ -262,23 +264,9 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
 
         {precisaInst && (
           <div className="form-group">
-            <label className="form-label">Instituição</label>
-            <select className="form-input" value={extra.instituicao} onChange={e => setEx("instituicao", e.target.value)}>
-              <option value="">Selecione a instituição</option>
-              {instituicoes.filter(i => i.ativo).map(i => (
-                <option key={i.id} value={i.sigla}>{i.sigla} – {i.nome}</option>
-              ))}
-              <option value="Outra">Outra</option>
-            </select>
-            {extra.instituicao === "Outra" && (
-              <input
-                className="form-input"
-                style={{ marginTop: "0.4rem" }}
-                placeholder="Digite o nome da sua instituição"
-                value={extra.instituicaoOutra}
-                onChange={e => setEx("instituicaoOutra", e.target.value)}
-              />
-            )}
+            <label className="form-label">Instituição *</label>
+            <InstSelect value={extra.instituicao} onChange={v => setEx("instituicao", v)} instituicoes={instituicoes} />
+            {errosExtra.instituicao && <div className="form-error">{errosExtra.instituicao}</div>}
           </div>
         )}
 
@@ -414,17 +402,8 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
         </div>
         <div className="form-group" style={{ gridColumn: "1/-1" }}>
           <label className="form-label">Instituição *</label>
-          <select className={`form-input${erros.instituicao ? " error" : ""}`} value={form.instituicao} onChange={e => set("instituicao", e.target.value)}>
-            <option value="">Selecione a instituição</option>
-            {instituicoes.filter(i => i.ativo).map(i => (
-              <option key={i.id} value={i.sigla}>{i.sigla} – {i.nome}</option>
-            ))}
-            <option value="Outra">Outra</option>
-          </select>
-          {form.instituicao === "Outra" && (
-            <input className="form-input" style={{ marginTop: "0.4rem" }} placeholder="Digite o nome da sua instituição"
-              value={form.instituicaoOutra} onChange={e => set("instituicaoOutra", e.target.value)} />
-          )}
+          <InstSelect value={form.instituicao} onChange={v => set("instituicao", v)} instituicoes={instituicoes}
+            className={`form-input${erros.instituicao ? " error" : ""}`} />
           {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
         </div>
         <div className="form-group" style={{ gridColumn: "1/-1" }}>

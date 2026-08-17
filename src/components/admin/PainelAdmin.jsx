@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faCircleUser,
+  faArrowRightFromBracket, faBuilding, faCircleUser, faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
@@ -25,6 +25,7 @@ import { ForumAdmin }     from "./sections/ForumAdmin";
 import { Gamificacao }    from "./sections/Gamificacao";
 import { Usuarios }       from "./sections/Usuarios";
 import { Instituicoes }   from "./sections/Instituicoes";
+import { Logs }           from "./sections/Logs";
 
 const MENU = [
   { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin","credenciador"] },
@@ -40,6 +41,7 @@ const MENU = [
   { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
   { path: "usuarios",       icon: faLock,         label: "Usuários",        roles: ["admin"] },
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
+  { path: "logs",           icon: faClipboardList,label: "Logs",            roles: ["admin"] },
   { path: "meus-dados",     icon: faCircleUser,   label: "Meus Dados",      roles: ["admin","credenciador"] },
 ];
 
@@ -195,6 +197,7 @@ function AdminRoutes() {
     { path: "gamificacao",       element: <Gamificacao /> },
     { path: "usuarios",          element: <Usuarios /> },
     { path: "instituicoes",      element: <Instituicoes /> },
+    { path: "logs",              element: <Logs /> },
     { path: "meus-dados",        element: <MeusDados /> },
     { path: "*",                 element: <Navigate to="/painel" replace /> },
   ]);

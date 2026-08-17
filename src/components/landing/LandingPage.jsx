@@ -44,6 +44,9 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
           <a href="#palestrantes" className="navbar-link">Palestrantes</a>
           <a href="#realizacao" className="navbar-link">Realização</a>
           <a href="#local" className="navbar-link">Local</a>
+          {inscStatus.aberta && (
+            <button className="btn-inscricao" onClick={onInscricaoClick}>Inscreva-se</button>
+          )}
           <button className="btn-inscricao btn-login-mobile" onClick={onLoginClick} style={{ background: "var(--teal)", color: "#fff" }}>{user ? "Minha Área" : "Login"}</button>
         </div>
       </nav>

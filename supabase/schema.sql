@@ -79,7 +79,8 @@ create table if not exists events (
   certificado_disponivel  boolean not null default false,
   rede_visivel            boolean not null default true,
   logo_url                text,
-  palestrantes_subtitulo  text
+  palestrantes_subtitulo  text,
+  modo_frequencia         text not null default 'palestra' check (modo_frequencia in ('palestra', 'turno'))
 );
 
 -- ── CONFIGURAÇÕES DE GAMIFICAÇÃO ─────────────────────────────

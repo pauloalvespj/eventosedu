@@ -34,7 +34,11 @@
       "PowerShell(Copy-Item *)",
       "PowerShell($c = [System.IO.File]::ReadAllText\\(\"C:\\\\projetos\\\\enaudin\\\\keys.json\"\\); [System.IO.File]::WriteAllText\\(\"C:\\\\projetos\\\\enaudin\\\\keys.json\", $c.TrimStart\\([char]0xFEFF\\), \\(New-Object System.Text.UTF8Encoding $false\\)\\); node C:\\\\projetos\\\\enaudin\\\\.tmp-test-security.mjs)",
       "PowerShell(node C:\\\\projetos\\\\enaudin\\\\.tmp-test-curtir.mjs)",
-      "PowerShell(node C:\\\\projetos\\\\enaudin\\\\.tmp-test-forum.mjs)"
+      "PowerShell(node C:\\\\projetos\\\\enaudin\\\\.tmp-test-forum.mjs)",
+      "Skill(run)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npm init *)",
+      "Bash(pkill -f \"vite\")"
     ]
   }
 }

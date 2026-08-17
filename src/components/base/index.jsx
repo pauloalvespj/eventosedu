@@ -13,6 +13,15 @@ export function Toast({ toast }) {
 
 // ── Modal ─────────────────────────────────────────────────────
 export function Modal({ show, onClose, title, children, wide }) {
+  // Trava o scroll da página atrás enquanto o modal estiver aberto — sem
+  // isso, a roda do mouse "vaza" e rola o site por trás do overlay.
+  useEffect(() => {
+    if (!show) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = original; };
+  }, [show]);
+
   if (!show) return null;
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>

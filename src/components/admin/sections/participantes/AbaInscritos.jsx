@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth } from "../../../../lib/db";
+import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, registrarLog } from "../../../../lib/db";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -14,13 +14,18 @@ const ROLE_OPTS = [
 ];
 
 export function AbaInscritos() {
-  const { participantes, setParticipantes, instituicoes, showToast } = useAdmin();
+  const { participantes, setParticipantes, instituicoes, setInstituicoes, showToast } = useAdmin();
   const [busca, setBusca]               = useState("");
   const [filtroRole, setFiltroRole]     = useState("todos");
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
+  const [mostrarPendentes, setMostrarPendentes]   = useState(false);
   const [modalPart, setModalPart]       = useState(null);
   const [formPart, setFormPart]         = useState({});
   const [reativando, setReativando]     = useState(null);
+  const [aprovando, setAprovando]       = useState(null);
+  const [ordenacao, setOrdenacao]       = useState({ campo: null, dir: "asc" });
+
+  const totPendentes = participantes.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
 
   const filtrados = participantes.filter(p => {
     const q = busca.toLowerCase();
@@ -28,13 +33,49 @@ export function AbaInscritos() {
       || p.instituicao?.toLowerCase().includes(q) || p.cargo?.toLowerCase().includes(q)
       || p.email?.toLowerCase().includes(q);
     const cancelado = p.ativo === false;
+    const pendente = p.status_inscricao === "pendente" && !cancelado;
     const roleMatch = filtroRole === "todos"
       || (filtroRole === "participante" && p.role === "participante")
       || (filtroRole === "admin" && p.role === "admin")
       || (filtroRole === "credenciador" && p.is_credenciador)
       || (filtroRole === "palestrante" && p.is_palestrante);
-    return ok && roleMatch && (mostrarCancelados ? cancelado : !cancelado);
+    if (mostrarCancelados) return ok && roleMatch && cancelado;
+    if (mostrarPendentes)  return ok && pendente;
+    return ok && roleMatch && !cancelado && !pendente;
   });
+
+  async function aprovar(p) {
+    setAprovando(p.id);
+    setParticipantes(participantes.map(x => x.id === p.id ? { ...x, status_inscricao: "aprovado" } : x));
+    await atualizarProfile(p.id, { status_inscricao: "aprovado" });
+    setAprovando(null);
+    showToast(`Inscrição de ${p.nome.split(" ")[0]} aprovada!`, "success");
+  }
+
+  async function recusar(p) {
+    if (!confirm(`Recusar a inscrição de "${p.nome}"?`)) return;
+    setAprovando(p.id);
+    setParticipantes(participantes.map(x => x.id === p.id ? { ...x, status_inscricao: "recusado" } : x));
+    await atualizarProfile(p.id, { status_inscricao: "recusado" });
+    setAprovando(null);
+    showToast(`Inscrição de ${p.nome.split(" ")[0]} recusada.`, "info");
+  }
+
+  function alternarOrdenacao(campo) {
+    setOrdenacao(o => o.campo === campo ? { campo, dir: o.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" });
+  }
+
+  const ordenados = ordenacao.campo
+    ? [...filtrados].sort((a, b) => {
+        const cmp = (a[ordenacao.campo] || "").toString().localeCompare((b[ordenacao.campo] || "").toString(), "pt-BR", { sensitivity: "base" });
+        return ordenacao.dir === "asc" ? cmp : -cmp;
+      })
+    : filtrados;
+
+  function setaOrdenacao(campo) {
+    if (ordenacao.campo !== campo) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
+    return <span style={{ marginLeft: 4 }}>{ordenacao.dir === "asc" ? "↑" : "↓"}</span>;
+  }
 
   const [salvando, setSalvando] = useState(false);
 
@@ -66,6 +107,9 @@ export function AbaInscritos() {
         return;
       }
       setParticipantes([...participantes, { ...data.user, is_palestrante, is_credenciador }]);
+      if (role === "admin" || is_credenciador) {
+        registrarLog("usuario.criar", "participante", data.user.id, formPart.nome, { role, is_credenciador });
+      }
       showToast("Inscrito criado com acesso ao sistema!", "success");
     } else {
       const original = participantes.find(p => p.id === formPart.id);
@@ -83,6 +127,9 @@ export function AbaInscritos() {
       }
       setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, is_palestrante, is_credenciador } : x));
       atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
+      if (original && (original.role !== role || !!original.is_credenciador !== is_credenciador)) {
+        registrarLog("usuario.editar_role", "participante", formPart.id, formPart.nome, { role_antes: original.role, role_depois: role, credenciador_antes: !!original.is_credenciador, credenciador_depois: is_credenciador });
+      }
       setSalvando(false);
       showToast("Inscrito atualizado!", "success");
     }
@@ -101,6 +148,14 @@ export function AbaInscritos() {
   const totP = participantes.filter(p => p.ativo !== false).length;
   const totCancelados = participantes.filter(p => p.ativo === false).length;
 
+  function exportarCSV() {
+    const header = "Nome,Instituição,Cargo\n";
+    const rows = participantes.map(p => `"${p.nome || ""}","${p.instituicao || ""}","${p.cargo || ""}"`).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "participantes.csv"; a.click();
+    showToast("Lista exportada!", "success");
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -109,14 +164,20 @@ export function AbaInscritos() {
           <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
             {totP} inscrito{totP !== 1 ? "s" : ""}
             {totCancelados > 0 && <span style={{ color: "var(--danger, #c0392b)", marginLeft: 6 }}>· {totCancelados} cancelado{totCancelados !== 1 ? "s" : ""}</span>}
+            {totPendentes > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {totPendentes} pendente{totPendentes !== 1 ? "s" : ""} de aprovação</span>}
           </p>
         </div>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <button className="btn btn-outline" onClick={exportarCSV}>
+          <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
+        </button>
         <button className="btn btn-primary" onClick={() => {
           setFormPart({ nome: "", cpf: "", email: "", instituicao: "", cargo: "", _palestrante: false, _admin: false, _credenciador: false });
           setModalPart("new");
         }}>
           <FontAwesomeIcon icon={faUsers} style={{ marginRight: 6 }} />Novo Inscrito
         </button>
+        </div>
       </div>
 
       <div className="table-wrap">
@@ -124,14 +185,22 @@ export function AbaInscritos() {
           <span className="table-title">Inscritos ({filtrados.length})</span>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <button
+              className={`btn btn-sm ${mostrarPendentes ? "btn-gold" : "btn-outline"}`}
+              onClick={() => { setMostrarPendentes(v => !v); setMostrarCancelados(false); }}
+              title="Exibir inscrições pendentes de aprovação"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {mostrarPendentes ? "Ver ativos" : `Pendentes${totPendentes > 0 ? ` (${totPendentes})` : ""}`}
+            </button>
+            <button
               className={`btn btn-sm ${mostrarCancelados ? "btn-danger" : "btn-outline"}`}
-              onClick={() => setMostrarCancelados(v => !v)}
+              onClick={() => { setMostrarCancelados(v => !v); setMostrarPendentes(false); }}
               title="Exibir inscrições canceladas"
               style={{ whiteSpace: "nowrap" }}
             >
               {mostrarCancelados ? "Ver ativos" : `Cancelados${totCancelados > 0 ? ` (${totCancelados})` : ""}`}
             </button>
-            {!mostrarCancelados && (
+            {!mostrarCancelados && !mostrarPendentes && (
               <select className="search-input" style={{ width: "auto", borderRadius: "var(--radius-sm)" }}
                 value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
                 <option value="todos">Todos</option>
@@ -144,12 +213,14 @@ export function AbaInscritos() {
         <table style={{ width: "100%", fontSize: "0.83rem" }}>
           <thead>
             <tr>
-              <th>Nome</th><th>CPF</th><th>Instituição / Cargo</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("nome")}>Nome{setaOrdenacao("nome")}</th>
+              <th>CPF</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("instituicao")}>Instituição / Cargo{setaOrdenacao("instituicao")}</th>
               <th>E-mail</th><th style={{ width: 88 }}>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {filtrados.map(p => {
+            {ordenados.map(p => {
               const cancelado = p.ativo === false;
               return (
                 <tr key={p.id} style={{ ...(cancelado ? { opacity: 0.55 } : {}), ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
@@ -172,7 +243,18 @@ export function AbaInscritos() {
                   <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{p.email}</td>
                   <td>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      {cancelado ? (
+                      {mostrarPendentes ? (
+                        <>
+                          <button className="btn btn-sm btn-success" title="Aprovar inscrição"
+                            disabled={aprovando === p.id} onClick={() => aprovar(p)}>
+                            <FontAwesomeIcon icon={faCheck} />
+                          </button>
+                          <button className="btn btn-sm btn-danger" title="Recusar inscrição"
+                            disabled={aprovando === p.id} onClick={() => recusar(p)}>
+                            <FontAwesomeIcon icon={faXmark} />
+                          </button>
+                        </>
+                      ) : cancelado ? (
                         <button className="btn btn-sm btn-outline" title="Reativar inscrição"
                           disabled={reativando === p.id}
                           onClick={() => handleReativar(p)}>
@@ -192,6 +274,7 @@ export function AbaInscritos() {
                           setParticipantes(participantes);
                           showToast("Erro ao remover: " + error.message, "error");
                         } else {
+                          registrarLog("participante.excluir", "participante", p.id, p.nome);
                           showToast("Participante removido.", "info");
                         }
                       }}>
@@ -277,7 +360,8 @@ export function AbaInscritos() {
           </div>
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Instituição</label>
-            <InstSelect value={formPart.instituicao || ""} onChange={v => setFormPart(f => ({ ...f, instituicao: v }))} instituicoes={instituicoes || []} />
+            <InstSelect value={formPart.instituicao || ""} onChange={v => setFormPart(f => ({ ...f, instituicao: v }))}
+              instituicoes={instituicoes || []} onCriada={i => setInstituicoes?.(prev => [...prev, i])} />
           </div>
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Cargo</label>

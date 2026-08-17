@@ -10,6 +10,7 @@ import {
   fetchEvent, fetchAtividades, fetchProfiles, fetchPresencas,
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
   fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
+  fetchTurnos, fetchPresencasTurno,
   seguirUsuario, desseguirUsuario,
   inserirEnrollment,
 } from "./lib/db";
@@ -24,6 +25,7 @@ import { FormLogin } from "./components/auth/FormLogin";
 import { LandingPage } from "./components/landing/LandingPage";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
+import { PaginaPresencaTurno } from "./components/presenca/PaginaPresencaTurno";
 import { AuthCallback } from "./components/auth/AuthCallback";
 import { RoleSelector } from "./components/auth/RoleSelector";
 
@@ -63,6 +65,35 @@ function PresencaRoute({ atividades, presencas, setPresencas, user, onLoginClick
       atividades={atividades}
       presencas={presencas}
       setPresencas={handleSetPresencas}
+      user={user}
+      onVoltar={() => navigate("/")}
+      onLoginClick={onLoginClick}
+    />
+  );
+}
+
+function PresencaTurnoRoute({ turnos, presencasTurno, setPresencasTurno, user, onLoginClick, registrarPresencaComPontos }) {
+  const { turnoId } = useParams();
+  const navigate = useNavigate();
+
+  function handleSetPresencasTurno(updater) {
+    const novas = typeof updater === "function" ? updater(presencasTurno) : updater;
+    if (Array.isArray(novas)) {
+      const ultima = novas[novas.length - 1];
+      if (ultima && !presencasTurno.find(p => p.id === ultima.id)) {
+        // Pontuação local otimista — no banco o trigger de presenças já pontuou
+        registrarPresencaComPontos(ultima.participante_id);
+      }
+    }
+    setPresencasTurno(novas);
+  }
+
+  return (
+    <PaginaPresencaTurno
+      turnoId={turnoId}
+      turnos={turnos}
+      presencasTurno={presencasTurno}
+      setPresencasTurno={handleSetPresencasTurno}
       user={user}
       onVoltar={() => navigate("/")}
       onLoginClick={onLoginClick}
@@ -144,6 +175,8 @@ export default function App() {
   const [atividades, setAtividades] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [presencas, setPresencas] = useState([]);
+  const [turnos, setTurnos] = useState([]);
+  const [presencasTurno, setPresencasTurno] = useState([]);
   const [avaliacoes, setAvaliacoes] = useState([]);
   const [forumConfig, setForumConfig] = useState(INITIAL_FORUM_CONFIG);
   const [topicos, setTopicos] = useState([]);
@@ -231,7 +264,9 @@ export default function App() {
       fetchGamificacaoConfig(),
       fetchFollows(),
       fetchConvidados(),
-    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes]) => {
+      fetchTurnos(),
+      fetchPresencasTurno(),
+    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes, turRes, presTurRes]) => {
       if (get(presRes)) setPresencas(get(presRes));
       if (get(avalRes)) setAvaliacoes(get(avalRes));
       if (get(fcRes))   setForumConfig(get(fcRes));
@@ -241,18 +276,22 @@ export default function App() {
       if (get(gamRes))  setPontosConfig(get(gamRes));
       if (get(folRes))  setFollows(get(folRes));
       if (get(convRes)) setConvidados(get(convRes));
+      if (get(turRes))  setTurnos(get(turRes));
+      if (get(presTurRes)) setPresencasTurno(get(presTurRes));
     });
   }
 
   // ── Auth listener ─────────────────────────────────────────────
   useEffect(() => {
-    // Verifica sessão ativa imediatamente (sem bloquear a tela)
+    // Espera a sessão ser restaurada (rápido — normalmente só localStorage,
+    // sem round-trip de rede) antes de carregar os dados. Se loadData() (que
+    // busca profiles) disparasse em paralelo com getSession(), a query podia
+    // sair sem o JWT anexado ainda, caindo no recorte público do RLS em vez
+    // da lista completa — daí números menores que só se corrigiam ao atualizar.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) setAuthUser(session.user);
+      loadData().catch(err => console.error("Erro ao carregar dados:", err));
     });
-
-    // Carrega dados do Supabase em background — substitui os mocks quando chegar
-    loadData().catch(err => console.error("Erro ao carregar dados:", err));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
@@ -423,6 +462,8 @@ export default function App() {
     participantes,
     setParticipantes: updated => setProfiles(() => updated),
     presencas, setPresencas,
+    turnos, setTurnos,
+    presencasTurno, setPresencasTurno,
     admins,
     setAdmins: updated => setProfiles(prev => [...prev.filter(p => p.role !== "admin"), ...updated]),
     topicos, setTopicos,
@@ -468,9 +509,10 @@ export default function App() {
                   onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
                   event={event} atividades={atividades} setAtividades={setAtividades}
                   palestrantes={palestrantes} presencas={presencas}
+                  turnos={turnos} presencasTurno={presencasTurno}
                   topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
                   forumConfig={forumConfig} participantes={participantes} admins={admins}
-                  instituicoes={instituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
+                  instituicoes={instituicoes} setInstituicoes={setInstituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
                   follows={follows} setFollows={setFollows} pontosConfig={pontosConfig}
                   onSeguir={async (followingId) => {
                     const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
@@ -501,6 +543,18 @@ export default function App() {
             atividades={atividades}
             presencas={presencas}
             setPresencas={setPresencas}
+            user={user}
+            onLoginClick={() => setShowLogin(true)}
+            registrarPresencaComPontos={registrarPresencaComPontos}
+          />
+        } />
+
+        {/* Rota de presença por turno via QR Code */}
+        <Route path="/presenca-turno/:turnoId" element={
+          <PresencaTurnoRoute
+            turnos={turnos}
+            presencasTurno={presencasTurno}
+            setPresencasTurno={setPresencasTurno}
             user={user}
             onLoginClick={() => setShowLogin(true)}
             registrarPresencaComPontos={registrarPresencaComPontos}

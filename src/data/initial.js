@@ -24,6 +24,8 @@ export const INITIAL_EVENT = {
   palestrantes_subtitulo: "A grade de atividades, palestrantes e horários será divulgada em breve. Fique atento às atualizações!",
   gamificacao_ativa: true,
   forum_ativo: true,
+  modo_frequencia: "palestra",
+  limite_inscricoes: null,
 };
 
 export const INITIAL_INSTITUICOES = [

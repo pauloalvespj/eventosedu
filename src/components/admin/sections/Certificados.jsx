@@ -3,15 +3,30 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { calcPresenca } from "../../../utils/helpers";
-import { atualizarEvento, uploadCertificado } from "../../../lib/db";
+import { calcPresenca, formatData } from "../../../utils/helpers";
+import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
+
+function MiniBarra({ pct, minimo }) {
+  const cls = pct >= minimo ? "" : pct >= minimo * 0.7 ? " warn" : " danger";
+  return (
+    <div style={{ minWidth: 130 }}>
+      <div className="progress-bar" style={{ height: 6 }}>
+        <div className={`progress-fill${cls}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+      <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: 3 }}>{pct}%</div>
+    </div>
+  );
+}
 
 export function Certificados() {
-  const { event, setEvent, atividades, participantes, setParticipantes, presencas, showToast } = useAdmin();
+  const { event, setEvent, atividades, participantes, setParticipantes, presencas, turnos, presencasTurno, showToast } = useAdmin();
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(null); // id do participante em upload
   const [busca, setBusca] = useState("");
+  const [filtroOrgao, setFiltroOrgao] = useState("");
+  const [filtroFreq, setFiltroFreq] = useState(""); // id do turno ou da atividade selecionada
   const fileRefs = useRef({});
+  const porTurno = event.modo_frequencia === "turno";
 
   async function toggleCertificado() {
     const novo = !event.certificado_disponivel;
@@ -21,6 +36,7 @@ export function Certificados() {
       setEvent(prev => ({ ...prev, certificado_disponivel: !novo }));
       showToast("Erro ao salvar.", "error");
     } else {
+      registrarLog(novo ? "certificado.liberar" : "certificado.ocultar", "evento", event.id, event.nome);
       showToast(novo ? "Certificados liberados para os participantes." : "Certificados ocultados.", "success");
     }
   }
@@ -33,6 +49,7 @@ export function Certificados() {
       setEvent(prev => ({ ...prev, certificado_externo: !novo }));
       showToast("Erro ao salvar.", "error");
     } else {
+      registrarLog(novo ? "certificado.modo_externo_on" : "certificado.modo_externo_off", "evento", event.id, event.nome);
       showToast(novo ? "Modo certificado externo ativado." : "Modo certificado do sistema ativado.", "success");
     }
   }
@@ -51,22 +68,38 @@ export function Certificados() {
     }
   }
 
-  const cargaHorariaTotal = atividades.filter(a => a.conta_certificado).reduce((s, a) => s + a.carga_horaria, 0);
-  const aptos = participantes.filter(p => calcPresenca(p.id, atividades, presencas, event).apto);
+  const cargaHorariaTotal = porTurno
+    ? turnos.filter(t => t.conta_certificado).reduce((s, t) => s + Number(t.carga_horaria || 0), 0)
+    : atividades.filter(a => a.conta_certificado).reduce((s, a) => s + a.carga_horaria, 0);
+  const aptos = participantes.filter(p => calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno).apto);
+  const credenciados = participantes.filter(p => p.credenciado);
 
-  const participantesFiltrados = busca.trim()
-    ? participantes.filter(p => {
-        const termo = busca.trim().toLowerCase();
-        const cpfLimpo = (p.cpf || "").replace(/\D/g, "");
-        const buscaCpf = busca.trim().replace(/\D/g, "");
-        return p.nome.toLowerCase().includes(termo) || (buscaCpf && cpfLimpo.includes(buscaCpf));
-      })
-    : participantes;
+  const orgaos = [...new Set(participantes.map(p => p.instituicao).filter(Boolean))].sort();
+  const opcoesFreq = porTurno
+    ? [...turnos].sort((a, b) => (a.dia + (a.horario_inicio||"")).localeCompare(b.dia + (b.horario_inicio||"")))
+    : atividades.filter(a => a.tipo !== "intervalo").sort((a, b) => (a.dia + a.horario).localeCompare(b.dia + b.horario));
+
+  const participantesFiltrados = participantes.filter(p => {
+    if (busca.trim()) {
+      const termo = busca.trim().toLowerCase();
+      const cpfLimpo = (p.cpf || "").replace(/\D/g, "");
+      const buscaCpf = busca.trim().replace(/\D/g, "");
+      if (!p.nome.toLowerCase().includes(termo) && !(buscaCpf && cpfLimpo.includes(buscaCpf))) return false;
+    }
+    if (filtroOrgao && p.instituicao !== filtroOrgao) return false;
+    if (filtroFreq) {
+      const bateu = porTurno
+        ? presencasTurno.some(pt => pt.turno_id === Number(filtroFreq) && pt.participante_id === p.id)
+        : presencas.some(pr => pr.atividade_id === Number(filtroFreq) && pr.participante_id === p.id);
+      if (!bateu) return false;
+    }
+    return true;
+  });
 
   function exportarLista() {
     const header = "Nome,CPF,Instituição,Cargo,CH Cumprida,Percentual,Status\n";
     const rows = participantes.map(p => {
-      const r = calcPresenca(p.id, atividades, presencas, event);
+      const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
       return `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}",${r.chCumprida}h,${r.pct}%,${r.apto ? "APTO" : "NÃO APTO"}`;
     }).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
@@ -77,7 +110,15 @@ export function Certificados() {
   return (
     <div>
       <div className="admin-topbar">
-        <div><h1>Certificados</h1><p>Gestão e emissão</p></div>
+        <div>
+          <h1>Certificados</h1>
+          <p style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            Gestão e emissão
+            <span className="badge badge-navy" style={{ fontSize: "0.68rem" }}>
+              Frequência: {porTurno ? "Por Turno" : "Por Palestra"}
+            </span>
+          </p>
+        </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button className="btn btn-outline" onClick={() => navigate("/painel/modelo-cert")}
             style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -161,22 +202,36 @@ export function Certificados() {
           <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Aptos</div>
           <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--success)" }}>{aptos.length}/{participantes.length}</div>
         </div>
+        <div>
+          <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Credenciados</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gold-on-dark)" }}>{credenciados.length}/{participantes.length}</div>
+        </div>
       </div>
 
       <div className="table-wrap">
-        <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+        <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
           <span className="table-title">Lista de Participantes</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            <select className="form-input" style={{ width: 170, marginBottom: 0 }} value={filtroOrgao} onChange={e => setFiltroOrgao(e.target.value)}>
+              <option value="">Todos os órgãos</option>
+              {orgaos.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <select className="form-input" style={{ width: 210, marginBottom: 0 }} value={filtroFreq} onChange={e => setFiltroFreq(e.target.value)}>
+              <option value="">{porTurno ? "Todos os turnos" : "Todas as palestras"}</option>
+              {porTurno
+                ? opcoesFreq.map(t => <option key={t.id} value={t.id}>{t.nome} — {formatData(t.dia)}</option>)
+                : opcoesFreq.map(a => <option key={a.id} value={a.id}>{a.titulo} — {formatData(a.dia)}</option>)}
+            </select>
             <input
               className="form-input"
               type="text"
               placeholder="Buscar por nome ou CPF…"
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              style={{ width: 220, marginBottom: 0 }}
+              style={{ width: 200, marginBottom: 0 }}
             />
-            {busca && (
-              <button className="btn btn-sm btn-outline" onClick={() => setBusca("")} style={{ padding: "0.35rem 0.6rem" }}>✕</button>
+            {(busca || filtroOrgao || filtroFreq) && (
+              <button className="btn btn-sm btn-outline" onClick={() => { setBusca(""); setFiltroOrgao(""); setFiltroFreq(""); }} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
             )}
           </div>
         </div>
@@ -184,16 +239,16 @@ export function Certificados() {
           <thead>
             <tr>
               <th>Nome</th><th>CPF</th><th>Instituição</th><th>Cargo</th>
-              <th>CH Cumprida</th><th>Status</th>
+              <th>Frequência</th><th>Status</th>
               {event.certificado_externo && <th style={{ width: 110 }}>Certificado</th>}
             </tr>
           </thead>
           <tbody>
             {participantesFiltrados.length === 0 && (
-              <tr><td colSpan={event.certificado_externo ? 7 : 6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para "{busca}".</td></tr>
+              <tr><td colSpan={event.certificado_externo ? 7 : 6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para os filtros atuais.</td></tr>
             )}
             {participantesFiltrados.map(p => {
-              const r = calcPresenca(p.id, atividades, presencas, event);
+              const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
               const isUploading = uploading === p.id;
               return (
                 <tr key={p.id}>
@@ -201,7 +256,11 @@ export function Certificados() {
                   <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>{p.cpf}</td>
                   <td>{p.instituicao}</td>
                   <td>{p.cargo}</td>
-                  <td>{r.chCumprida}h / {r.chTotal}h</td>
+                  <td>
+                    {p.credenciado
+                      ? <MiniBarra pct={r.pct} minimo={event.percentual_minimo} />
+                      : <span style={{ fontSize: "0.78rem", color: "var(--text3)" }}>Não credenciado</span>}
+                  </td>
                   <td><span className={`badge badge-${r.apto ? "success" : "danger"}`}>{r.apto ? "APTO" : "NÃO APTO"}</span></td>
                   {event.certificado_externo && <td>
                     <input

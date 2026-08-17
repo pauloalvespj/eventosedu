@@ -59,7 +59,18 @@ export function timeAgo(dt) {
 }
 
 // ── Presença e certificado ────────────────────────────────────
-export function calcPresenca(participante_id, atividades, presencas, event) {
+// No modo "turno" (event.modo_frequencia === "turno"), a frequência é
+// calculada a partir de turnos/presencasTurno (entidade independente das
+// atividades) em vez de atividades/presencas.
+export function calcPresenca(participante_id, atividades, presencas, event, turnos = [], presencasTurno = []) {
+  if (event?.modo_frequencia === "turno") {
+    const turnosContam = turnos.filter(t => t.conta_certificado);
+    const chTotal = turnosContam.reduce((s, t) => s + Number(t.carga_horaria || 0), 0);
+    const presIds = presencasTurno.filter(p => p.participante_id === participante_id).map(p => p.turno_id);
+    const chCumprida = turnosContam.filter(t => presIds.includes(t.id)).reduce((s, t) => s + Number(t.carga_horaria || 0), 0);
+    const pct = chTotal > 0 ? Math.round((chCumprida / chTotal) * 100) : 0;
+    return { chCumprida, chTotal, pct, apto: pct >= (event?.percentual_minimo || 75) };
+  }
   const atividadesContam = atividades.filter(a => a.conta_certificado);
   const chTotal = atividadesContam.reduce((s, a) => s + a.carga_horaria, 0);
   const presIds = presencas.filter(p => p.participante_id === participante_id).map(p => p.atividade_id);
@@ -73,6 +84,11 @@ export function calcPresenca(participante_id, atividades, presencas, event) {
 // pela RPC registrar_presenca_qr.
 export function qrPresencaValue(atividadeId, token) {
   return `${window.location.origin}/presenca/${atividadeId}?t=${token ?? ""}`;
+}
+
+// Mesma ideia, para o check-in por turno (RPC registrar_presenca_turno_qr).
+export function qrPresencaTurnoValue(turnoId, token) {
+  return `${window.location.origin}/presenca-turno/${turnoId}?t=${token ?? ""}`;
 }
 
 // ── Gamificação ───────────────────────────────────────────────

@@ -6,11 +6,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
-import { formatData, formatPeriodo, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, diaSemana } from "../../../utils/helpers";
+import { formatData, formatPeriodo, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, qrPresencaTurnoValue, diaSemana } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
   inserirPresenca, uploadMaterial, deletarMaterial, atualizarEvento,
   fetchQrToken,
+  inserirTurno, atualizarTurno, deletarTurno,
+  fetchQrTokenTurno, inserirPresencaTurno,
+  registrarLog,
 } from "../../../lib/db";
 
 function formatBytes(b) {
@@ -21,8 +24,13 @@ function formatBytes(b) {
 }
 
 export function Programacao() {
-  const { atividades, setAtividades, palestrantes, participantes, presencas, setPresencas, event, setEvent, showToast } = useAdmin();
+  const {
+    atividades, setAtividades, palestrantes, participantes, presencas, setPresencas,
+    turnos, setTurnos, presencasTurno, setPresencasTurno,
+    event, setEvent, showToast,
+  } = useAdmin();
 
+  const [abaProg, setAbaProg]                   = useState("atividades"); // "atividades" | "turnos"
   const [busca, setBusca]                       = useState("");
   const [modalAtv, setModalAtv]                 = useState(false);
   const [formAtv, setFormAtv]                   = useState({});
@@ -37,6 +45,56 @@ export function Programacao() {
   const [modalPresManual, setModalPresManual]   = useState(null);
   const [presencaCPF, setPresencaCPF]           = useState("");
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
+
+  // ── Turnos (modo de frequência "por turno") ───────────────────
+  const [modalTurno, setModalTurno]             = useState(false);
+  const [formTurno, setFormTurno]               = useState({});
+  const [modalQRTurno, setModalQRTurno]         = useState(null);
+  const [qrTokenTurno, setQrTokenTurno]         = useState(null);
+
+  useEffect(() => {
+    if (!modalQRTurno) { setQrTokenTurno(null); return; }
+    fetchQrTokenTurno(modalQRTurno.id).then(setQrTokenTurno);
+  }, [modalQRTurno]);
+  const [modalPresManualTurno, setModalPresManualTurno] = useState(null);
+  const [presencaCPFTurno, setPresencaCPFTurno]         = useState("");
+
+  async function salvarTurno() {
+    if (!formTurno.nome || !formTurno.dia) { showToast("Preencha os campos obrigatórios", "error"); return; }
+    const dados = { ...formTurno, carga_horaria: Number(formTurno.carga_horaria) || 0, conta_certificado: formTurno.conta_certificado === "true" || formTurno.conta_certificado === true };
+    if (formTurno.id) {
+      setTurnos(prev => prev.map(t => t.id === formTurno.id ? { ...dados } : t));
+      atualizarTurno(formTurno.id, dados);
+    } else {
+      const tempId = Date.now();
+      setTurnos(prev => [...prev, { ...dados, id: tempId }]);
+      const { data } = await inserirTurno({ ...dados, event_id: event.id });
+      if (data) setTurnos(prev => prev.map(t => t.id === tempId ? data : t));
+    }
+    setModalTurno(false);
+    showToast("Turno salvo!", "success");
+  }
+
+  async function excluirTurno(id) {
+    if (!confirm("Excluir turno?")) return;
+    const t = turnos.find(x => x.id === id);
+    setTurnos(prev => prev.filter(t => t.id !== id));
+    deletarTurno(id);
+    registrarLog("turno.excluir", "turno", id, t?.nome);
+    showToast("Turno excluído", "info");
+  }
+
+  async function registrarPresencaManualTurno() {
+    const cpf = presencaCPFTurno.replace(/\D/g, "");
+    const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
+    if (!part) { showToast("Participante não encontrado", "error"); return; }
+    if (presencasTurno.find(p => p.participante_id === part.id && p.turno_id === modalPresManualTurno.id)) { showToast("Presença já registrada", "error"); return; }
+    const nova = { id: Date.now(), participante_id: part.id, turno_id: modalPresManualTurno.id, data_hora: new Date().toISOString() };
+    setPresencasTurno(prev => [...prev, nova]);
+    setPresencaCPFTurno("");
+    showToast(`Presença de ${part.nome} registrada!`, "success");
+    inserirPresencaTurno(part.id, modalPresManualTurno.id);
+  }
 
   function getPalestrantes(atv) {
     return (atv.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
@@ -60,8 +118,10 @@ export function Programacao() {
 
   async function excluirAtividade(id) {
     if (!confirm("Excluir atividade?")) return;
+    const a = atividades.find(x => x.id === id);
     setAtividades(prev => prev.filter(a => a.id !== id));
     deletarAtividade(id);
+    registrarLog("atividade.excluir", "atividade", id, a?.titulo);
     showToast("Atividade excluída", "info");
   }
 
@@ -226,23 +286,38 @@ export function Programacao() {
       <div className="admin-topbar">
         <div><h1>Programação</h1><p>Atividades e palestras</p></div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button
-            className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
-            onClick={toggleVisibilidade}
-            title={visivel ? "Clique para bloquear (mostra Em breve no site)" : "Clique para liberar (mostra programação no site)"}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
-            {visivel ? "Visível no site" : "Em breve no site"}
-          </button>
-          <button className="btn btn-sm btn-outline" onClick={gerarPDF} style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <FontAwesomeIcon icon={faFilePdf} />
-            Exportar PDF
-          </button>
-          <button className="btn btn-sm btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+          {abaProg === "atividades" && (
+            <>
+              <button
+                className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
+                onClick={toggleVisibilidade}
+                title={visivel ? "Clique para bloquear (mostra Em breve no site)" : "Clique para liberar (mostra programação no site)"}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <FontAwesomeIcon icon={visivel ? faEye : faEyeSlash} />
+                {visivel ? "Visível no site" : "Em breve no site"}
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={gerarPDF} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <FontAwesomeIcon icon={faFilePdf} />
+                Exportar PDF
+              </button>
+              <button className="btn btn-sm btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+            </>
+          )}
+          {abaProg === "turnos" && (
+            <button className="btn btn-sm btn-primary" onClick={() => { setFormTurno({ conta_certificado: true, carga_horaria: 0 }); setModalTurno(true); }}>+ Novo Turno</button>
+          )}
         </div>
       </div>
 
+      {event.modo_frequencia === "turno" && (
+        <div style={{ display:"flex", gap:"0.5rem", marginBottom:"1rem" }}>
+          <button className={`btn btn-sm ${abaProg==="atividades"?"btn-primary":"btn-outline"}`} onClick={() => setAbaProg("atividades")}>Atividades</button>
+          <button className={`btn btn-sm ${abaProg==="turnos"?"btn-primary":"btn-outline"}`} onClick={() => setAbaProg("turnos")}>Turnos ({turnos.length})</button>
+        </div>
+      )}
+
+      {abaProg === "atividades" && (
       <div className="table-wrap">
         <div className="table-header">
           <span className="table-title">Atividades ({atividades.length})</span>
@@ -305,6 +380,116 @@ export function Programacao() {
           </tbody>
         </table>
       </div>
+      )}
+
+      {abaProg === "turnos" && event.modo_frequencia === "turno" && (
+      <div className="table-wrap">
+        <div className="table-header">
+          <span className="table-title">Turnos ({turnos.length})</span>
+        </div>
+        <table style={{ width: "100%", tableLayout: "auto", fontSize: "0.82rem" }}>
+          <thead><tr>
+            <th style={{ width:"36%" }}>Nome</th>
+            <th style={{ width: 90 }}>Dia</th>
+            <th style={{ width: 110 }}>Horário</th>
+            <th style={{ width: 50 }}>CH</th>
+            <th style={{ width: 60 }}>Cert.</th>
+            <th style={{ width: 60 }}>Pres.</th>
+            <th style={{ width: 120 }}>Ações</th>
+          </tr></thead>
+          <tbody>
+            {turnos.map(t => (
+              <tr key={t.id}>
+                <td style={{ fontWeight:500 }}>{t.nome}</td>
+                <td style={{ fontSize:"0.78rem" }}>{formatData(t.dia)}</td>
+                <td style={{ whiteSpace:"nowrap", fontSize:"0.78rem" }}>{t.horario_inicio}{t.horario_fim ? `–${t.horario_fim}` : ""}</td>
+                <td style={{ fontSize:"0.78rem" }}>{t.carga_horaria}h</td>
+                <td><span className={`badge badge-${t.conta_certificado ? "success" : "warn"}`} style={{ fontSize:"0.68rem" }}>{t.conta_certificado ? "Sim" : "Não"}</span></td>
+                <td style={{ textAlign:"center" }}>{presencasTurno.filter(p => p.turno_id === t.id).length}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "0.2rem" }}>
+                    <button className="btn btn-sm btn-outline" onClick={() => setModalQRTurno(t)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManualTurno(t); setPresencaCPFTurno(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setFormTurno({ ...t, conta_certificado: t.conta_certificado ? "true" : "false" }); setModalTurno(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                    <button className="btn btn-sm btn-danger" onClick={() => excluirTurno(t.id)}><FontAwesomeIcon icon={faTrash} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      )}
+
+      {/* MODAL TURNO */}
+      <Modal show={modalTurno} onClose={() => setModalTurno(false)} title={formTurno.id ? "Editar Turno" : "Novo Turno"}>
+        <div className="form-group"><label className="form-label">Nome *</label><input className="form-input" placeholder="Ex: Manhã" value={formTurno.nome || ""} onChange={e => setFormTurno(f => ({ ...f, nome: e.target.value }))} /></div>
+        <div className="form-grid">
+          <DatePickerInput label="Dia *" value={formTurno.dia || ""} onChange={v => setFormTurno(f => ({ ...f, dia: v }))} />
+          <div className="form-group"><label className="form-label">Horário início</label><input type="time" className="form-input" value={formTurno.horario_inicio || ""} onChange={e => setFormTurno(f => ({ ...f, horario_inicio: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Horário fim</label><input type="time" className="form-input" value={formTurno.horario_fim || ""} onChange={e => setFormTurno(f => ({ ...f, horario_fim: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Carga Horária (h)</label><input type="number" min={0} step={0.25} className="form-input" value={formTurno.carga_horaria || 0} onChange={e => setFormTurno(f => ({ ...f, carga_horaria: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Conta para certificado</label>
+            <select className="form-input" value={formTurno.conta_certificado} onChange={e => setFormTurno(f => ({ ...f, conta_certificado: e.target.value }))}>
+              <option value="true">Sim</option><option value="false">Não</option>
+            </select>
+          </div>
+        </div>
+        <button className="btn btn-primary btn-block" onClick={salvarTurno} style={{ marginTop:"1rem" }}>Salvar</button>
+      </Modal>
+
+      {/* MODAL QR CODE DO TURNO */}
+      <Modal show={!!modalQRTurno} onClose={() => setModalQRTurno(null)} title="QR Code de Presença do Turno">
+        {modalQRTurno && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ marginBottom: "1rem", color: "var(--text2)", fontSize: "0.9rem", fontWeight: 600 }}>{modalQRTurno.nome}</p>
+            <p style={{ marginBottom: "1.25rem", fontSize: "0.8rem", color: "var(--text3)" }}>{formatData(modalQRTurno.dia)}{modalQRTurno.horario_inicio ? ` · ${modalQRTurno.horario_inicio}${modalQRTurno.horario_fim ? `–${modalQRTurno.horario_fim}` : ""}` : ""}</p>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+              {qrTokenTurno
+                ? <QRCodeCanvas value={qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)} size={200} />
+                : <div style={{ width: 200, height: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderRadius: 8, color: "var(--text3)", fontSize: "0.85rem" }}>Carregando…</div>}
+            </div>
+            {qrTokenTurno && (
+              <div style={{ padding: "0.5rem 0.75rem", background: "var(--gold-pale)", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--warn)", fontFamily: "monospace", marginBottom: "1rem", wordBreak: "break-all" }}>
+                {qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)}
+              </div>
+            )}
+            <button className="btn btn-sm btn-outline" onClick={() => {
+              const canvas = document.querySelector("canvas");
+              if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-turno-${modalQRTurno.id}.png`; a.click(); }
+            }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar PNG</button>
+          </div>
+        )}
+      </Modal>
+
+      {/* MODAL PRESENÇA MANUAL DO TURNO */}
+      <Modal show={!!modalPresManualTurno} onClose={() => setModalPresManualTurno(null)} title="Registrar Presença Manual">
+        {modalPresManualTurno && (
+          <div>
+            <p style={{ color: "var(--text2)", marginBottom: "1rem" }}>{modalPresManualTurno.nome}</p>
+            <div className="form-group">
+              <label className="form-label">CPF do Participante</label>
+              <input className="form-input" placeholder="000.000.000-00" value={presencaCPFTurno}
+                onChange={e => setPresencaCPFTurno(formatCPF(e.target.value))} maxLength={14} />
+            </div>
+            <button className="btn btn-success btn-block" onClick={registrarPresencaManualTurno}>Registrar Presença</button>
+            <div style={{ marginTop: "1.5rem" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text2)", marginBottom: "0.5rem" }}>
+                Presenças neste turno ({presencasTurno.filter(p => p.turno_id === modalPresManualTurno.id).length})
+              </div>
+              {presencasTurno.filter(p => p.turno_id === modalPresManualTurno.id).map(p => {
+                const part = participantes.find(x => x.id === p.participante_id);
+                return part ? (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
+                    <span>{part.nome}</span>
+                    <span style={{ color: "var(--text3)" }}>{p.data_hora}</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* MODAL ATIVIDADE */}
       <Modal show={modalAtv} onClose={() => setModalAtv(false)} title={formAtv.id ? "Editar Atividade" : "Nova Atividade"}>

@@ -4,14 +4,13 @@ import { faDownload, faMicrophone, faUpload, faTrash } from "@fortawesome/free-s
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue, formatCPF } from "../../utils/helpers";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { ProgressBar, TipoBadge, QRCodeCanvas, AvaliacaoWidget, StarRating, IconEdit, AvatarUpload } from "../base/index";
+import { InstSelect } from "../admin/sections/InstSelect";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
 import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao, fetchQrToken } from "../../lib/db";
 
-function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
-  const instList = instituicoes.filter(i => i.ativo);
-  const selectVal = formEdit.outraInst ? "__outro__" : (instList.some(i => i.nome === formEdit.instituicao) ? formEdit.instituicao : (formEdit.instituicao ? "__outro__" : ""));
+function EditForm({ formEdit, setFormEdit, instituicoes, setInstituicoes, onSave, onCancel }) {
   return (
     <div>
       <div className="form-grid" style={{ marginBottom:"0.75rem" }}>
@@ -25,26 +24,9 @@ function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
         </div>
         <div className="form-group">
           <label className="form-label">Instituição</label>
-          <select className="form-input" value={selectVal}
-            onChange={e => {
-              if (e.target.value === "__outro__") {
-                setFormEdit(f => ({...f, outraInst:true, instituicao:""}));
-              } else {
-                setFormEdit(f => ({...f, outraInst:false, instituicao:e.target.value}));
-              }
-            }}>
-            <option value="">Selecione...</option>
-            {instList.map(i => <option key={i.id} value={i.nome}>{i.sigla} — {i.nome}</option>)}
-            <option value="__outro__">Outra (digitar)</option>
-          </select>
+          <InstSelect value={formEdit.instituicao} onChange={v => setFormEdit(f => ({ ...f, instituicao: v }))}
+            instituicoes={instituicoes} onCriada={i => setInstituicoes?.(prev => [...prev, i])} />
         </div>
-        {(formEdit.outraInst || (formEdit.instituicao && !instList.some(i => i.nome === formEdit.instituicao))) && (
-          <div className="form-group" style={{ gridColumn:"1/-1" }}>
-            <label className="form-label">Nome da instituição</label>
-            <input className="form-input" placeholder="Digite o nome da sua instituição" value={formEdit.instituicao}
-              onChange={e=>setFormEdit(f=>({...f,instituicao:e.target.value,outraInst:true}))} autoFocus />
-          </div>
-        )}
       </div>
       <div style={{ display:"flex", gap:"0.5rem" }}>
         <button className="btn btn-primary btn-sm" onClick={onSave}>Salvar</button>
@@ -54,16 +36,19 @@ function EditForm({ formEdit, setFormEdit, instituicoes, onSave, onCancel }) {
   );
 }
 
-export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
+export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, turnos = [], presencasTurno = [], topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, setInstituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
+  const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
   const [aba, setAba] = useState("dashboard");
   const [editando, setEditando] = useState(false);
-  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false });
+  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
   const [palBio, setPalBio] = useState(null);
   const [navAberta, setNavAberta] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  const [erroMotivoCancelamento, setErroMotivoCancelamento] = useState(false);
   const fileRefs = useRef({});
 
   // Tokens de QR das atividades do palestrante (lidos do banco; o RLS
@@ -88,8 +73,9 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   }, [event.forum_ativo, event.gamificacao_ativa, event.rede_visivel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancelarInscricao() {
+    if (!motivoCancelamento.trim()) { setErroMotivoCancelamento(true); return; }
     setCancelando(true);
-    await cancelarInscricao(user.id);
+    await cancelarInscricao(user.id, motivoCancelamento.trim());
     setUser(u => ({ ...u, ativo: false }));
     setCancelando(false);
     setConfirmandoCancelamento(false);
@@ -111,6 +97,38 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     );
   }
 
+  // Tela de inscrição pendente de aprovação (limite de inscrições atingido)
+  if (user.status_inscricao === "pendente") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: "2rem" }}>
+        <div style={{ textAlign: "center", maxWidth: 420 }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
+          <h2 style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "0.5rem" }}>Inscrição pendente de aprovação</h2>
+          <p style={{ color: "var(--text2)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+            O evento <strong>{event.nome}</strong> atingiu o limite de vagas no momento da sua inscrição. Assim que a organização aprovar seu cadastro, você terá acesso completo à plataforma.
+          </p>
+          <button className="btn btn-outline" onClick={onLogout}>← Sair</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de inscrição recusada
+  if (user.status_inscricao === "recusado") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: "2rem" }}>
+        <div style={{ textAlign: "center", maxWidth: 420 }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚫</div>
+          <h2 style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "0.5rem" }}>Inscrição não aprovada</h2>
+          <p style={{ color: "var(--text2)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+            Sua inscrição no <strong>{event.nome}</strong> não foi aprovada pela organização. Entre em contato caso queira mais informações.
+          </p>
+          <button className="btn btn-outline" onClick={onLogout}>← Sair</button>
+        </div>
+      </div>
+    );
+  }
+
   // Dados comuns
   const uid = getUserId(user);
   const meusPts = calcPontos(uid, pontuacoes);
@@ -118,7 +136,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
 
   // Dados participante (calculados mesmo p/ palestrante se ele for inscrito)
   const minasPresencas = presencas.filter(p => p.participante_id === user.id);
-  const presencaCalc = calcPresenca(user.id, atividades, presencas, event);
+  const minhasPresencasTurno = presencasTurno.filter(p => p.participante_id === user.id);
+  const presencaCalc = calcPresenca(user.id, atividades, presencas, event, turnos, presencasTurno);
 
   // Dados palestrante
   const minhasPalestras = isPalestrante ? atividades.filter(a => (a.palestrantes_ids || []).includes(user.id)) : [];
@@ -234,10 +253,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               <div style={{ fontSize:"0.68rem", color:"var(--white-low)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
             </div>
           </div>
-          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
-            <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
-            <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
-          </div>
+          {event.gamificacao_ativa !== false && (
+            <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
+              <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
+              <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
+            </div>
+          )}
         </div>
 
         <nav className="part-nav">
@@ -274,10 +295,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", marginBottom:"0.15rem" }}>{user.nome}</div>
                     <div style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.6)" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
                   </div>
-                  <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ fontSize:"0.72rem", color:"var(--white-low)", marginBottom:"0.2rem" }}>Pontuação</div>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
-                  </div>
+                  {event.gamificacao_ativa !== false && (
+                    <div style={{ textAlign:"right", flexShrink:0 }}>
+                      <div style={{ fontSize:"0.72rem", color:"var(--white-low)", marginBottom:"0.2rem" }}>Pontuação</div>
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold-light)" }}>{nivel.icon} {meusPts} pts</div>
+                    </div>
+                  )}
                 </div>
                 <div className="dash-cards-pal" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"1rem", marginBottom:"1.5rem" }}>
                   {(() => {
@@ -405,15 +428,13 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                         </div>
                         {!editando && (
                           <button className="btn btn-sm btn-outline" style={{ flexShrink:0, padding:"0.3rem 0.55rem" }} onClick={()=>{
-                            const instList = (instituicoes||[]).filter(i=>i.ativo);
-                            const isKnown = instList.some(i=>i.nome===(user.instituicao||"")||i.sigla===(user.instituicao||""));
-                            setFormEdit({ nome:user.nome||"", instituicao:user.instituicao||"", cargo:user.cargo||"", outraInst:!isKnown&&!!(user.instituicao) });
+                            setFormEdit({ nome:user.nome||"", instituicao:user.instituicao||"", cargo:user.cargo||"" });
                             setEditando(true);
                           }} title="Editar dados"><IconEdit /></button>
                         )}
                       </div>
                       {editando ? (
-                        <EditForm formEdit={formEdit} setFormEdit={setFormEdit} instituicoes={instituicoes||[]} onSave={salvarEdicao} onCancel={()=>setEditando(false)} />
+                        <EditForm formEdit={formEdit} setFormEdit={setFormEdit} instituicoes={instituicoes||[]} setInstituicoes={setInstituicoes} onSave={salvarEdicao} onCancel={()=>setEditando(false)} />
                       ) : (
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.65rem" }}>
                           {[["CPF",user.cpf||"–"],["Cargo",user.cargo||user.titulo||"–"],["E-mail",user.email],["Instituição",user.instituicao||"–"]].map(([k,v]) => (
@@ -444,7 +465,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                   {/* 3. Cards de Estatísticas */}
                   <div className="dash-stats-3">
                     {[
-                      { n:minasPresencas.length,       l:"Presenças registradas", ic:"✅", warn:false },
+                      { n: porTurno ? minhasPresencasTurno.length : minasPresencas.length, l:"Presenças registradas", ic:"✅", warn:false },
                       { n:`${presencaCalc.chCumprida}h`, l:"Carga horária",         ic:"⏱", warn:false },
                       { n:`${presencaCalc.pct}%`,       l:"% de presença",         ic:"📊", warn:true  },
                     ].map((c,i) => (
@@ -457,23 +478,25 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                   </div>
 
                   {/* 4. Card de Pontuação */}
-                  <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"1.25rem 1.75rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1rem", flexWrap:"wrap" }}>
-                    <div>
-                      <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Pontuação acumulada</div>
-                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
-                        <span style={{ fontSize:"1.5rem" }}>{nivel.icon}</span>
-                        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--gold)" }}>{meusPts}</span>
-                        <span style={{ fontSize:"0.9rem", color:"var(--text2)", alignSelf:"flex-end", marginBottom:3 }}>pts</span>
+                  {event.gamificacao_ativa !== false && (
+                    <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"1.25rem 1.75rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1rem", flexWrap:"wrap" }}>
+                      <div>
+                        <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Pontuação acumulada</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                          <span style={{ fontSize:"1.5rem" }}>{nivel.icon}</span>
+                          <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--gold)" }}>{meusPts}</span>
+                          <span style={{ fontSize:"0.9rem", color:"var(--text2)", alignSelf:"flex-end", marginBottom:3 }}>pts</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Posição no ranking</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", justifyContent:"flex-end" }}>
+                          <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--navy)" }}>#{posicao}</span>
+                          <span style={{ fontSize:"0.82rem", color:"var(--text3)", alignSelf:"flex-end", marginBottom:3 }}>de {rankingTodos.length}</span>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:"0.68rem", color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.3rem" }}>Posição no ranking</div>
-                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", justifyContent:"flex-end" }}>
-                        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:800, color:"var(--navy)" }}>#{posicao}</span>
-                        <span style={{ fontSize:"0.82rem", color:"var(--text3)", alignSelf:"flex-end", marginBottom:3 }}>de {rankingTodos.length}</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </>
               );
             })()}
@@ -677,7 +700,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                   📅 {diaSemana(dia)}, {formatData(dia)}
                 </div>
                 {atividades.filter(a=>a.dia===dia).sort((a,b)=>a.horario.localeCompare(b.horario)).map(a => {
-                  const temPres = minasPresencas.some(p => p.atividade_id === a.id);
+                  const temPres = !porTurno && minasPresencas.some(p => p.atividade_id === a.id);
                   const ehMinha = isPalestrante && (a.palestrantes_ids || []).includes(user.id);
                   const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
                   const mats = a.materiais || [];
@@ -746,16 +769,44 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.5rem", flexWrap:"wrap", gap:"0.5rem" }}>
               <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)" }}>Minhas Presenças</h2>
               <div style={{ display:"flex", gap:"0.5rem" }}>
-                <span className="badge badge-navy">{minasPresencas.length} registros</span>
+                <span className="badge badge-navy">{(porTurno ? minhasPresencasTurno.length : minasPresencas.length)} registros</span>
                 <span className="badge badge-teal">{presencaCalc.chCumprida}h</span>
               </div>
             </div>
-            {minasPresencas.length===0 ? (
+            {(porTurno ? minhasPresencasTurno.length===0 : minasPresencas.length===0) ? (
               <div style={{ textAlign:"center", padding:"3rem", color:"var(--text2)", background:"var(--surface)", borderRadius:"var(--radius)", border:"1px dashed var(--border2)" }}>
                 <div style={{ fontSize:"3rem", marginBottom:"1rem" }}>📋</div>
                 <p style={{ fontWeight:600, marginBottom:"0.5rem" }}>Nenhuma presença registrada</p>
-                <p style={{ fontSize:"0.85rem" }}>Use o QR Code exibido em cada atividade.</p>
+                <p style={{ fontSize:"0.85rem" }}>{porTurno ? "Use o QR Code exibido em cada turno." : "Use o QR Code exibido em cada atividade."}</p>
               </div>
+            ) : porTurno ? (
+              <>
+                <div style={{ marginBottom:"1.25rem" }}><ProgressBar pct={presencaCalc.pct} minimo={event.percentual_minimo}/></div>
+                {minhasPresencasTurno.map(p => {
+                  const t = turnos.find(x=>x.id===p.turno_id);
+                  if (!t) return null;
+                  return (
+                    <div key={p.id} className="presenca-card" style={{ borderLeft:"4px solid var(--navy)" }}>
+                      <div className="presenca-header">
+                        <div>
+                          <div className="presenca-atividade">{t.nome}</div>
+                          <div style={{ fontSize:"0.8rem",color:"var(--text2)",marginTop:3 }}>
+                            {diaSemana(t.dia)}, {formatData(t.dia)}{t.horario_inicio ? ` · ${t.horario_inicio}${t.horario_fim ? `–${t.horario_fim}` : ""}` : ""}
+                          </div>
+                        </div>
+                        <div style={{ textAlign:"right", flexShrink:0 }}>
+                          <span className="badge badge-success">✓</span>
+                          {t.carga_horaria>0&&<div style={{ fontSize:"0.78rem",color:"var(--text3)",marginTop:4 }}>{t.carga_horaria}h</div>}
+                        </div>
+                      </div>
+                      <div style={{ fontSize:"0.78rem",color:"var(--text3)",marginTop:"0.5rem",display:"flex",gap:"1.5rem",flexWrap:"wrap" }}>
+                        <span>🕐 {p.data_hora}</span>
+                        {t.conta_certificado&&<span style={{ color:"var(--teal)",fontWeight:600 }}>✓ Conta p/ certificado</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
             ) : (
               <>
                 <div style={{ marginBottom:"1.25rem" }}><ProgressBar pct={presencaCalc.pct} minimo={event.percentual_minimo}/></div>
@@ -976,7 +1027,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               {/* Botão editar — canto superior direito */}
               {!editando && (
                 <button className="btn btn-outline btn-sm" style={{ position:"absolute", top:"1.25rem", right:"1.25rem" }}
-                  onClick={() => { setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "", outraInst: false }); setEditando(true); }}
+                  onClick={() => { setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" }); setEditando(true); }}
                   title="Editar dados"><IconEdit /></button>
               )}
 
@@ -1015,16 +1066,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     </div>
                     <div className="form-group" style={{ gridColumn: "1/-1" }}>
                       <label className="form-label">Instituição</label>
-                      <select className="form-input" value={instituicoes.filter(i => i.ativo).some(i => i.nome === formEdit.instituicao || i.sigla === formEdit.instituicao) ? formEdit.instituicao : (formEdit.instituicao ? "__outro__" : "")}
-                        onChange={e => setFormEdit(f => ({ ...f, instituicao: e.target.value === "__outro__" ? "" : e.target.value, outraInst: e.target.value === "__outro__" }))}>
-                        <option value="">Selecione...</option>
-                        {instituicoes.filter(i => i.ativo).map(i => <option key={i.id} value={i.sigla}>{i.sigla} — {i.nome}</option>)}
-                        <option value="__outro__">Outra (digitar)</option>
-                      </select>
-                      {formEdit.outraInst && (
-                        <input className="form-input" style={{ marginTop: "0.4rem" }} placeholder="Nome da instituição"
-                          value={formEdit.instituicao} onChange={e => setFormEdit(f => ({ ...f, instituicao: e.target.value }))} autoFocus />
-                      )}
+                      <InstSelect value={formEdit.instituicao} onChange={v => setFormEdit(f => ({ ...f, instituicao: v }))}
+                        instituicoes={instituicoes} onCriada={i => setInstituicoes?.(prev => [...prev, i])} />
                     </div>
                     {isPalestrante && (
                       <div className="form-group" style={{ gridColumn: "1/-1" }}>
@@ -1063,7 +1106,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px dashed var(--border2)" }}>
                 {!confirmandoCancelamento ? (
                   <button style={{ background: "transparent", border: "none", color: "var(--text3)", fontSize: "0.78rem", cursor: "pointer", textDecoration: "underline", padding: 0 }}
-                    onClick={() => setConfirmandoCancelamento(true)}>
+                    onClick={() => { setMotivoCancelamento(""); setErroMotivoCancelamento(false); setConfirmandoCancelamento(true); }}>
                     Cancelar minha inscrição no evento
                   </button>
                 ) : (
@@ -1072,6 +1115,14 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                     <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem", lineHeight: 1.6 }}>
                       Você perderá acesso ao evento. Sua conta continuará existindo, mas precisará entrar em contato com a organização para reativar.
                     </p>
+                    <div className="form-group" style={{ marginBottom: "1rem" }}>
+                      <label className="form-label">Motivo do cancelamento *</label>
+                      <textarea className={`form-input${erroMotivoCancelamento ? " error" : ""}`} rows={3}
+                        placeholder="Conte rapidamente por que está cancelando…"
+                        value={motivoCancelamento}
+                        onChange={e => { setMotivoCancelamento(e.target.value); setErroMotivoCancelamento(false); }} />
+                      {erroMotivoCancelamento && <div className="form-error">Informe o motivo do cancelamento</div>}
+                    </div>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button className="btn btn-sm btn-danger" onClick={handleCancelarInscricao} disabled={cancelando}>
                         {cancelando ? "Cancelando…" : "Confirmar cancelamento"}

@@ -126,6 +126,14 @@ export async function fetchInstituicoes() {
   return { data: data ?? [], error };
 }
 
+// Cadastra a instituição digitada em "Outra" na inscrição (RPC pois RLS de
+// instituicoes só permite insert direto para admin — participante/anon não pode).
+// Retorna a linha criada (ou a existente, se já havia uma com a mesma sigla).
+export async function registrarInstituicaoLivre(sigla, nome) {
+  const { data, error } = await supabase.rpc("registrar_instituicao_livre", { p_sigla: sigla, p_nome: nome });
+  return { data, error };
+}
+
 export async function inserirInstituicao({ sigla, nome, ativo = true, realizadora = false, ordem = null }) {
   const { data, error } = await supabase
     .from("instituicoes")
@@ -211,6 +219,30 @@ export async function fetchAvaliacoes() {
   // A UI usa estrelas/participante_id; o banco usa nota/user_id
   const normalizadas = (data ?? []).map(a => ({ ...a, estrelas: a.nota, participante_id: a.user_id }));
   return { data: normalizadas, error };
+}
+
+// ── LOGS DE AUDITORIA ────────────────────────────────────────
+
+export async function fetchLogs() {
+  const { data, error } = await supabase
+    .from("logs_auditoria")
+    .select("*")
+    .order("criado_em", { ascending: false })
+    .limit(500);
+  return { data: data ?? [], error };
+}
+
+// Best-effort: falha ao registrar log nunca deve travar a ação real.
+// A RPC (security definer) carimba o autor pelo JWT e ignora chamadas
+// de quem não for admin/credenciador — não confia em nada do cliente.
+export function registrarLog(acao, alvoTipo = null, alvoId = null, alvoNome = null, detalhes = {}) {
+  supabase.rpc("registrar_log", {
+    p_acao: acao,
+    p_alvo_tipo: alvoTipo,
+    p_alvo_id: alvoId != null ? String(alvoId) : null,
+    p_alvo_nome: alvoNome,
+    p_detalhes: detalhes,
+  }).then(({ error }) => { if (error) console.error("Erro ao registrar log:", error.message); });
 }
 
 export async function fetchForumConfig() {
@@ -479,6 +511,92 @@ export async function deletarAtividade(id) {
   return { error };
 }
 
+// ── TURNOS (modo de frequência "por turno") ──────────────────
+// Entidade independente das atividades: nome, dia e carga horária
+// próprios. Presença é registrada em presencas_turno, com QR e
+// RPC próprios (registrar_presenca_turno_qr), espelhando o fluxo
+// de atividades sem misturar as duas tabelas.
+
+export async function fetchTurnos() {
+  const { data, error } = await supabase
+    .from("turnos")
+    .select("*")
+    .order("dia")
+    .order("horario_inicio");
+  return { data: data ?? [], error };
+}
+
+export async function inserirTurno(turno) {
+  const { data, error } = await supabase
+    .from("turnos")
+    .insert(turno)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function atualizarTurno(id, updates) {
+  const { error } = await supabase
+    .from("turnos")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarTurno(id) {
+  const { error } = await supabase
+    .from("turnos")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+export async function fetchPresencasTurno() {
+  const { data, error } = await supabase
+    .from("presencas_turno")
+    .select("*");
+  return { data: data ?? [], error };
+}
+
+// Registro direto (admin/credenciador via painel)
+export async function inserirPresencaTurno(participante_id, turno_id) {
+  const { data, error } = await supabase
+    .from("presencas_turno")
+    .insert({ participante_id, turno_id })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function deletarPresencaTurno(id) {
+  const { error } = await supabase
+    .from("presencas_turno")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+// Token do QR de um turno — visível para admin e credenciador (RLS em turno_qr_tokens)
+export async function fetchQrTokenTurno(turnoId) {
+  const { data } = await supabase
+    .from("turno_qr_tokens")
+    .select("token")
+    .eq("turno_id", turnoId)
+    .maybeSingle();
+  return data?.token ?? null;
+}
+
+// Check-in via QR Code de turno: o servidor valida o token e resolve o
+// participante (usuário logado ou CPF), creditando presença no turno inteiro.
+export async function registrarPresencaTurnoQR(turnoId, token, cpf = null) {
+  const { data, error } = await supabase.rpc("registrar_presenca_turno_qr", {
+    p_turno_id: Number(turnoId),
+    p_token: token ?? "",
+    ...(cpf ? { p_cpf: cpf } : {}),
+  });
+  return { data, error };
+}
+
 // ── PROFILES (admin) ─────────────────────────────────────────
 
 // ── Inscrições por evento ─────────────────────────────────────
@@ -489,10 +607,10 @@ export async function inserirEnrollment(userId, role = "participante", eventId =
   return { error };
 }
 
-export async function cancelarInscricao(userId, eventId = 1) {
+export async function cancelarInscricao(userId, motivo = "", eventId = 1) {
   const { error: e1 } = await supabase
     .from("event_enrollments")
-    .upsert({ event_id: eventId, user_id: userId, ativo: false, cancelado_em: new Date().toISOString() }, { onConflict: "event_id,user_id" });
+    .upsert({ event_id: eventId, user_id: userId, ativo: false, cancelado_em: new Date().toISOString(), motivo_cancelamento: motivo || null }, { onConflict: "event_id,user_id" });
   const { error: e2 } = await supabase
     .from("profiles")
     .update({ ativo: false })

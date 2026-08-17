@@ -5,12 +5,12 @@ import { calcPresenca, formatData, TIPO_LABEL } from "../../../utils/helpers";
 import { TipoBadge } from "../../base/index";
 
 export function Relatorios() {
-  const { event, atividades, participantes, presencas, showToast } = useAdmin();
+  const { event, atividades, participantes, presencas, turnos, presencasTurno, showToast } = useAdmin();
 
   function exportarCertificados() {
     const header = "Nome,CPF,Instituição,Cargo,CH Cumprida,Percentual,Status\n";
     const rows = participantes.map(p => {
-      const r = calcPresenca(p.id, atividades, presencas, event);
+      const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
       return `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}",${r.chCumprida}h,${r.pct}%,${r.apto ? "APTO" : "NÃO APTO"}`;
     }).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
@@ -31,7 +31,7 @@ export function Relatorios() {
             {[...new Set(participantes.map(p => p.instituicao))].sort().map(inst => {
               const pts = participantes.filter(p => p.instituicao === inst);
               const cred = pts.filter(p => p.credenciado).length;
-              const aptosInst = pts.filter(p => calcPresenca(p.id, atividades, presencas, event).apto).length;
+              const aptosInst = pts.filter(p => calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno).apto).length;
               return (
                 <tr key={inst}>
                   <td style={{ fontWeight: 600 }}>{inst}</td>

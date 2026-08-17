@@ -4,7 +4,7 @@ import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, fa
 import { useAdmin } from "./AdminContext";
 import { DatePickerInput } from "../../base/index";
 import { formatData } from "../../../utils/helpers";
-import { atualizarEvento, uploadEventLogo } from "../../../lib/db";
+import { atualizarEvento, uploadEventLogo, registrarLog } from "../../../lib/db";
 import { PRESETS, applyTheme, isLightHex } from "../../../lib/themes";
 
 function InscricoesStatusBadge({ event }) {
@@ -142,9 +142,13 @@ export function Evento() {
     delete temaClean.sec2_bg;
     delete temaClean.sec3_bg;
     const cleanForm = { ...form, tema: temaClean };
+    const camposAlterados = Object.keys(cleanForm).filter(k => JSON.stringify(cleanForm[k]) !== JSON.stringify(event[k]));
     setEvent(cleanForm);
     setEditando(false);
     atualizarEvento(event.id, cleanForm);
+    if (camposAlterados.length) {
+      registrarLog("evento.atualizar", "evento", event.id, event.nome, { campos: camposAlterados });
+    }
     showToast("Evento atualizado!", "success");
   }
   function cancelar() { setEditando(false); applyTheme(event.tema); }
@@ -200,6 +204,7 @@ export function Evento() {
                   ["Local",         event.local || "–"],
                   ["Carga horária", `${event.carga_horaria_total || "–"}h`],
                   ["Mín. presença", `${event.percentual_minimo || "–"}%`],
+                  ["Limite de inscrições", event.limite_inscricoes ? event.limite_inscricoes : "Sem limite"],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:"0.2rem" }}>{label}</div>
@@ -313,6 +318,24 @@ export function Evento() {
           <div className="form-group" style={{ gridColumn:"span 2" }}>
             <label className="form-label">Carga Horária Total (h)</label>
             <input type="number" className="form-input" min={1} value={form.carga_horaria_total||""} onChange={e => set("carga_horaria_total", Number(e.target.value))} />
+          </div>
+
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Frequência calculada por</label>
+            <select className="form-input" value={form.modo_frequencia || "palestra"} onChange={e => set("modo_frequencia", e.target.value)}>
+              <option value="palestra">Por Palestra</option>
+              <option value="turno">Por Turno</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Limite de Inscrições</label>
+            <input type="number" className="form-input" min={0} placeholder="Sem limite"
+              value={form.limite_inscricoes ?? ""} onChange={e => set("limite_inscricoes", e.target.value === "" ? null : Number(e.target.value))} />
+          </div>
+          <div className="form-group" style={{ gridColumn:"1/-1" }}>
+            <p style={{ fontSize:"0.78rem", color:"var(--text3)", margin:0 }}>
+              Deixe em branco para inscrições ilimitadas. Ao atingir o limite, novas inscrições ficam <strong>pendentes de aprovação</strong> — o admin precisa aprovar manualmente em Participantes.
+            </p>
           </div>
 
           {/* Local (2 cols) + Endereço (2 cols) na mesma linha */}
