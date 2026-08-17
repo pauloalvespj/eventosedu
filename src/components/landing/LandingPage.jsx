@@ -395,6 +395,25 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
               {faqAberto === i && <div className="faq-a">{f.r}</div>}
             </div>
           ))}
+          {(event.email_contato || event.telefone_contato) && (
+            <div style={{ textAlign: "center", marginTop: "2.5rem", paddingTop: "2rem", borderTop: "1px solid var(--border)" }}>
+              <p style={{ fontSize: "0.9rem", color: "var(--text2)", marginBottom: "0.75rem" }}>
+                Ainda com dúvidas? Fale com a organização:
+              </p>
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center", fontSize: "0.95rem", fontWeight: 600 }}>
+                {event.email_contato && (
+                  <a href={`mailto:${event.email_contato}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
+                    ✉️ {event.email_contato}
+                  </a>
+                )}
+                {event.telefone_contato && (
+                  <a href={`tel:${event.telefone_contato.replace(/\D/g, "")}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
+                    📞 {event.telefone_contato}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

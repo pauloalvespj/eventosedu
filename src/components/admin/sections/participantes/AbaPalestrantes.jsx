@@ -16,6 +16,13 @@ export function AbaPalestrantes() {
     atualizarEvento(event.id, { palestrantes_visivel: novo });
     showToast(novo ? "Palestrantes visíveis no site!" : "Palestrantes ocultados (Em breve)", novo ? "success" : "warn");
   }
+  const [subtitulo, setSubtitulo] = useState(event?.palestrantes_subtitulo || "");
+  function salvarSubtitulo() {
+    if (subtitulo === (event?.palestrantes_subtitulo || "")) return;
+    setEvent(ev => ({ ...ev, palestrantes_subtitulo: subtitulo }));
+    atualizarEvento(event.id, { palestrantes_subtitulo: subtitulo });
+    showToast("Mensagem salva!", "success");
+  }
   const [busca, setBusca]       = useState("");
   const [modalPal, setModalPal] = useState(false);
   const [formPal, setFormPal]   = useState({});
@@ -144,6 +151,14 @@ export function AbaPalestrantes() {
           </button>
         </div>
       </div>
+
+      {!visivel && (
+        <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+          <label className="form-label">Mensagem exibida no lugar dos palestrantes ("Em breve")</label>
+          <input className="form-input" placeholder="Ex: Especialistas em auditoria, governança e controle público"
+            value={subtitulo} onChange={e => setSubtitulo(e.target.value)} onBlur={salvarSubtitulo} />
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-header">

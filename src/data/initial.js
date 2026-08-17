@@ -26,6 +26,8 @@ export const INITIAL_EVENT = {
   forum_ativo: true,
   modo_frequencia: "palestra",
   limite_inscricoes: null,
+  email_contato: "",
+  telefone_contato: "",
 };
 
 export const INITIAL_INSTITUICOES = [

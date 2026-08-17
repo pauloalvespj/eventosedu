@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, faFileAlt, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faFloppyDisk, faFileLines, faLocationDot, faBuilding, faFileAlt, faImage, faTrash, faEnvelope, faPhone } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { DatePickerInput } from "../../base/index";
 import { formatData } from "../../../utils/helpers";
@@ -263,6 +263,18 @@ export function Evento() {
             </div>
           </div>
 
+          {/* ── Contato ── */}
+          <div className="ev-view-grid">
+            <div className="card-white">
+              <div style={LABEL}><FontAwesomeIcon icon={faEnvelope} style={{ color:"var(--navy)" }}/>E-mail de Contato</div>
+              <div style={{ color:"var(--text)", fontSize:"0.92rem", lineHeight:1.6 }}>{event.email_contato || <span style={{ color:"var(--text3)" }}>–</span>}</div>
+            </div>
+            <div className="card-white">
+              <div style={LABEL}><FontAwesomeIcon icon={faPhone} style={{ color:"var(--navy)" }}/>Telefone de Contato</div>
+              <div style={{ color:"var(--text)", fontSize:"0.92rem", lineHeight:1.6 }}>{event.telefone_contato || <span style={{ color:"var(--text3)" }}>–</span>}</div>
+            </div>
+          </div>
+
           {/* ── Descrição ── */}
           <div className="card-white">
             <div style={LABEL}><FontAwesomeIcon icon={faFileAlt} style={{ color:"var(--navy)" }}/>Descrição</div>
@@ -310,24 +322,24 @@ export function Evento() {
           <DatePickerInput label="Início das Inscrições" value={form.inscricao_inicio||""} onChange={v => set("inscricao_inicio", v)} />
           <DatePickerInput label="Fim das Inscrições"    value={form.inscricao_fim||""}    onChange={v => set("inscricao_fim", v)} />
 
-          {/* Percentual e Carga horária */}
-          <div className="form-group" style={{ gridColumn:"span 2" }}>
+          {/* Percentual, Carga horária, Frequência e Limite — uma linha só no desktop */}
+          <div className="form-group">
             <label className="form-label">Percentual Mínimo (%)</label>
             <input type="number" className="form-input" min={0} max={100} value={form.percentual_minimo||""} onChange={e => set("percentual_minimo", Number(e.target.value))} />
           </div>
-          <div className="form-group" style={{ gridColumn:"span 2" }}>
+          <div className="form-group">
             <label className="form-label">Carga Horária Total (h)</label>
             <input type="number" className="form-input" min={1} value={form.carga_horaria_total||""} onChange={e => set("carga_horaria_total", Number(e.target.value))} />
           </div>
 
-          <div className="form-group" style={{ gridColumn:"span 2" }}>
+          <div className="form-group">
             <label className="form-label">Frequência calculada por</label>
             <select className="form-input" value={form.modo_frequencia || "palestra"} onChange={e => set("modo_frequencia", e.target.value)}>
               <option value="palestra">Por Palestra</option>
               <option value="turno">Por Turno</option>
             </select>
           </div>
-          <div className="form-group" style={{ gridColumn:"span 2" }}>
+          <div className="form-group">
             <label className="form-label">Limite de Inscrições</label>
             <input type="number" className="form-input" min={0} placeholder="Sem limite"
               value={form.limite_inscricoes ?? ""} onChange={e => set("limite_inscricoes", e.target.value === "" ? null : Number(e.target.value))} />
@@ -348,15 +360,21 @@ export function Evento() {
             <input className="form-input" value={form.endereco||""} onChange={e => set("endereco", e.target.value)} />
           </div>
 
+          {/* E-mail e Telefone de contato (exibidos na landing page) */}
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">E-mail de Contato</label>
+            <input type="email" className="form-input" placeholder="contato@evento.com" value={form.email_contato||""} onChange={e => set("email_contato", e.target.value)} />
+          </div>
+          <div className="form-group" style={{ gridColumn:"span 2" }}>
+            <label className="form-label">Telefone de Contato</label>
+            <input className="form-input" placeholder="(00) 00000-0000" value={form.telefone_contato||""} onChange={e => set("telefone_contato", e.target.value)} />
+          </div>
+
           <div className="form-group" style={{ gridColumn:"1/-1" }}>
             <label className="form-label">Realização</label>
             <textarea className="form-input" rows={2} value={form.realizacao||""} onChange={e => set("realizacao", e.target.value)} />
           </div>
 
-          <div className="form-group" style={{ gridColumn:"1/-1" }}>
-            <label className="form-label">Subtítulo da seção de Palestrantes</label>
-            <input className="form-input" placeholder="Ex: Especialistas em auditoria, governança e controle público" value={form.palestrantes_subtitulo||""} onChange={e => set("palestrantes_subtitulo", e.target.value)} />
-          </div>
 
           {/* ── Logo do Evento — linha inteira ── */}
           <div style={{ gridColumn:"1/-1", marginTop:"0.25rem" }}>
