@@ -115,6 +115,21 @@ export function AbaPalestrantes() {
     return !q || p.nome?.toLowerCase().includes(q) || p.area?.toLowerCase().includes(q) || p.instituicao?.toLowerCase().includes(q);
   });
 
+  const [ordenacao, setOrdenacao] = useState({ campo: null, dir: "asc" });
+  function alternarOrdenacao(campo) {
+    setOrdenacao(o => o.campo === campo ? { campo, dir: o.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" });
+  }
+  const ordenados = ordenacao.campo
+    ? [...filtrados].sort((a, b) => {
+        const cmp = (a[ordenacao.campo] || "").toString().localeCompare((b[ordenacao.campo] || "").toString(), "pt-BR", { sensitivity: "base" });
+        return ordenacao.dir === "asc" ? cmp : -cmp;
+      })
+    : filtrados;
+  function setaOrdenacao(campo) {
+    if (ordenacao.campo !== campo) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
+    return <span style={{ marginLeft: 4 }}>{ordenacao.dir === "asc" ? "↑" : "↓"}</span>;
+  }
+
   return (
     <div>
       {palBio && (
@@ -167,10 +182,15 @@ export function AbaPalestrantes() {
         </div>
         <table>
           <thead>
-            <tr><th>Nome</th><th>CPF</th><th>Instituição / Cargo</th><th>E-mail</th><th style={{ width: 100 }}>Ações</th></tr>
+            <tr>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("nome")}>Nome{setaOrdenacao("nome")}</th>
+              <th>CPF</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("instituicao")}>Instituição / Cargo{setaOrdenacao("instituicao")}</th>
+              <th>E-mail</th><th style={{ width: 100 }}>Ações</th>
+            </tr>
           </thead>
           <tbody>
-            {filtrados.map(p => (
+            {ordenados.map(p => (
               <tr key={p.id} style={{ ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
                 <td>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

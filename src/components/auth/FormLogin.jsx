@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../lib/supabase";
+import { formatCPF } from "../../utils/helpers";
 
 function traduzirErroAuth(msg) {
   const m = msg.toLowerCase();
@@ -18,7 +21,7 @@ function traduzirErroAuth(msg) {
   return "Ocorreu um erro inesperado. Tente novamente.";
 }
 
-export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
+export function FormLogin({ onLogin }) {
   const [modo, setModo] = useState("link"); // "link" | "senha"
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -26,6 +29,7 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -38,6 +42,31 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     setEtapa("email"); setErro("");
   }
 
+  // Campo único aceita e-mail ou CPF — detecta pelo formato (sem @ e sem
+  // letras = tratado como CPF em digitação, com máscara automática).
+  function pareceCpfEmDigitacao(v) {
+    return v.trim() !== "" && !/[a-zA-Z@]/.test(v);
+  }
+  function handleIdentificadorChange(v) {
+    setEmail(pareceCpfEmDigitacao(v) ? formatCPF(v.replace(/\D/g, "")) : v);
+    setErro("");
+  }
+  function identificadorValido(v) {
+    return v.includes("@") ? v.length > 3 : v.replace(/\D/g, "").length === 11;
+  }
+  // Resolve CPF → e-mail via a mesma RPC usada na inscrição (verificar_cadastro).
+  // Se já for e-mail, retorna direto.
+  async function resolverEmailOuCpf(valor) {
+    const v = valor.trim();
+    if (!v) return { email: null, error: "Informe seu e-mail ou CPF" };
+    if (v.includes("@")) return { email: v, error: null };
+    const cpfDigits = v.replace(/\D/g, "");
+    if (cpfDigits.length !== 11) return { email: null, error: "CPF inválido" };
+    const { data, error } = await supabase.rpc("verificar_cadastro", { p_email: "", p_cpf: formatCPF(cpfDigits) });
+    if (error || !data?.email) return { email: null, error: "CPF não encontrado no sistema." };
+    return { email: data.email, error: null };
+  }
+
   const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false);
   const [reenvioOk, setReenvioOk] = useState(false);
 
@@ -45,7 +74,10 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
     setErro("");
     setEmailNaoConfirmado(false);
     setEnviando(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const { email: emailResolvido, error: erroResolucao } = await resolverEmailOuCpf(email);
+    if (erroResolucao) { setEnviando(false); setErro(erroResolucao); return; }
+    setEmail(emailResolvido);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: emailResolvido, password: senha });
     setEnviando(false);
     if (error) {
       const msg = error.message.toLowerCase();
@@ -69,7 +101,10 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
   async function handleRecuperarSenha() {
     setErro("");
     setEnviando(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { email: emailResolvido, error: erroResolucao } = await resolverEmailOuCpf(email);
+    if (erroResolucao) { setEnviando(false); setErro(erroResolucao); return; }
+    setEmail(emailResolvido);
+    const { error } = await supabase.auth.resetPasswordForEmail(emailResolvido, {
       redirectTo: `${window.location.origin}/auth/callback`,
     });
     setEnviando(false);
@@ -84,8 +119,11 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
   async function handleEnviarLink() {
     setErro("");
     setEnviando(true);
+    const { email: emailResolvido, error: erroResolucao } = await resolverEmailOuCpf(email);
+    if (erroResolucao) { setEnviando(false); setErro(erroResolucao); return; }
+    setEmail(emailResolvido);
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: emailResolvido,
       options: {
         shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -118,15 +156,23 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
       {modo === "senha" && (
         <div>
           <div className="form-group">
-            <label className="form-label">E-mail</label>
-            <input className="form-input" type="email" placeholder="seu@email.com" value={email}
-              onChange={e => { setEmail(e.target.value); setErro(""); }} autoFocus />
+            <label className="form-label">E-mail ou CPF</label>
+            <input className="form-input" type="text" placeholder="seu@email.com ou CPF" value={email}
+              onChange={e => handleIdentificadorChange(e.target.value)} autoFocus />
           </div>
           <div className="form-group">
             <label className="form-label">Senha</label>
-            <input className="form-input" type="password" placeholder="Sua senha" value={senha}
-              onChange={e => { setSenha(e.target.value); setErro(""); }}
-              onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
+            <div style={{ position: "relative" }}>
+              <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Sua senha" value={senha}
+                style={{ paddingRight: "2.5rem" }}
+                onChange={e => { setSenha(e.target.value); setErro(""); }}
+                onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
+              <button type="button" onClick={() => setMostrarSenha(v => !v)}
+                title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
+                <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
+              </button>
+            </div>
           </div>
           {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
           {emailNaoConfirmado && (
@@ -172,13 +218,13 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
                 Informe seu e-mail cadastrado e enviaremos um link para você <strong>criar uma nova senha</strong>.
               </p>
               <div className="form-group">
-                <label className="form-label">Seu e-mail cadastrado</label>
-                <input className="form-input" type="email" placeholder="seu@email.com" value={email}
-                  onChange={e => { setEmail(e.target.value); setErro(""); }} autoFocus
-                  onKeyDown={e => e.key === "Enter" && !enviando && email.includes("@") && handleRecuperarSenha()} />
+                <label className="form-label">Seu e-mail ou CPF cadastrado</label>
+                <input className="form-input" type="text" placeholder="seu@email.com ou CPF" value={email}
+                  onChange={e => handleIdentificadorChange(e.target.value)} autoFocus
+                  onKeyDown={e => e.key === "Enter" && !enviando && identificadorValido(email) && handleRecuperarSenha()} />
               </div>
               {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
-              <button className="btn btn-primary btn-block" onClick={handleRecuperarSenha} disabled={enviando || !email.includes("@")}>
+              <button className="btn btn-primary btn-block" onClick={handleRecuperarSenha} disabled={enviando || !identificadorValido(email)}>
                 {enviando ? "Enviando…" : "Enviar link de recuperação"}
               </button>
               <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
@@ -220,12 +266,12 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
           {etapa === "email" && (
             <div>
               <div className="form-group">
-                <label className="form-label">Seu e-mail cadastrado</label>
-                <input className="form-input" type="email" placeholder="seu@email.com" value={email}
-                  onChange={e => { setEmail(e.target.value); setErro(""); }} autoFocus />
+                <label className="form-label">Seu e-mail ou CPF cadastrado</label>
+                <input className="form-input" type="text" placeholder="seu@email.com ou CPF" value={email}
+                  onChange={e => handleIdentificadorChange(e.target.value)} autoFocus />
               </div>
               {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
-              <button className="btn btn-primary btn-block" onClick={handleEnviarLink} disabled={enviando || !email.includes("@")}>
+              <button className="btn btn-primary btn-block" onClick={handleEnviarLink} disabled={enviando || !identificadorValido(email)}>
                 {enviando ? "Enviando…" : "📧 Enviar link de acesso"}
               </button>
             </div>
@@ -255,17 +301,6 @@ export function FormLogin({ onLogin, onClose, onInscricaoClick }) {
           )}
         </div>
       )}
-
-      {/* Rodapé */}
-      <div style={{ borderTop: "1px solid var(--border)", marginTop: "1.25rem", paddingTop: "1rem" }}>
-        <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text2)", marginBottom: "0.75rem" }}>
-          Não tem conta?{" "}
-          <button style={{ background: "transparent", color: "var(--navy)", fontWeight: 700, border: "none", cursor: "pointer" }}
-            onClick={() => { onClose(); onInscricaoClick(); }}>
-            Inscreva-se
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

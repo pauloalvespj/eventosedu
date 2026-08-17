@@ -274,6 +274,9 @@ input,select,textarea{font-family:inherit}
 .admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
 .admin-topbar h1{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--admin-hd)}
 .admin-topbar p{font-size:0.85rem;color:var(--text2);margin-top:0.2rem}
+.admin-subtabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.admin-subtabs::-webkit-scrollbar{height:4px}
+.admin-subtabs > button{flex-shrink:0;white-space:nowrap}
 
 /* DASHBOARD CARDS */
 .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}

@@ -52,7 +52,7 @@ export function gerarTemplateHTMLPesquisa({ event, bannerUrl, pesquisaUrl, assun
 </body></html>`;
 }
 
-export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao }) {
+export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto }) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
   const corCta = corBotao || "#0a1f40";
@@ -82,7 +82,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
           <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
-              Quero me inscrever →
+              ${ctaTexto || "Quero me inscrever →"}
             </a>
           </td></tr>
         </table>

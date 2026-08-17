@@ -8,6 +8,7 @@ import { gerarTemplateHTML, DEFAULT_MENSAGEM } from "../../../../lib/emailTempla
 const TEMPLATE_DEFAULTS = {
   assunto: "",
   mensagem: DEFAULT_MENSAGEM,
+  ctaTexto: "",
   bannerUrl: "",
   inscricaoUrl: typeof window !== "undefined" ? window.location.origin : "",
   anexoUrl: "",
@@ -123,6 +124,7 @@ export function AbaConfigEmail() {
       corCabecalho: ativo.corCabecalho,
       corRodape: ativo.corRodape,
       corBotao: ativo.corBotao,
+      ctaTexto: ativo.ctaTexto,
     });
   }
 
@@ -175,6 +177,11 @@ export function AbaConfigEmail() {
           <div className="form-group">
             <label className="form-label">Mensagem</label>
             <textarea className="form-input" rows={6} value={ativo.mensagem} onChange={e => set("mensagem", e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Texto do Botão (opcional)</label>
+            <input className="form-input" type="text" placeholder="Quero me inscrever →"
+              value={ativo.ctaTexto || ""} onChange={e => set("ctaTexto", e.target.value)} />
           </div>
           <div className="form-group">
             <label className="form-label">URL do Banner do Evento (opcional)</label>

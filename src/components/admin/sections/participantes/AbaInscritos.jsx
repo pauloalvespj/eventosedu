@@ -6,6 +6,7 @@ import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
 import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, registrarLog } from "../../../../lib/db";
 import { baixarCSV } from "../../../../utils/helpers";
+import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -15,7 +16,9 @@ const ROLE_OPTS = [
 ];
 
 export function AbaInscritos() {
-  const { participantes, setParticipantes, instituicoes, setInstituicoes, showToast } = useAdmin();
+  const { event, participantes, setParticipantes, instituicoes, setInstituicoes, showToast } = useAdmin();
+  const [modalAtualizacao, setModalAtualizacao]   = useState(false);
+  const [enviandoAtualizacao, setEnviandoAtualizacao] = useState(false);
   const [busca, setBusca]               = useState("");
   const [filtroRole, setFiltroRole]     = useState("todos");
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
@@ -148,6 +151,47 @@ export function AbaInscritos() {
 
   const totP = participantes.filter(p => p.ativo !== false).length;
   const totCancelados = participantes.filter(p => p.ativo === false).length;
+  const incompletos = participantes.filter(p => p.ativo !== false && (
+    !p.cpf || !p.instituicao || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2
+  ));
+
+  async function solicitarAtualizacaoCadastro() {
+    const template = (event.convite_templates || []).find(t => t.id === "tpl-atualizacao-cadastro");
+    if (!template) { showToast("Modelo 'Atualização de Cadastro' não encontrado em Modelos de E-mail.", "error"); return; }
+    if (!template.inscricaoUrl) { showToast("Preencha a URL em Modelos de E-mail → Atualização de Cadastro antes de enviar.", "error"); return; }
+    if (!incompletos.length) { showToast("Nenhum participante com dado faltando.", "warn"); return; }
+    setEnviandoAtualizacao(true);
+    try {
+      const leads = incompletos.map(p => ({ id: p.id, email: p.email }));
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("enviar-convite", {
+        body: {
+          leads, event,
+          bannerUrl: template.bannerUrl, inscricaoUrl: template.inscricaoUrl,
+          assunto: template.assunto, mensagem: template.mensagem,
+          corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
+          ctaTexto: template.ctaTexto,
+        },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const enviados = data?.sent || [];
+      const falhas = data?.failed || [];
+      registrarLog("participantes.solicitar_atualizacao", "participante", null, null, { enviados: enviados.length, falhas: falhas.length });
+      if (falhas.length) {
+        showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
+        console.warn("Falhas ao enviar solicitação de atualização:", falhas);
+      } else {
+        showToast(`E-mail enviado para ${enviados.length} participante${enviados.length !== 1 ? "s" : ""}!`, "success");
+      }
+      setModalAtualizacao(false);
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviandoAtualizacao(false);
+    }
+  }
 
   function exportarCSV() {
     const header = "Nome,Instituição,Cargo\n";
@@ -167,7 +211,7 @@ export function AbaInscritos() {
             {totPendentes > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {totPendentes} pendente{totPendentes !== 1 ? "s" : ""} de aprovação</span>}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button className="btn btn-outline" onClick={exportarCSV}>
           <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
         </button>
@@ -299,6 +343,16 @@ export function AbaInscritos() {
         </div>
       </div>
 
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "1.25rem", flexWrap: "wrap" }}>
+        <button className="btn btn-outline" style={{ borderColor: "var(--warn)", color: "var(--warn)" }} disabled={incompletos.length === 0}
+          onClick={() => setModalAtualizacao(true)}>
+          📧 Pedir atualização ({incompletos.length})
+        </button>
+        <p style={{ fontSize: "0.8rem", color: "var(--text3)", margin: 0, flex: 1, minWidth: 220 }}>
+          Envia um e-mail pedindo pra completar o cadastro pra quem está sem CPF, sem instituição, ou preencheu só um nome (sem sobrenome).
+        </p>
+      </div>
+
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
         title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"} wide>
         {modalPart !== "new" && formPart.id && (
@@ -393,6 +447,21 @@ export function AbaInscritos() {
           </button>
           <button className="btn btn-outline" onClick={() => setModalPart(null)} disabled={salvando}>Cancelar</button>
         </div>
+      </Modal>
+
+      <Modal show={modalAtualizacao} onClose={() => setModalAtualizacao(false)} title="Pedir atualização de cadastro">
+        <p style={{ fontSize: "0.9rem", color: "var(--text2)", lineHeight: 1.6, marginBottom: "1rem" }}>
+          Envia o modelo <strong>"Atualização de Cadastro"</strong> (editável em Participantes → Modelos) para os{" "}
+          <strong>{incompletos.length}</strong> inscrito{incompletos.length !== 1 ? "s" : ""} sem CPF, sem instituição, ou que preencheram só um nome.
+        </p>
+        <div style={{ maxHeight: 220, overflowY: "auto", background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.85rem", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
+          {incompletos.map(p => (
+            <div key={p.id} style={{ padding: "0.3rem 0", borderBottom: "1px solid var(--border)" }}>{p.nome} <span style={{ color: "var(--text3)" }}>· {p.email}</span></div>
+          ))}
+        </div>
+        <button className="btn btn-primary btn-block" onClick={solicitarAtualizacaoCadastro} disabled={enviandoAtualizacao || incompletos.length === 0}>
+          {enviandoAtualizacao ? "Enviando…" : `Enviar para ${incompletos.length} pessoa${incompletos.length !== 1 ? "s" : ""}`}
+        </button>
       </Modal>
     </div>
   );

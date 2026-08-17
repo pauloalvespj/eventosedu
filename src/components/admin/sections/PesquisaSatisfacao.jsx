@@ -430,7 +430,7 @@ export function PesquisaSatisfacao() {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: "1.5rem" }}>
+      <div className="admin-subtabs">
         {TABS.map(([key, label, icon]) => (
           <button key={key} onClick={() => setAba(key)}
             style={{

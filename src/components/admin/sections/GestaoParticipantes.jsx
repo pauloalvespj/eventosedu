@@ -8,8 +8,8 @@ import { AbaConfigEmail } from "./participantes/AbaConfigEmail";
 const ABAS = [
   { key: "inscritos",     label: "Inscritos"           },
   { key: "palestrantes",  label: "Palestrantes"         },
-  { key: "pre-convidados", label: "Pré-Convidados (Leads)" },
-  { key: "config-email", label: "Modelos de E-mail" },
+  { key: "pre-convidados", label: "Leads" },
+  { key: "config-email", label: "Modelos" },
 ];
 
 export function GestaoParticipantes() {
@@ -37,7 +37,7 @@ export function GestaoParticipantes() {
       </div>
 
       {/* Abas */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: "1.5rem" }}>
+      <div className="admin-subtabs">
         {ABAS.map(a => (
           <button
             key={a.key}

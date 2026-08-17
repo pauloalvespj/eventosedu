@@ -32,7 +32,7 @@ function formatDataBR(d: string | undefined): string {
   return `${dia}/${m}/${y}`;
 }
 
-function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao }: any) {
+function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto }: any) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
   const corCta = corBotao || "#0a1f40";
@@ -62,7 +62,7 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, 
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
           <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
-              Quero me inscrever →
+              ${ctaTexto || "Quero me inscrever →"}
             </a>
           </td></tr>
         </table>
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       .from("profiles").select("role").eq("id", caller.id).single();
     if (callerProfile?.role !== "admin") return json({ error: "Permissão insuficiente" }, 403);
 
-    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao } = await req.json();
+    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto } = await req.json();
     if (!Array.isArray(leads) || !leads.length) {
       return json({ error: "leads é obrigatório e não pode ser vazio" }, 400);
     }
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
     const sent: (string | number)[] = [];
     const failed: { id: string | number; email: string; error: string }[] = [];
 
-    const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao });
+    const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
 
     // Base64 evita o bug de quoted-printable do denomailer que deixava "=20" visível no corpo do e-mail
     function toBase64Utf8(str: string): string {

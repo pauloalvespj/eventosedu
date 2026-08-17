@@ -118,7 +118,7 @@ export function Avaliacoes() {
         <div><h1>Avaliações</h1><p>Feedback dos participantes — por palestra e sobre o evento</p></div>
       </div>
 
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: "1.5rem" }}>
+      <div className="admin-subtabs">
         {TABS.map(([key, label, icon]) => (
           <button key={key} onClick={() => setAba(key)}
             style={{

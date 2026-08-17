@@ -193,6 +193,7 @@ export function AbaPreConvidados() {
       assunto: convite.assunto, mensagem: convite.mensagem,
       anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
       corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
+      ctaTexto: convite.ctaTexto,
     });
   }
 
@@ -218,6 +219,7 @@ export function AbaPreConvidados() {
           assunto: convite.assunto, mensagem: convite.mensagem,
           anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
           corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
+          ctaTexto: convite.ctaTexto,
         },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
@@ -273,12 +275,10 @@ export function AbaPreConvidados() {
           <button className="btn btn-outline" onClick={() => { setFormAdd({ nome: "", email: "", instituicao: "" }); setModalAdd(true); }}>
             <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Adicionar Lead
           </button>
-          {selecionados.size > 0 && (
-            <button className="btn btn-primary" onClick={() => setModalEmail(true)}>
-              <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 6 }} />
-              Enviar Convites ({selecionados.size})
-            </button>
-          )}
+          <button className="btn btn-primary" onClick={() => setModalEmail(true)} disabled={selecionados.size === 0}>
+            <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 6 }} />
+            Enviar Convites ({selecionados.size})
+          </button>
         </div>
       </div>
 
