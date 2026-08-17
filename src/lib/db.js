@@ -349,6 +349,66 @@ export async function salvarAvaliacao({ user_id, atividade_id, nota, comentario 
   return { data, error };
 }
 
+// ── PESQUISA DE SATISFAÇÃO ───────────────────────────────────
+
+export async function fetchPerguntasPesquisa() {
+  const { data, error } = await supabase
+    .from("pesquisa_perguntas")
+    .select("*")
+    .order("ordem");
+  return { data: data ?? [], error };
+}
+
+export async function inserirPerguntaPesquisa(pergunta) {
+  const { data, error } = await supabase
+    .from("pesquisa_perguntas")
+    .insert(pergunta)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function atualizarPerguntaPesquisa(id, updates) {
+  const { error } = await supabase
+    .from("pesquisa_perguntas")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarPerguntaPesquisa(id) {
+  const { error } = await supabase
+    .from("pesquisa_perguntas")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+export async function fetchMinhasRespostasPesquisa(participanteId) {
+  const { data, error } = await supabase
+    .from("pesquisa_respostas")
+    .select("*")
+    .eq("participante_id", participanteId);
+  return { data: data ?? [], error };
+}
+
+// Admin: todas as respostas, para a tela de resultados
+export async function fetchRespostasPesquisa() {
+  const { data, error } = await supabase
+    .from("pesquisa_respostas")
+    .select("*");
+  return { data: data ?? [], error };
+}
+
+export async function salvarRespostaPesquisa({ pergunta_id, participante_id, resposta_opcao, resposta_texto }) {
+  const { data, error } = await supabase
+    .from("pesquisa_respostas")
+    .upsert({ pergunta_id, participante_id, resposta_opcao, resposta_texto }, { onConflict: "pergunta_id,participante_id" })
+    .select()
+    .single();
+  return { data, error };
+}
+
 // ── PONTUAÇÕES ────────────────────────────────────────────────
 // Pontos são concedidos por triggers no banco (presença, tópico,
 // resposta, curtida, avaliação, seguir) — o cliente não insere mais.

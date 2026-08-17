@@ -58,6 +58,19 @@ export function timeAgo(dt) {
   if (d > 0) return `há ${d}d`; if (h > 0) return `há ${h}h`; if (m > 0) return `há ${m}min`; return "agora";
 }
 
+// ── Exportação CSV ──────────────────────────────────────────────
+// BOM UTF-8 no início: sem ele o Excel (pt-BR) abre o CSV como
+// Windows-1252 e quebra acentuação (ç, ã, õ...).
+export function baixarCSV(nomeArquivo, conteudo) {
+  const bom = String.fromCharCode(0xFEFF);
+  const blob = new Blob([bom + conteudo], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nomeArquivo;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ── Presença e certificado ────────────────────────────────────
 // No modo "turno" (event.modo_frequencia === "turno"), a frequência é
 // calculada a partir de turnos/presencasTurno (entidade independente das

@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartBar, faBuilding, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { calcPresenca, formatData, TIPO_LABEL } from "../../../utils/helpers";
+import { calcPresenca, formatData, TIPO_LABEL, baixarCSV } from "../../../utils/helpers";
 import { TipoBadge } from "../../base/index";
 
 export function Relatorios() {
@@ -13,8 +13,7 @@ export function Relatorios() {
       const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
       return `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}",${r.chCumprida}h,${r.pct}%,${r.apto ? "APTO" : "NÃO APTO"}`;
     }).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "lista_certificados.csv"; a.click();
+    baixarCSV("lista_certificados.csv", header + rows);
     showToast("Lista exportada!", "success");
   }
 
@@ -56,8 +55,7 @@ export function Relatorios() {
               const pct = participantes.length > 0 ? Math.round((cnt / participantes.length) * 100) : 0;
               return `"${a.titulo}","${TIPO_LABEL[a.tipo]||a.tipo}","${formatData(a.dia)}","${a.horario}",${a.carga_horaria}h,${cnt},${pct}%`;
             }).join("\n");
-            const blob = new Blob([header+rows],{type:"text/csv"});
-            const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="presenca_por_atividade.csv";el.click();
+            baixarCSV("presenca_por_atividade.csv", header + rows);
             showToast("CSV exportado!","success");
           }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />CSV</button>
         </div>
@@ -94,8 +92,7 @@ export function Relatorios() {
         <button className="btn btn-outline" onClick={() => {
           const header = "Nome,CPF,Instituição,Cargo,Sexo,E-mail,Credenciado\n";
           const rows = participantes.map(p => `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}","${p.sexo}","${p.email}","${p.credenciado?"Sim":"Não"}"`).join("\n");
-          const blob = new Blob([header+rows],{type:"text/csv"});
-          const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="lista_inscritos.csv";el.click();
+          baixarCSV("lista_inscritos.csv", header + rows);
           showToast("Lista exportada!","success");
         }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Lista de Inscritos (CSV)</button>
         <button className="btn btn-outline" onClick={() => {
@@ -106,8 +103,7 @@ export function Relatorios() {
             if (!part || !at) return "";
             return `"${part.nome}","${part.cpf}","${part.instituicao}","${at.titulo}","${p.data_hora}"`;
           }).filter(Boolean).join("\n");
-          const blob = new Blob([header+rows],{type:"text/csv"});
-          const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="registro_presencas.csv";el.click();
+          baixarCSV("registro_presencas.csv", header + rows);
           showToast("Exportado!","success");
         }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Registro de Presenças (CSV)</button>
       </div>

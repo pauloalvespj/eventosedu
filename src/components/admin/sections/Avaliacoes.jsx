@@ -1,16 +1,17 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faStar, faChartBar, faComments } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faStar, faChartBar, faComments, faMicrophone, faClipboardQuestion } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { formatData } from "../../../utils/helpers";
+import { formatData, baixarCSV } from "../../../utils/helpers";
 import { TipoBadge, StarRating } from "../../base/index";
+import { PesquisaSatisfacao } from "./PesquisaSatisfacao";
 
-export function Avaliacoes() {
+function AvaliacoesPalestras() {
   const { atividades, palestrantes, participantes, avaliacoes, showToast } = useAdmin();
 
   return (
     <div>
-      <div className="admin-topbar">
-        <div><h1>Avaliações das Palestras</h1><p>Feedback dos participantes por atividade</p></div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
         <button className="btn btn-sm btn-outline" onClick={() => {
           const header = "Atividade,Dia,Palestrante,Avaliações,Média,Comentários\n";
           const rows = atividades.filter(a => a.tipo !== "intervalo" && a.tipo !== "encerramento").map(a => {
@@ -20,8 +21,7 @@ export function Avaliacoes() {
             const comentarios = avs.filter(av=>av.comentario).map(av=>`"${av.comentario}"`).join(" | ");
             return `"${a.titulo}","${formatData(a.dia)}","${pal?.nome||"–"}",${avs.length},${media},"${comentarios}"`;
           }).join("\n");
-          const blob=new Blob([header+rows],{type:"text/csv"});
-          const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="avaliacoes_palestras.csv";el.click();
+          baixarCSV("avaliacoes_palestras.csv", header + rows);
           showToast("Exportado!","success");
         }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV</button>
       </div>
@@ -101,6 +101,39 @@ export function Avaliacoes() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function Avaliacoes() {
+  const [aba, setAba] = useState("palestras");
+  const TABS = [
+    ["palestras", "Palestras", faMicrophone],
+    ["pesquisa",  "Pesquisa de Satisfação", faClipboardQuestion],
+  ];
+
+  return (
+    <div>
+      <div className="admin-topbar">
+        <div><h1>Avaliações</h1><p>Feedback dos participantes — por palestra e sobre o evento</p></div>
+      </div>
+
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: "1.5rem" }}>
+        {TABS.map(([key, label, icon]) => (
+          <button key={key} onClick={() => setAba(key)}
+            style={{
+              padding: "0.6rem 1.25rem", fontSize: "0.88rem", fontWeight: aba === key ? 700 : 500,
+              color: aba === key ? "var(--navy)" : "var(--text2)", background: "none", border: "none",
+              borderBottom: aba === key ? "2.5px solid var(--navy)" : "2.5px solid transparent",
+              marginBottom: -2, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem",
+            }}>
+            <FontAwesomeIcon icon={icon} style={{ fontSize: "0.8rem" }} />{label}
+          </button>
+        ))}
+      </div>
+
+      {aba === "palestras" && <AvaliacoesPalestras />}
+      {aba === "pesquisa"  && <PesquisaSatisfacao />}
     </div>
   );
 }

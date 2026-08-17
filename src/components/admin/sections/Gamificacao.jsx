@@ -4,7 +4,7 @@ import { faDownload, faTrophy, faGear, faFloppyDisk, faEye, faEyeSlash } from "@
 import { useAdmin } from "./AdminContext";
 import { atualizarEvento } from "../../../lib/db";
 import { NIVEL_LABELS } from "../../../config/gamificacao";
-import { getRanking, getNivel, ROLE_LABEL } from "../../../utils/helpers";
+import { getRanking, getNivel, ROLE_LABEL, baixarCSV } from "../../../utils/helpers";
 import { RoleBadge } from "../../base/index";
 import { salvarGamificacaoConfig } from "../../../lib/db";
 
@@ -54,8 +54,7 @@ export function Gamificacao() {
       const nivel = getNivel(u.pts);
       return `${i + 1},"${u.nome}","${u.inst || "–"}","${ROLE_LABEL[u.role] || u.role}",${u.pts},"${nivel.label}"`;
     }).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ranking_gamificacao.csv"; a.click();
+    baixarCSV("ranking_gamificacao.csv", header + rows);
     showToast("Ranking exportado!", "success");
   }
 

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { calcPresenca, formatData } from "../../../utils/helpers";
+import { calcPresenca, formatData, baixarCSV } from "../../../utils/helpers";
 import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
 
 function MiniBarra({ pct, minimo }) {
@@ -102,8 +102,7 @@ export function Certificados() {
       const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
       return `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}",${r.chCumprida}h,${r.pct}%,${r.apto ? "APTO" : "NÃO APTO"}`;
     }).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "lista_certificados.csv"; a.click();
+    baixarCSV("lista_certificados.csv", header + rows);
     showToast("Lista exportada!", "success");
   }
 

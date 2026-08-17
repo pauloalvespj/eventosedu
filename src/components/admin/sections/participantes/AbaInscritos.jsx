@@ -5,6 +5,7 @@ import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
 import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, registrarLog } from "../../../../lib/db";
+import { baixarCSV } from "../../../../utils/helpers";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
@@ -151,8 +152,7 @@ export function AbaInscritos() {
   function exportarCSV() {
     const header = "Nome,Instituição,Cargo\n";
     const rows = participantes.map(p => `"${p.nome || ""}","${p.instituicao || ""}","${p.cargo || ""}"`).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "participantes.csv"; a.click();
+    baixarCSV("participantes.csv", header + rows);
     showToast("Lista exportada!", "success");
   }
 

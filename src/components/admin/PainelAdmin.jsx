@@ -36,11 +36,11 @@ const MENU = [
   { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["admin"] },
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
-  { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
   { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
   { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
   { path: "usuarios",       icon: faLock,         label: "Usuários",        roles: ["admin"] },
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
+  { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
   { path: "logs",           icon: faClipboardList,label: "Logs",            roles: ["admin"] },
   { path: "meus-dados",     icon: faCircleUser,   label: "Meus Dados",      roles: ["admin","credenciador"] },
 ];

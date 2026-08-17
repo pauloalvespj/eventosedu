@@ -10,7 +10,7 @@ import {
   fetchEvent, fetchAtividades, fetchProfiles, fetchPresencas,
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
   fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
-  fetchTurnos, fetchPresencasTurno,
+  fetchTurnos, fetchPresencasTurno, fetchPerguntasPesquisa,
   seguirUsuario, desseguirUsuario,
   inserirEnrollment,
 } from "./lib/db";
@@ -177,6 +177,7 @@ export default function App() {
   const [presencas, setPresencas] = useState([]);
   const [turnos, setTurnos] = useState([]);
   const [presencasTurno, setPresencasTurno] = useState([]);
+  const [perguntasPesquisa, setPerguntasPesquisa] = useState([]);
   const [avaliacoes, setAvaliacoes] = useState([]);
   const [forumConfig, setForumConfig] = useState(INITIAL_FORUM_CONFIG);
   const [topicos, setTopicos] = useState([]);
@@ -266,7 +267,8 @@ export default function App() {
       fetchConvidados(),
       fetchTurnos(),
       fetchPresencasTurno(),
-    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes, turRes, presTurRes]) => {
+      fetchPerguntasPesquisa(),
+    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes, turRes, presTurRes, pergRes]) => {
       if (get(presRes)) setPresencas(get(presRes));
       if (get(avalRes)) setAvaliacoes(get(avalRes));
       if (get(fcRes))   setForumConfig(get(fcRes));
@@ -278,6 +280,7 @@ export default function App() {
       if (get(convRes)) setConvidados(get(convRes));
       if (get(turRes))  setTurnos(get(turRes));
       if (get(presTurRes)) setPresencasTurno(get(presTurRes));
+      if (get(pergRes)) setPerguntasPesquisa(get(pergRes));
     });
   }
 
@@ -510,6 +513,7 @@ export default function App() {
                   event={event} atividades={atividades} setAtividades={setAtividades}
                   palestrantes={palestrantes} presencas={presencas}
                   turnos={turnos} presencasTurno={presencasTurno}
+                  perguntasPesquisa={perguntasPesquisa}
                   topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
                   forumConfig={forumConfig} participantes={participantes} admins={admins}
                   instituicoes={instituicoes} setInstituicoes={setInstituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}

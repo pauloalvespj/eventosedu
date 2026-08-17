@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faMicrophone, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, formatData, diaSemana, imprimirCertificado, qrPresencaValue, formatCPF } from "../../utils/helpers";
@@ -8,7 +9,8 @@ import { InstSelect } from "../admin/sections/InstSelect";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
-import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao, fetchQrToken } from "../../lib/db";
+import { PesquisaSatisfacaoForm } from "./PesquisaSatisfacaoForm";
+import { uploadMaterial, deletarMaterial, atualizarAtividade, atualizarProfile, cancelarInscricao, fetchQrToken, fetchMinhasRespostasPesquisa } from "../../lib/db";
 
 function EditForm({ formEdit, setFormEdit, instituicoes, setInstituicoes, onSave, onCancel }) {
   return (
@@ -36,10 +38,11 @@ function EditForm({ formEdit, setFormEdit, instituicoes, setInstituicoes, onSave
   );
 }
 
-export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, turnos = [], presencasTurno = [], topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, setInstituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
+export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, turnos = [], presencasTurno = [], perguntasPesquisa = [], topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, setInstituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
-  const [aba, setAba] = useState("dashboard");
+  const [searchParams] = useSearchParams();
+  const [aba, setAba] = useState(() => searchParams.get("aba") || "dashboard");
   const [editando, setEditando] = useState(false);
   const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
@@ -65,12 +68,20 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     });
   }, [user.id, user.is_palestrante, atividades]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Já respondeu a pesquisa de satisfação? (pra parar de destacar no dashboard depois que responder)
+  const [respondeuPesquisa, setRespondeuPesquisa] = useState(null); // null = ainda não checou
+  useEffect(() => {
+    if (!event.pesquisa_ativa) return;
+    fetchMinhasRespostasPesquisa(user.id).then(({ data }) => setRespondeuPesquisa((data || []).length > 0));
+  }, [event.pesquisa_ativa, user.id]);
+
   // Redireciona para dashboard se a aba atual for desativada pelo admin
   useEffect(() => {
     if (aba === "forum"   && event.forum_ativo === false)      setAba("dashboard");
     if (aba === "ranking" && event.gamificacao_ativa === false) setAba("dashboard");
     if (aba === "rede"    && event.rede_visivel === false)      setAba("dashboard");
-  }, [event.forum_ativo, event.gamificacao_ativa, event.rede_visivel]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (aba === "pesquisa" && (!event.pesquisa_ativa || !podeResponderPesquisa)) setAba("dashboard");
+  }, [event.forum_ativo, event.gamificacao_ativa, event.rede_visivel, event.pesquisa_ativa]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancelarInscricao() {
     if (!motivoCancelamento.trim()) { setErroMotivoCancelamento(true); return; }
@@ -138,6 +149,8 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
   const minasPresencas = presencas.filter(p => p.participante_id === user.id);
   const minhasPresencasTurno = presencasTurno.filter(p => p.participante_id === user.id);
   const presencaCalc = calcPresenca(user.id, atividades, presencas, event, turnos, presencasTurno);
+  // Só quem teve presença mínima de 50% pode responder a pesquisa de satisfação
+  const podeResponderPesquisa = presencaCalc.pct >= 50;
 
   // Dados palestrante
   const minhasPalestras = isPalestrante ? atividades.filter(a => (a.palestrantes_ids || []).includes(user.id)) : [];
@@ -194,6 +207,7 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
     ...(event.forum_ativo !== false ? [["forum", "💬 Fórum"]] : []),
     ...(event.gamificacao_ativa !== false ? [["ranking", "🏅 Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", "🤝 Rede"]] : []),
+    ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", "📝 Pesquisa de Satisfação"]] : []),
     ["meus_dados",   "👤 Meus Dados"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
@@ -381,50 +395,71 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               return (
                 <>
                   {/* 1. Card Evento */}
-                  <div className="dash-event-card" style={{ background:"var(--hero)", borderRadius:"var(--radius-lg)", padding:"1.5rem 2rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center", gap:"1rem", flexWrap:"wrap" }}>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.75rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1, marginBottom:"0.3rem" }}>{event.nome}</div>
-                      {event.nome_completo && event.nome_completo !== event.nome && (
-                        <div style={{ fontSize:"0.88rem", color:"rgba(255,255,255,0.7)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
-                      )}
-                      {event.subtitulo && (
-                        <div style={{ fontSize:"0.82rem", color:"var(--white-low)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.subtitulo}</div>
-                      )}
-                      <div style={{ display:"flex", gap:"1.5rem", flexWrap:"wrap", marginTop:"0.5rem" }}>
-                        <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📅 {formatData(event.data_inicio)}{event.data_fim !== event.data_inicio ? ` – ${formatData(event.data_fim)}` : ""}</span>
-                        <span style={{ fontSize:"0.82rem", color:"rgba(255,255,255,0.5)" }}>📍 {event.local}</span>
-                      </div>
+                  <div className="dash-event-card" style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"1.25rem 1.5rem", marginBottom:"1rem", textAlign:"center" }}>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", fontWeight:800, color:"var(--navy)", lineHeight:1.15, marginBottom:"0.25rem" }}>{event.nome}</div>
+                    {event.nome_completo && event.nome_completo !== event.nome && (
+                      <div style={{ fontSize:"0.85rem", color:"var(--text2)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
+                    )}
+                    {event.subtitulo && (
+                      <div style={{ fontSize:"0.8rem", color:"var(--text3)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.subtitulo}</div>
+                    )}
+                    <div style={{ display:"flex", gap:"1.25rem", flexWrap:"wrap", justifyContent:"center", marginBottom:"0.85rem" }}>
+                      <span style={{ fontSize:"0.8rem", color:"var(--text3)" }}>📅 <strong style={{ color:"var(--text2)" }}>{formatData(event.data_inicio)}{event.data_fim !== event.data_inicio ? ` – ${formatData(event.data_fim)}` : ""}</strong></span>
+                      <span style={{ fontSize:"0.8rem", color:"var(--text3)" }}>📍 {event.local}</span>
                     </div>
-                    <div className="dash-countdown" style={{ textAlign:"center", flexShrink:0, background:"var(--gold-tint)", border:"1.5px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"1rem 1.5rem", minWidth:90 }}>
+                    <div className="dash-countdown" style={{ display:"inline-flex", alignItems:"center", gap:"0.5rem", background:"var(--gold-tint)", border:"1.5px solid var(--gold-border)", borderRadius:"var(--radius)", padding:"0.5rem 1.1rem" }}>
                       {encerrado ? (
                         <>
-                          <div style={{ fontSize:"1.5rem", marginBottom:"0.2rem" }}>✓</div>
-                          <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Encerrado</div>
+                          <span style={{ fontSize:"1.1rem" }}>✓</span>
+                          <span style={{ fontSize:"0.72rem", color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600 }}>Evento encerrado</span>
                         </>
                       ) : emAndamento ? (
                         <>
-                          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.75rem", color:"var(--gold-on-dark)", marginBottom:"0.2rem" }}>🎉</div>
-                          <div style={{ fontSize:"0.68rem", color:"var(--white-low)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Em andamento</div>
+                          <span style={{ fontSize:"1.2rem" }}>🎉</span>
+                          <span style={{ fontSize:"0.72rem", color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600 }}>Evento em andamento</span>
                         </>
                       ) : (
                         <>
-                          <div style={{ fontSize:"0.65rem", color:"var(--white-faint)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.1rem" }}>Faltam</div>
-                          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"3rem", fontWeight:800, color:"var(--gold-on-dark)", lineHeight:1 }}>{diasFaltam}</div>
-                          <div style={{ fontSize:"0.72rem", color:"var(--white-low)", marginTop:"0.2rem" }}>dia{diasFaltam!==1?"s":""}</div>
+                          <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.5rem", fontWeight:800, color:"var(--gold)" }}>{diasFaltam}</span>
+                          <span style={{ fontSize:"0.72rem", color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.05em" }}>dia{diasFaltam!==1?"s":""} para o evento</span>
                         </>
                       )}
                     </div>
                   </div>
 
+                  {/* Destaque: pesquisa de satisfação liberada e ainda não respondida */}
+                  {event.pesquisa_ativa && podeResponderPesquisa && respondeuPesquisa === false && (
+                    <div style={{ background:"var(--success-bg)", border:"1.5px solid rgba(26,122,74,0.25)", borderRadius:"var(--radius-lg)", padding:"1.1rem 1.5rem", marginBottom:"1rem", textAlign:"center" }}>
+                      <div style={{ fontSize:"1.6rem", marginBottom:"0.35rem" }}>📝</div>
+                      <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>Sua opinião é importante!</div>
+                      <div style={{ fontSize:"0.82rem", color:"var(--text2)", marginBottom:"0.85rem" }}>Responda a pesquisa de satisfação do evento — leva só um minuto.</div>
+                      <button className="btn btn-sm btn-primary" onClick={() => setAba("pesquisa")}>Responder agora</button>
+                    </div>
+                  )}
+
                   {/* 2. Card Participante */}
                   <div className="dash-participant-card">
-                    {/* Coluna esquerda */}
-                    <div style={{ padding:"1.5rem", background:"var(--surface)" }}>
+                    {/* Coluna esquerda — credencial */}
+                    <div style={{ background:"#e8f0fb", padding:"1.5rem", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                      <div>
+                        <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text3)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
+                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", color:"var(--navy)", marginBottom:"0.2rem", lineHeight:1.25, wordBreak:"break-word" }}>{user.nome}</div>
+                        <div style={{ fontSize:"0.78rem", color:"var(--text2)", marginBottom:"0.75rem", lineHeight:1.3, wordBreak:"break-word" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                        <span className={`badge badge-${user.credenciado?"success":"warn"}`} style={{ fontSize:"0.7rem" }}>{user.credenciado?"✓ Credenciado":"Aguardando credenciamento"}</span>
+                      </div>
+                      <div className="dash-qr-wrap" style={{ display:"flex", justifyContent:"flex-end", marginTop:"1rem" }}>
+                        <div style={{ cursor:"pointer", padding:4, background:"var(--surface)", borderRadius:10, border:"1px solid var(--border)" }} onClick={()=>setAba("credencial_qr")} title="Ver credencial completa">
+                          <QRCodeCanvas value={`ENAUDIN:PARTICIPANTE:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={120}/>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Coluna direita — meus dados */}
+                    <div style={{ padding:"1.5rem", background:"var(--surface)", borderLeft:"1px solid var(--border)" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", marginBottom:"1rem" }}>
                         <AvatarUpload userId={user.id} fotoUrl={user.foto_url} iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")} size={48} onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))} />
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontWeight:700, fontSize:"1rem", color:"var(--navy)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
-                          <div style={{ fontSize:"0.8rem", color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
+                          <div style={{ fontWeight:700, fontSize:"1rem", color:"var(--navy)", lineHeight:1.25, wordBreak:"break-word" }}>{user.nome}</div>
+                          <div style={{ fontSize:"0.8rem", color:"var(--text2)", lineHeight:1.3, wordBreak:"break-word" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
                         </div>
                         {!editando && (
                           <button className="btn btn-sm btn-outline" style={{ flexShrink:0, padding:"0.3rem 0.55rem" }} onClick={()=>{
@@ -446,27 +481,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
                         </div>
                       )}
                     </div>
-                    {/* Coluna direita — credencial */}
-                    <div style={{ background:"var(--surface2)", padding:"1.5rem", display:"flex", flexDirection:"column", justifyContent:"space-between", borderLeft:"1px solid var(--border)" }}>
-                      <div>
-                        <div style={{ fontSize:"0.63rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--text3)", marginBottom:"0.5rem" }}>{event.nome} · Participante</div>
-                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", color:"var(--navy)", marginBottom:"0.2rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome}</div>
-                        <div style={{ fontSize:"0.78rem", color:"var(--text2)", marginBottom:"0.75rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.cargo||user.titulo} · {user.instituicao}</div>
-                        <span className={`badge badge-${user.credenciado?"success":"warn"}`} style={{ fontSize:"0.7rem" }}>{user.credenciado?"✓ Credenciado":"Aguardando credenciamento"}</span>
-                      </div>
-                      <div className="dash-qr-wrap" style={{ display:"flex", justifyContent:"flex-end", marginTop:"1rem" }}>
-                        <div style={{ cursor:"pointer", padding:4, background:"var(--surface)", borderRadius:10, border:"1px solid var(--border)" }} onClick={()=>setAba("credencial_qr")} title="Ver credencial completa">
-                          <QRCodeCanvas value={`ENAUDIN:PARTICIPANTE:${(user.cpf||user.email||user.id).toString().replace(/\D/g,"")}`} size={120}/>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* 3. Cards de Estatísticas */}
                   <div className="dash-stats-3">
                     {[
                       { n: porTurno ? minhasPresencasTurno.length : minasPresencas.length, l:"Presenças registradas", ic:"✅", warn:false },
-                      { n:`${presencaCalc.chCumprida}h`, l:"Carga horária",         ic:"⏱", warn:false },
                       { n:`${presencaCalc.pct}%`,       l:"% de presença",         ic:"📊", warn:true  },
                     ].map((c,i) => (
                       <div key={i} className="dash-card" style={{ textAlign:"center", padding:"1.25rem 1rem" }}>
@@ -1014,6 +1034,10 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
             onSeguir={onSeguir}
             onDesseguir={onDesseguir}
           />
+        )}
+
+        {aba === "pesquisa" && event.pesquisa_ativa && podeResponderPesquisa && (
+          <PesquisaSatisfacaoForm event={event} user={user} perguntasPesquisa={perguntasPesquisa} onRespondido={() => setRespondeuPesquisa(true)} />
         )}
 
         {aba === "meus_dados" && (
