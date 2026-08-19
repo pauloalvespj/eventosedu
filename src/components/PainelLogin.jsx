@@ -5,7 +5,7 @@ import { FormInscricao } from "./auth/FormInscricao";
 import { Modal } from "./base/index";
 import { useState } from "react";
 
-export function PainelLogin({ onLogin, instituicoes = [], showToast }) {
+export function PainelLogin({ onLogin, instituicoes = [], showToast, event }) {
   const [showInscricao, setShowInscricao] = useState(false);
 
   return (
@@ -13,11 +13,13 @@ export function PainelLogin({ onLogin, instituicoes = [], showToast }) {
       <div style={{ width: "100%", maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "2px solid var(--gold)", marginBottom: "1rem" }}>
-            <FontAwesomeIcon icon={faCalendarDays} style={{ color: "var(--gold)", fontSize: "1.4rem" }} />
-          </div>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.6rem", color: "#fff", marginBottom: "0.25rem" }}>Enaudin</div>
-          <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.45)" }}>Acesse sua área do evento</div>
+          {event?.logo_url ? (
+            <img src={event.logo_url} alt={event.nome} style={{ maxHeight: 72, maxWidth: 220, objectFit: "contain", marginBottom: "1rem" }} />
+          ) : (
+            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "2px solid var(--gold)", marginBottom: "1rem" }}>
+              <FontAwesomeIcon icon={faCalendarDays} style={{ color: "var(--gold)", fontSize: "1.4rem" }} />
+            </div>
+          )}
         </div>
 
         {/* Card de login */}

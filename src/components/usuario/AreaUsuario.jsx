@@ -41,9 +41,10 @@ function EditForm({ formEdit, setFormEdit, instituicoes, setInstituicoes, onSave
 export function AreaUsuario({ user, setUser, event, atividades, setAtividades, palestrantes, presencas, turnos = [], presencasTurno = [], perguntasPesquisa = [], topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig, participantes, admins, instituicoes, setInstituicoes, avaliacoes, setAvaliacoes, follows, pontosConfig, onSeguir, onDesseguir, onLogout, onSwitchRole }) {
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
+  const perfilIncompleto = !user.cpf || !user.instituicao || !user.cargo;
   const [searchParams] = useSearchParams();
-  const [aba, setAba] = useState(() => searchParams.get("aba") || "dashboard");
-  const [editando, setEditando] = useState(false);
+  const [aba, setAba] = useState(() => searchParams.get("aba") || (perfilIncompleto ? "meus_dados" : "dashboard"));
+  const [editando, setEditando] = useState(() => perfilIncompleto && !searchParams.get("aba"));
   const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
   const [uploadingId, setUploadingId] = useState(null); // id da atividade em upload
   const [palBio, setPalBio] = useState(null);
@@ -1046,6 +1047,12 @@ export function AreaUsuario({ user, setUser, event, atividades, setAtividades, p
               <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"0.25rem" }}>Meus Dados</h2>
               <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Informações do seu perfil no evento</p>
             </div>
+
+            {perfilIncompleto && (
+              <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "0.9rem 1.1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "var(--warn)" }}>
+                ⚠️ Seu cadastro está incompleto — falta preencher {[!user.cpf && "CPF", !user.instituicao && "instituição", !user.cargo && "cargo"].filter(Boolean).join(", ")}. Isso é importante para o credenciamento e a emissão do certificado.
+              </div>
+            )}
 
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", position:"relative" }}>
               {/* Botão editar — canto superior direito */}

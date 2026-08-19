@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       .from("profiles").select("role").eq("id", caller.id).single();
     if (callerProfile?.role !== "admin") return json({ error: "Permissão insuficiente" }, 403);
 
-    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto } = await req.json();
+    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, magicLink, origin } = await req.json();
     if (!Array.isArray(leads) || !leads.length) {
       return json({ error: "leads é obrigatório e não pode ser vazio" }, 400);
     }
@@ -141,8 +141,6 @@ Deno.serve(async (req) => {
     const sent: (string | number)[] = [];
     const failed: { id: string | number; email: string; error: string }[] = [];
 
-    const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
-
     // Base64 evita o bug de quoted-printable do denomailer que deixava "=20" visível no corpo do e-mail
     function toBase64Utf8(str: string): string {
       const bytes = new TextEncoder().encode(str);
@@ -150,11 +148,14 @@ Deno.serve(async (req) => {
       for (const b of bytes) binary += String.fromCharCode(b);
       return btoa(binary);
     }
-    const mimeContent = [{
+
+    // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só
+    const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
+    const mimeContentPadrao = htmlPadrao ? [{
       mimeType: 'text/html; charset="utf-8"',
-      content: toBase64Utf8(html),
+      content: toBase64Utf8(htmlPadrao),
       transferEncoding: "base64",
-    }];
+    }] : null;
 
     // Reenvia até 2x em caso de falha transitória de rede/SMTP antes de marcar como falho
     async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
@@ -173,6 +174,31 @@ Deno.serve(async (req) => {
 
     for (const lead of leads) {
       try {
+        let mimeContent = mimeContentPadrao;
+
+        if (magicLink) {
+          // Link de login direto (sem precisar digitar e-mail/senha de novo) —
+          // só funciona pra quem já tem conta; se falhar, cai pro link estático.
+          let linkFinal = inscricaoUrl;
+          try {
+            const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+              type: "magiclink",
+              email: lead.email,
+              options: { redirectTo: `${origin || inscricaoUrl}/auth/callback` },
+            });
+            if (linkError) throw linkError;
+            if (linkData?.properties?.action_link) linkFinal = linkData.properties.action_link;
+          } catch {
+            // Segue com o link estático (inscricaoUrl) como fallback
+          }
+          const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
+          mimeContent = [{
+            mimeType: 'text/html; charset="utf-8"',
+            content: toBase64Utf8(html),
+            transferEncoding: "base64",
+          }];
+        }
+
         await enviarComRetry({
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: lead.email,

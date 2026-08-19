@@ -480,6 +480,46 @@ export default function App() {
     showToast,
   };
 
+  // Elemento da área logada — servido tanto em /painel quanto em /login
+  // (rota mais amigável usada no link de "complete seu cadastro" por e-mail).
+  const painelElement = !effectiveUser
+    ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} />
+    : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
+      ? <PainelAdmin {...adminProps} />
+      : <AreaUsuario
+          user={effectiveUser}
+          setUser={u => setUser(typeof u === "function" ? u(user) : u)}
+          onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
+          event={event} atividades={atividades} setAtividades={setAtividades}
+          palestrantes={palestrantes} presencas={presencas}
+          turnos={turnos} presencasTurno={presencasTurno}
+          perguntasPesquisa={perguntasPesquisa}
+          topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
+          forumConfig={forumConfig} participantes={participantes} admins={admins}
+          instituicoes={instituicoes} setInstituicoes={setInstituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
+          follows={follows} setFollows={setFollows} pontosConfig={pontosConfig}
+          onSeguir={async (followingId) => {
+            const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
+            setFollows(prev => [...prev, novo]);
+            seguirUsuario(user.id, followingId);
+            // Pontos reais vêm do trigger de follows; aqui só o otimista
+            const pts = pontosConfig.seguir ?? 5;
+            if (pts > 0) {
+              setPontuacoes(prev => [...prev, { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" }]);
+            }
+          }}
+          onDesseguir={(followingId) => {
+            setFollows(prev => prev.filter(f => !(f.follower_id === user.id && f.following_id === followingId)));
+            desseguirUsuario(user.id, followingId);
+            // Estorno local do ponto de seguir (o trigger estorna no banco)
+            setPontuacoes(prev => {
+              const idx = prev.findLastIndex(p => p.user_id === user.id && p.tipo === "seguir");
+              return idx === -1 ? prev : prev.filter((_, i) => i !== idx);
+            });
+          }}
+          onLogout={handleLogout}
+        />;
+
   return (
     <>
       <Toast toast={toast} />
@@ -501,45 +541,10 @@ export default function App() {
         <Route path="/admin/*" element={<Navigate to="/painel" replace />} />
 
         {/* Rota principal — /painel e /painel/* para todos os usuários autenticados */}
-        <Route path="/painel/*" element={
-          !effectiveUser
-            ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} />
-            : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
-              ? <PainelAdmin {...adminProps} />
-              : <AreaUsuario
-                  user={effectiveUser}
-                  setUser={u => setUser(typeof u === "function" ? u(user) : u)}
-                  onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
-                  event={event} atividades={atividades} setAtividades={setAtividades}
-                  palestrantes={palestrantes} presencas={presencas}
-                  turnos={turnos} presencasTurno={presencasTurno}
-                  perguntasPesquisa={perguntasPesquisa}
-                  topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
-                  forumConfig={forumConfig} participantes={participantes} admins={admins}
-                  instituicoes={instituicoes} setInstituicoes={setInstituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
-                  follows={follows} setFollows={setFollows} pontosConfig={pontosConfig}
-                  onSeguir={async (followingId) => {
-                    const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };
-                    setFollows(prev => [...prev, novo]);
-                    seguirUsuario(user.id, followingId);
-                    // Pontos reais vêm do trigger de follows; aqui só o otimista
-                    const pts = pontosConfig.seguir ?? 5;
-                    if (pts > 0) {
-                      setPontuacoes(prev => [...prev, { id: Date.now()+1, user_id: user.id, tipo: "seguir", valor: pts, desc: "Seguiu um participante" }]);
-                    }
-                  }}
-                  onDesseguir={(followingId) => {
-                    setFollows(prev => prev.filter(f => !(f.follower_id === user.id && f.following_id === followingId)));
-                    desseguirUsuario(user.id, followingId);
-                    // Estorno local do ponto de seguir (o trigger estorna no banco)
-                    setPontuacoes(prev => {
-                      const idx = prev.findLastIndex(p => p.user_id === user.id && p.tipo === "seguir");
-                      return idx === -1 ? prev : prev.filter((_, i) => i !== idx);
-                    });
-                  }}
-                  onLogout={handleLogout}
-                />
-        } />
+        <Route path="/painel/*" element={painelElement} />
+
+        {/* Alias amigável — usado no link de "complete seu cadastro" por e-mail */}
+        <Route path="/login/*" element={painelElement} />
 
         {/* Rota de presença via QR Code */}
         <Route path="/presenca/:atividadeId" element={

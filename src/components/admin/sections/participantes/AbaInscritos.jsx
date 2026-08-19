@@ -19,15 +19,22 @@ export function AbaInscritos() {
   const { event, participantes, setParticipantes, instituicoes, setInstituicoes, showToast } = useAdmin();
   const [modalAtualizacao, setModalAtualizacao]   = useState(false);
   const [enviandoAtualizacao, setEnviandoAtualizacao] = useState(false);
+  const [emailTeste, setEmailTeste]               = useState("pauloalvespj@ufc.br");
+  const [enviandoTeste, setEnviandoTeste]         = useState(false);
   const [busca, setBusca]               = useState("");
   const [filtroRole, setFiltroRole]     = useState("todos");
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
-  const [mostrarPendentes, setMostrarPendentes]   = useState(false);
+  const [mostrarPendentes, setMostrarPendentes]   = useState(false); // fila de aprovação (limite de inscrições)
+  const [mostrarIncompletos, setMostrarIncompletos] = useState(false); // cadastro sem CPF/órgão/cargo
   const [modalPart, setModalPart]       = useState(null);
   const [formPart, setFormPart]         = useState({});
   const [reativando, setReativando]     = useState(null);
   const [aprovando, setAprovando]       = useState(null);
   const [ordenacao, setOrdenacao]       = useState({ campo: null, dir: "asc" });
+
+  function estaIncompleto(p) {
+    return !p.cpf || !p.instituicao || !p.cargo || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2;
+  }
 
   const totPendentes = participantes.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
 
@@ -37,15 +44,17 @@ export function AbaInscritos() {
       || p.instituicao?.toLowerCase().includes(q) || p.cargo?.toLowerCase().includes(q)
       || p.email?.toLowerCase().includes(q);
     const cancelado = p.ativo === false;
-    const pendente = p.status_inscricao === "pendente" && !cancelado;
+    const pendenteAprovacao = p.status_inscricao === "pendente" && !cancelado;
+    const incompleto = !cancelado && estaIncompleto(p);
     const roleMatch = filtroRole === "todos"
       || (filtroRole === "participante" && p.role === "participante")
       || (filtroRole === "admin" && p.role === "admin")
       || (filtroRole === "credenciador" && p.is_credenciador)
       || (filtroRole === "palestrante" && p.is_palestrante);
-    if (mostrarCancelados) return ok && roleMatch && cancelado;
-    if (mostrarPendentes)  return ok && pendente;
-    return ok && roleMatch && !cancelado && !pendente;
+    if (mostrarCancelados)   return ok && roleMatch && cancelado;
+    if (mostrarPendentes)    return ok && pendenteAprovacao;
+    if (mostrarIncompletos)  return ok && incompleto;
+    return ok && roleMatch && !cancelado && !pendenteAprovacao;
   });
 
   async function aprovar(p) {
@@ -151,33 +160,42 @@ export function AbaInscritos() {
 
   const totP = participantes.filter(p => p.ativo !== false).length;
   const totCancelados = participantes.filter(p => p.ativo === false).length;
-  const incompletos = participantes.filter(p => p.ativo !== false && (
-    !p.cpf || !p.instituicao || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2
-  ));
+  const incompletos = participantes.filter(p => p.ativo !== false && estaIncompleto(p));
+
+  async function dispararAtualizacaoCadastro(leads) {
+    const template = (event.convite_templates || []).find(t => t.id === "tpl-atualizacao-cadastro");
+    if (!template) { showToast("Modelo 'Atualização de Cadastro' não encontrado em Modelos de E-mail.", "error"); return null; }
+    // O CTA desse modelo é login, não inscrição — se o admin não preencheu,
+    // usa a página de login do próprio site (não a home com modal).
+    const inscricaoUrl = template.inscricaoUrl || `${window.location.origin}/login`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke("enviar-convite", {
+      body: {
+        leads, event,
+        bannerUrl: template.bannerUrl, inscricaoUrl,
+        assunto: template.assunto, mensagem: template.mensagem,
+        corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
+        ctaTexto: template.ctaTexto,
+        // Gera um link de login direto por pessoa (magic link) — quem já tem
+        // conta clica e já entra logado, sem passar pelo formulário de novo.
+        magicLink: true, origin: window.location.origin,
+      },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
 
   async function solicitarAtualizacaoCadastro() {
-    const template = (event.convite_templates || []).find(t => t.id === "tpl-atualizacao-cadastro");
-    if (!template) { showToast("Modelo 'Atualização de Cadastro' não encontrado em Modelos de E-mail.", "error"); return; }
-    if (!template.inscricaoUrl) { showToast("Preencha a URL em Modelos de E-mail → Atualização de Cadastro antes de enviar.", "error"); return; }
     if (!incompletos.length) { showToast("Nenhum participante com dado faltando.", "warn"); return; }
     setEnviandoAtualizacao(true);
     try {
       const leads = incompletos.map(p => ({ id: p.id, email: p.email }));
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke("enviar-convite", {
-        body: {
-          leads, event,
-          bannerUrl: template.bannerUrl, inscricaoUrl: template.inscricaoUrl,
-          assunto: template.assunto, mensagem: template.mensagem,
-          corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
-          ctaTexto: template.ctaTexto,
-        },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      const enviados = data?.sent || [];
-      const falhas = data?.failed || [];
+      const data = await dispararAtualizacaoCadastro(leads);
+      if (!data) return;
+      const enviados = data.sent || [];
+      const falhas = data.failed || [];
       registrarLog("participantes.solicitar_atualizacao", "participante", null, null, { enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
         showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
@@ -190,6 +208,25 @@ export function AbaInscritos() {
       showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
     } finally {
       setEnviandoAtualizacao(false);
+    }
+  }
+
+  async function enviarTesteAtualizacao() {
+    const email = emailTeste.trim();
+    if (!email) { showToast("Informe um e-mail para o teste.", "error"); return; }
+    setEnviandoTeste(true);
+    try {
+      const data = await dispararAtualizacaoCadastro([{ id: "teste", email }]);
+      if (!data) return;
+      if (data.failed?.length) {
+        showToast("Falha ao enviar teste: " + (data.failed[0]?.error || "erro desconhecido"), "error");
+      } else {
+        showToast(`E-mail de teste enviado para ${email}!`, "success");
+      }
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviandoTeste(false);
     }
   }
 
@@ -209,6 +246,7 @@ export function AbaInscritos() {
             {totP} inscrito{totP !== 1 ? "s" : ""}
             {totCancelados > 0 && <span style={{ color: "var(--danger, #c0392b)", marginLeft: 6 }}>· {totCancelados} cancelado{totCancelados !== 1 ? "s" : ""}</span>}
             {totPendentes > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {totPendentes} pendente{totPendentes !== 1 ? "s" : ""} de aprovação</span>}
+            {incompletos.length > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {incompletos.length} com cadastro incompleto</span>}
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -230,21 +268,29 @@ export function AbaInscritos() {
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <button
               className={`btn btn-sm ${mostrarPendentes ? "btn-gold" : "btn-outline"}`}
-              onClick={() => { setMostrarPendentes(v => !v); setMostrarCancelados(false); }}
-              title="Exibir inscrições pendentes de aprovação"
+              onClick={() => { setMostrarPendentes(v => !v); setMostrarCancelados(false); setMostrarIncompletos(false); }}
+              title="Exibir inscrições pendentes de aprovação (fila do limite de inscrições)"
               style={{ whiteSpace: "nowrap" }}
             >
-              {mostrarPendentes ? "Ver ativos" : `Pendentes${totPendentes > 0 ? ` (${totPendentes})` : ""}`}
+              {mostrarPendentes ? "Ver todos" : `Aprovação pendente${totPendentes > 0 ? ` (${totPendentes})` : ""}`}
+            </button>
+            <button
+              className={`btn btn-sm ${mostrarIncompletos ? "btn-gold" : "btn-outline"}`}
+              onClick={() => { setMostrarIncompletos(v => !v); setMostrarCancelados(false); setMostrarPendentes(false); }}
+              title="Exibir inscritos sem CPF, órgão ou cargo preenchido"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {mostrarIncompletos ? "Ver todos" : `Cadastro incompleto${incompletos.length > 0 ? ` (${incompletos.length})` : ""}`}
             </button>
             <button
               className={`btn btn-sm ${mostrarCancelados ? "btn-danger" : "btn-outline"}`}
-              onClick={() => { setMostrarCancelados(v => !v); setMostrarPendentes(false); }}
+              onClick={() => { setMostrarCancelados(v => !v); setMostrarPendentes(false); setMostrarIncompletos(false); }}
               title="Exibir inscrições canceladas"
               style={{ whiteSpace: "nowrap" }}
             >
-              {mostrarCancelados ? "Ver ativos" : `Cancelados${totCancelados > 0 ? ` (${totCancelados})` : ""}`}
+              {mostrarCancelados ? "Ver todos" : `Cancelados${totCancelados > 0 ? ` (${totCancelados})` : ""}`}
             </button>
-            {!mostrarCancelados && !mostrarPendentes && (
+            {!mostrarCancelados && !mostrarPendentes && !mostrarIncompletos && (
               <select className="search-input" style={{ width: "auto", borderRadius: "var(--radius-sm)" }}
                 value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
                 <option value="todos">Todos</option>
@@ -459,6 +505,18 @@ export function AbaInscritos() {
             <div key={p.id} style={{ padding: "0.3rem 0", borderBottom: "1px solid var(--border)" }}>{p.nome} <span style={{ color: "var(--text3)" }}>· {p.email}</span></div>
           ))}
         </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <input className="form-input" placeholder="seu@email.com" value={emailTeste}
+            onChange={e => setEmailTeste(e.target.value)} style={{ flex: 1 }} />
+          <button className="btn btn-outline" onClick={enviarTesteAtualizacao} disabled={enviandoTeste || !emailTeste.trim()}>
+            {enviandoTeste ? "Enviando…" : "Enviar teste"}
+          </button>
+        </div>
+        <p style={{ fontSize: "0.78rem", color: "var(--text3)", margin: "0 0 1.25rem" }}>
+          Envia só para esse e-mail, sem afetar a lista de {incompletos.length} pendente{incompletos.length !== 1 ? "s" : ""} abaixo. Use pra conferir o modelo antes de disparar pra todo mundo.
+        </p>
+
         <button className="btn btn-primary btn-block" onClick={solicitarAtualizacaoCadastro} disabled={enviandoAtualizacao || incompletos.length === 0}>
           {enviandoAtualizacao ? "Enviando…" : `Enviar para ${incompletos.length} pessoa${incompletos.length !== 1 ? "s" : ""}`}
         </button>

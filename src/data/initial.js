@@ -281,5 +281,5 @@ export const FAQ_ITEMS = [
   { q: "Como confirmar presença nas atividades?", r: "Cada atividade terá um QR Code exibido no local. Aponte a câmera do celular, acesse a página e informe seu CPF para confirmar presença." },
   { q: "Como obter o certificado de participação?", r: "O certificado é gerado automaticamente quando você atinge o percentual mínimo de presença definido pela comissão organizadora." },
   { q: "Quem pode participar?", r: "O evento é voltado para servidores das IFEs do Ceará, membros de UAIGs, servidores de órgãos de controle (CGU, TCU, CGE) e demais interessados em auditoria interna governamental." },
-  { q: "O evento tem transmissão online?", r: "Informações sobre transmissão serão divulgadas pela comissão organizadora próximo à data do evento." },
+  { q: "Qual a modalidade do evento?", r: "Presencial." },
 ];

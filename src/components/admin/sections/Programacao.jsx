@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
   faDownload, faClock, faFileAlt, faEye, faEyeSlash, faFilePdf,
+  faExpand, faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
@@ -58,6 +59,23 @@ export function Programacao() {
   }, [modalQRTurno]);
   const [modalPresManualTurno, setModalPresManualTurno] = useState(null);
   const [presencaCPFTurno, setPresencaCPFTurno]         = useState("");
+
+  // ── Telão (exibição em tela cheia do QR do turno para o telão do evento) ──
+  const [telaoTurno, setTelaoTurno]             = useState(false);
+  const telaoRef                                = useRef(null);
+
+  useEffect(() => {
+    if (!telaoTurno) return;
+    telaoRef.current?.requestFullscreen?.().catch(() => {});
+    function onFsChange() { if (!document.fullscreenElement) setTelaoTurno(false); }
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [telaoTurno]);
+
+  function fecharTelao() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setTelaoTurno(false);
+  }
 
   async function salvarTurno() {
     if (!formTurno.nome || !formTurno.dia) { showToast("Preencha os campos obrigatórios", "error"); return; }
@@ -454,13 +472,53 @@ export function Programacao() {
                 {qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)}
               </div>
             )}
-            <button className="btn btn-sm btn-outline" onClick={() => {
-              const canvas = document.querySelector("canvas");
-              if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-turno-${modalQRTurno.id}.png`; a.click(); }
-            }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar PNG</button>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+              <button className="btn btn-sm btn-outline" onClick={() => {
+                const canvas = document.querySelector("canvas");
+                if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-turno-${modalQRTurno.id}.png`; a.click(); }
+              }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar PNG</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setTelaoTurno(true)} disabled={!qrTokenTurno}>
+                <FontAwesomeIcon icon={faExpand} style={{ marginRight: 6 }} />Exibir no telão
+              </button>
+            </div>
           </div>
         )}
       </Modal>
+
+      {/* TELÃO — exibição em tela cheia do QR do turno (projeção no evento) */}
+      {telaoTurno && modalQRTurno && (
+        <div ref={telaoRef} style={{
+          position: "fixed", inset: 0, zIndex: 5000,
+          background: "var(--hero-gradient, linear-gradient(135deg,var(--hero-dark),var(--hero)))",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          padding: "4vh 4vw", textAlign: "center",
+        }}>
+          <button className="btn btn-sm btn-outline" onClick={fecharTelao} title="Fechar (Esc)"
+            style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "rgba(255,255,255,0.1)", borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
+            <FontAwesomeIcon icon={faXmark} style={{ marginRight: 6 }} />Fechar
+          </button>
+
+          {event.logo_url && (
+            <img src={event.logo_url} alt={event.nome} style={{ maxHeight: "min(20vh,220px)", maxWidth: "55vw", objectFit: "contain", marginBottom: "2rem", filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.25))" }} />
+          )}
+
+          <div style={{
+            background: "#fff", borderRadius: "1.25rem", padding: "clamp(1.5rem,3vw,2.5rem)",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", alignItems: "center",
+            margin: "0.5rem 0 2rem",
+          }}>
+            <QRCodeCanvas value={qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)} size={Math.min(360, typeof window !== "undefined" ? Math.round(window.innerHeight * 0.36) : 360)} />
+          </div>
+
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(1.1rem,2.2vw,1.6rem)", color: "#1c2333", fontWeight: 700 }}>
+            {modalQRTurno.nome}
+          </div>
+
+          <div style={{ marginTop: "2rem", fontSize: "clamp(0.8rem,1.3vw,0.95rem)", color: "var(--hero-subtext)" }}>
+            📱 Aponte a câmera do celular para o QR Code e confirme sua presença
+          </div>
+        </div>
+      )}
 
       {/* MODAL PRESENÇA MANUAL DO TURNO */}
       <Modal show={!!modalPresManualTurno} onClose={() => setModalPresManualTurno(null)} title="Registrar Presença Manual">
