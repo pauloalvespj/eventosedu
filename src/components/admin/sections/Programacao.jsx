@@ -106,6 +106,7 @@ export function Programacao() {
     const cpf = presencaCPFTurno.replace(/\D/g, "");
     const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
     if (!part) { showToast("Participante não encontrado", "error"); return; }
+    if (!part.credenciado) { showToast(`${part.nome} ainda não foi credenciado(a) — credencie antes de registrar presença.`, "error"); return; }
     if (presencasTurno.find(p => p.participante_id === part.id && p.turno_id === modalPresManualTurno.id)) { showToast("Presença já registrada", "error"); return; }
     const nova = { id: Date.now(), participante_id: part.id, turno_id: modalPresManualTurno.id, data_hora: new Date().toISOString() };
     setPresencasTurno(prev => [...prev, nova]);
@@ -147,6 +148,7 @@ export function Programacao() {
     const cpf = presencaCPF.replace(/\D/g, "");
     const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
     if (!part) { showToast("Participante não encontrado", "error"); return; }
+    if (!part.credenciado) { showToast(`${part.nome} ainda não foi credenciado(a) — credencie antes de registrar presença.`, "error"); return; }
     if (presencas.find(p => p.participante_id === part.id && p.atividade_id === modalPresManual.id)) { showToast("Presença já registrada", "error"); return; }
     const nova = { id: Date.now(), participante_id: part.id, atividade_id: modalPresManual.id, data_hora: new Date().toISOString() };
     setPresencas(prev => [...prev, nova]);

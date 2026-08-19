@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../lib/supabase";
-import { formatCPF } from "../../utils/helpers";
+import { formatCPF, pareceCpfEmDigitacao, identificadorValido } from "../../utils/helpers";
 
 function traduzirErroAuth(msg) {
   const m = msg.toLowerCase();
@@ -42,17 +42,9 @@ export function FormLogin({ onLogin }) {
     setEtapa("email"); setErro("");
   }
 
-  // Campo único aceita e-mail ou CPF — detecta pelo formato (sem @ e sem
-  // letras = tratado como CPF em digitação, com máscara automática).
-  function pareceCpfEmDigitacao(v) {
-    return v.trim() !== "" && !/[a-zA-Z@]/.test(v);
-  }
   function handleIdentificadorChange(v) {
     setEmail(pareceCpfEmDigitacao(v) ? formatCPF(v.replace(/\D/g, "")) : v);
     setErro("");
-  }
-  function identificadorValido(v) {
-    return v.includes("@") ? v.length > 3 : v.replace(/\D/g, "").length === 11;
   }
   // Resolve CPF → e-mail via a mesma RPC usada na inscrição (verificar_cadastro).
   // Se já for e-mail, retorna direto.

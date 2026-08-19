@@ -226,7 +226,7 @@ function AbaEnviar({ event, setEvent, participantes, showToast }) {
     try {
       const destinatarios = participantes.filter(p => ids.includes(p.id)).map(p => ({ id: p.id, email: p.email }));
       const { data: { session } } = await supabase.auth.getSession();
-      const pesquisaUrl = `${window.location.origin}/painel?aba=pesquisa`;
+      const pesquisaUrl = `${window.location.origin}/painel/pesquisa`;
       const { data, error } = await supabase.functions.invoke("enviar-pesquisa", {
         body: { destinatarios, event, pesquisaUrl, ...template },
         headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -251,7 +251,7 @@ function AbaEnviar({ event, setEvent, participantes, showToast }) {
   function htmlPreview() {
     return gerarTemplateHTMLPesquisa({
       event: event || {}, bannerUrl: template.bannerUrl,
-      pesquisaUrl: `${window.location.origin}/painel?aba=pesquisa`,
+      pesquisaUrl: `${window.location.origin}/painel/pesquisa`,
       assunto: template.assunto, mensagem: template.mensagem,
       corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
     });

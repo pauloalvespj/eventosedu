@@ -15,6 +15,16 @@ export function formatCPF(v) {
   return v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+// Campo único aceita e-mail ou CPF — detecta pelo formato (sem @ e sem
+// letras = tratado como CPF em digitação, com máscara automática).
+export function pareceCpfEmDigitacao(v) {
+  return v.trim() !== "" && !/[a-zA-Z@]/.test(v);
+}
+
+export function identificadorValido(v) {
+  return v.includes("@") ? v.length > 3 : v.replace(/\D/g, "").length === 11;
+}
+
 export function validateCPF(cpf) {
   const c = cpf.replace(/\D/g, "");
   if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;

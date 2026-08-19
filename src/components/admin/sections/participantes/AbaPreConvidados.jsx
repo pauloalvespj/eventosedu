@@ -18,6 +18,11 @@ const STATUS_CONFIG = {
   inscrito: { label: "Inscrito", cls: "badge-success" },
 };
 
+// Nome normalizado pra comparar lead x inscrito mesmo com acento/caixa/espaços diferentes
+function normalizarNome(nome) {
+  return (nome || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
 export function AbaPreConvidados() {
   const { convidados, setConvidados, participantes, event, showToast } = useAdmin();
 
@@ -32,7 +37,16 @@ export function AbaPreConvidados() {
   const [importando, setImportando] = useState(false);
   const [enviando, setEnviando]     = useState(false);
   const [templateId, setTemplateId] = useState("");
+  const [ordenacao, setOrdenacao]   = useState({ campo: null, dir: "asc" });
   const fileRef = useRef();
+
+  function alternarOrdenacao(campo) {
+    setOrdenacao(o => o.campo === campo ? { campo, dir: o.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" });
+  }
+  function setaOrdenacao(campo) {
+    if (ordenacao.campo !== campo) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
+    return <span style={{ marginLeft: 4 }}>{ordenacao.dir === "asc" ? "↑" : "↓"}</span>;
+  }
 
   const templates = event?.convite_templates?.length
     ? event.convite_templates
@@ -57,6 +71,13 @@ export function AbaPreConvidados() {
       c.status === filtroStatus;
     return ok && passaStatus;
   });
+
+  const ordenados = ordenacao.campo
+    ? [...filtrados].sort((a, b) => {
+        const cmp = (a[ordenacao.campo] || "").toString().localeCompare((b[ordenacao.campo] || "").toString(), "pt-BR", { sensitivity: "base" });
+        return ordenacao.dir === "asc" ? cmp : -cmp;
+      })
+    : filtrados;
 
   // ── Exportar / copiar leads filtrados ────────────────────────
   function baixarLeadsFiltrados() {
@@ -331,16 +352,20 @@ export function AbaPreConvidados() {
                 <input type="checkbox" checked={selecionados.size === filtrados.length && filtrados.length > 0}
                   onChange={toggleTodos} title="Selecionar todos" />
               </th>
-              <th>Nome</th><th>E-mail</th><th>Instituição</th><th>Status</th><th style={{ width: 90 }}>E-mail</th><th style={{ width: 60 }}>Ação</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("nome")}>Nome{setaOrdenacao("nome")}</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("email")}>E-mail{setaOrdenacao("email")}</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("instituicao")}>Instituição{setaOrdenacao("instituicao")}</th>
+              <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("status")}>Status{setaOrdenacao("status")}</th>
+              <th style={{ width: 90 }}>E-mail</th><th style={{ width: 60 }}>Ação</th>
             </tr>
           </thead>
           <tbody>
-            {filtrados.length === 0 && (
+            {ordenados.length === 0 && (
               <tr><td colSpan={7} style={{ textAlign: "center", padding: "2rem", color: "var(--text3)" }}>
                 Nenhum lead encontrado. Importe uma planilha ou adicione manualmente.
               </td></tr>
             )}
-            {filtrados.map(c => {
+            {ordenados.map(c => {
               const st = STATUS_CONFIG[c.status] || STATUS_CONFIG.pendente;
               return (
                 <tr key={c.id}>

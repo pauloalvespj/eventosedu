@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { formatCPF, formatData, TIPO_LABEL } from "../../utils/helpers";
+import { formatCPF, formatData, TIPO_LABEL, pareceCpfEmDigitacao, identificadorValido } from "../../utils/helpers";
 import { registrarPresencaQR } from "../../lib/db";
 
 export function PaginaPresenca({ atividadeId, atividades, presencas, setPresencas, user, onVoltar, onLoginClick }) {
@@ -13,7 +13,12 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
   const [nomeSucesso, setNomeSucesso] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const jaConfirmadoLogado = user && user.role === "participante" &&
+  // Confirmação é sempre no papel de participante — mesmo se a pessoa está
+  // navegando o site como admin/credenciador, se o perfil dela também tem
+  // o papel de participante, usamos o fluxo de 1 clique.
+  const logadoComoParticipante = user && (user.role === "participante" || user.roles?.includes("participante"));
+
+  const jaConfirmadoLogado = logadoComoParticipante &&
     presencas.find(p => p.participante_id === user.id && p.atividade_id === Number(atividadeId));
 
   // O servidor valida o token do QR, resolve o participante (logado ou CPF)
@@ -40,8 +45,13 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
     setStatus(data.status);
   }
 
-  function confirmarViaCPF() {
+  function confirmarViaIdentificador() {
     return confirmar(cpf);
+  }
+
+  function handleIdentificadorChange(v) {
+    setCpf(pareceCpfEmDigitacao(v) ? formatCPF(v.replace(/\D/g, "")) : v);
+    setStatus(null);
   }
 
   if (!atividade) return (
@@ -120,8 +130,14 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
           </div>
         )}
 
+        {status === "nao_credenciado" && (
+          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.75rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>
+            🪪 <strong>Credenciamento pendente.</strong> Procure a organização do evento para fazer seu credenciamento antes de confirmar presença.
+          </div>
+        )}
+
         {/* Usuário logado: 1 clique */}
-        {user && user.role === "participante" && (
+        {logadoComoParticipante && (
           <div>
             {jaConfirmadoLogado ? (
               <div style={{ textAlign: "center" }}>
@@ -132,9 +148,6 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
               </div>
             ) : (
               <div style={{ textAlign: "center" }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Playfair Display',serif", fontSize: "1.3rem", fontWeight: 700, margin: "0 auto 1rem" }}>
-                  {user.nome.split(" ").map(n => n[0]).slice(0, 2).join("")}
-                </div>
                 <p style={{ fontWeight: 700, color: "var(--text)", marginBottom: "0.2rem" }}>{user.nome}</p>
                 <p style={{ fontSize: "0.82rem", color: "var(--text3)", marginBottom: "1.5rem" }}>{user.instituicao} · {user.cargo}</p>
                 <button className="btn btn-primary btn-block btn-lg"
@@ -150,7 +163,7 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
         )}
 
         {/* Não logado: login ou CPF */}
-        {(!user || user.role !== "participante") && (
+        {!logadoComoParticipante && (
           <div>
             <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "1rem", marginBottom: "1.25rem", textAlign: "center" }}>
               <p style={{ fontSize: "0.88rem", color: "var(--warn)", fontWeight: 600, marginBottom: "0.5rem" }}>
@@ -163,30 +176,29 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1rem 0" }}>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              <span style={{ fontSize: "0.78rem", color: "var(--text3)", fontWeight: 600 }}>ou confirme pelo CPF</span>
+              <span style={{ fontSize: "0.78rem", color: "var(--text3)", fontWeight: 600 }}>ou confirme pelo CPF/e-mail</span>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Seu CPF</label>
+              <label className="form-label">Seu CPF ou e-mail</label>
               <input
                 className="form-input"
-                placeholder="000.000.000-00"
                 value={cpf}
-                onChange={e => { setCpf(formatCPF(e.target.value)); setStatus(null); }}
-                maxLength={14}
-                style={{ textAlign: "center", fontSize: "1.15rem", letterSpacing: "0.06em", fontFamily: "monospace" }}
+                onChange={e => handleIdentificadorChange(e.target.value)}
+                maxLength={40}
+                style={{ textAlign: "center", fontSize: "1.05rem", letterSpacing: "0.03em", fontFamily: "monospace" }}
               />
             </div>
 
             {status === "nao_encontrado" && (
               <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.75rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                ⚠️ CPF não encontrado. Verifique se você está inscrito no evento.
+                ⚠️ CPF/e-mail não encontrado. Verifique se você está inscrito no evento.
               </div>
             )}
 
-            <button className="btn btn-primary btn-block" onClick={confirmarViaCPF}
-              disabled={cpf.replace(/\D/g, "").length < 11 || salvando}>
+            <button className="btn btn-primary btn-block" onClick={confirmarViaIdentificador}
+              disabled={!identificadorValido(cpf) || salvando}>
               {salvando ? "Registrando…" : "Confirmar Presença"}
             </button>
             <button className="btn btn-outline btn-block" style={{ marginTop: "0.5rem" }} onClick={onVoltar}>Voltar ao site</button>

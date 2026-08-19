@@ -72,7 +72,7 @@ function PresencaRoute({ atividades, presencas, setPresencas, user, onLoginClick
   );
 }
 
-function PresencaTurnoRoute({ turnos, presencasTurno, setPresencasTurno, user, onLoginClick, registrarPresencaComPontos }) {
+function PresencaTurnoRoute({ turnos, presencasTurno, setPresencasTurno, user, onLoginClick, onLogout, registrarPresencaComPontos }) {
   const { turnoId } = useParams();
   const navigate = useNavigate();
 
@@ -97,6 +97,7 @@ function PresencaTurnoRoute({ turnos, presencasTurno, setPresencasTurno, user, o
       user={user}
       onVoltar={() => navigate("/")}
       onLoginClick={onLoginClick}
+      onLogout={onLogout}
     />
   );
 }
@@ -566,6 +567,7 @@ export default function App() {
             setPresencasTurno={setPresencasTurno}
             user={user}
             onLoginClick={() => setShowLogin(true)}
+            onLogout={handleLogout}
             registrarPresencaComPontos={registrarPresencaComPontos}
           />
         } />
