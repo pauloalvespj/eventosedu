@@ -139,7 +139,7 @@ export function AbaInscritos() {
         await atualizarProfile(formPart.id, { email: emailNovo });
       }
       setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, is_palestrante, is_credenciador } : x));
-      atualizarProfile(formPart.id, { nome: formPart.nome, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
+      atualizarProfile(formPart.id, { nome: formPart.nome, nome_publico: formPart.nome_publico, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
       if (original && (original.role !== role || !!original.is_credenciador !== is_credenciador)) {
         registrarLog("usuario.editar_role", "participante", formPart.id, formPart.nome, { role_antes: original.role, role_depois: role, credenciador_antes: !!original.is_credenciador, credenciador_depois: is_credenciador });
       }
@@ -457,6 +457,11 @@ export function AbaInscritos() {
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Nome completo *</label>
             <input className="form-input" value={formPart.nome || ""} onChange={e => setFormPart(f => ({ ...f, nome: e.target.value }))} />
+          </div>
+          <div className="form-group" style={{ gridColumn: "1/-1" }}>
+            <label className="form-label">Nome para Crachá e Divulgação</label>
+            <input className="form-input" placeholder="Como a pessoa quer ser chamada no crachá" value={formPart.nome_publico || ""}
+              onChange={e => setFormPart(f => ({ ...f, nome_publico: e.target.value }))} />
           </div>
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
             <label className="form-label">Instituição</label>

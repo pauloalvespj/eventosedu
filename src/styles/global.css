@@ -315,8 +315,8 @@ input,select,textarea{font-family:inherit}
 .admin-nav-item:hover{background:rgba(255,255,255,0.10);color:#fff}
 .admin-nav-item.active{background:var(--admin-sb-active);color:var(--admin-sb-accent-lg);border-left-color:var(--admin-sb-accent)}
 .admin-nav-icon{width:18px;text-align:center;font-size:15px}
-.admin-content{flex:1;min-width:0;padding:2rem;overflow-x:hidden}
-.admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
+.admin-content{flex:1;min-width:0;padding:1.1rem 2rem 2rem;overflow-x:hidden}
+.admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
 .admin-topbar h1{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--admin-hd)}
 .admin-topbar p{font-size:0.85rem;color:var(--text2);margin-top:0.2rem}
 .admin-subtabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -359,7 +359,7 @@ tr:hover td{background:var(--surface2)}
 .part-nav-item{display:flex;align-items:center;gap:0.65rem;padding:0.65rem 1rem;color:#B8D2F4;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.2s;border-left:3px solid transparent;white-space:nowrap}
 .part-nav-item:hover{background:rgba(255,255,255,0.10);color:#fff}
 .part-nav-item.active{background:var(--admin-sb-active);color:var(--admin-sb-accent-lg);border-left-color:var(--admin-sb-accent)}
-.part-content{flex:1;min-width:0;padding:2rem;box-sizing:border-box}
+.part-content{flex:1;min-width:0;padding:1.1rem 2rem 2rem;box-sizing:border-box}
 
 /* Minha Área (popover mobile) */
 .minha-area-fullscreen{position:fixed;top:54px;left:0;right:0;bottom:calc(4.75rem + env(safe-area-inset-bottom));z-index:190;background:var(--surface);display:flex;flex-direction:column;overflow-y:auto}
@@ -487,7 +487,7 @@ tr:hover td{background:var(--surface2)}
   .part-layout{flex-direction:column}
   .mobile-header{display:flex;position:fixed;top:0;left:0;right:0}
   .part-sidebar{display:none}
-  .part-content{padding:1rem;width:100%;padding-top:calc(1rem + 54px);padding-bottom:calc(4.75rem + env(safe-area-inset-bottom))}
+  .part-content{padding:1rem;width:100%;padding-top:calc(0.5rem + 54px);padding-bottom:calc(4.75rem + env(safe-area-inset-bottom))}
 
   /* Bottom nav — navegação principal no mobile, estilo iFood (ícone + label) */
   .bottom-nav{
@@ -505,7 +505,7 @@ tr:hover td{background:var(--surface2)}
   .admin-layout{flex-direction:column}
   .admin-sidebar{position:fixed;top:0;left:0;bottom:0;width:260px;height:100vh;z-index:200;transform:translateX(-100%);transition:transform 0.25s ease}
   .admin-sidebar.open{transform:translateX(0)}
-  .admin-content{padding:1rem;width:100%}
+  .admin-content{padding:1rem;width:100%;padding-top:calc(0.5rem + 54px)}
 
   /* Admin topbar dentro das seções */
   .admin-topbar{flex-wrap:wrap;gap:0.75rem}

@@ -4,9 +4,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faCircleUser, faClipboardList, faCircleHalfStroke,
+  faArrowRightFromBracket, faBuilding, faClipboardList, faCircleHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
-import { ROLE_LABEL } from "../../utils/helpers";
+import { ROLE_LABEL, nomeExibicao } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
 import { AvatarUpload } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
@@ -43,23 +43,25 @@ const MENU = [
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
   { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
   { path: "logs",           icon: faClipboardList,label: "Logs",            roles: ["admin"] },
-  { path: "meus-dados",     icon: faCircleUser,   label: "Meus Dados",      roles: ["admin","credenciador"] },
 ];
 
 function MeusDados() {
   const { user: ctxUser, participantes, setParticipantes, instituicoes, showToast } = useAdmin();
   const isPalestrante = ctxUser?.is_palestrante;
   const [editando, setEditando] = useState(false);
-  const [form, setForm] = useState({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" });
+  const [form, setForm] = useState({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" });
   const [salvando, setSalvando] = useState(false);
 
   async function salvar() {
     if (!form.nome.trim()) { showToast("Nome obrigatório", "error"); return; }
     if (!form.nome_publico.trim()) { showToast("Nome para crachá e divulgação obrigatório", "error"); return; }
+    if (!form.cpf.trim()) { showToast("CPF obrigatório", "error"); return; }
+    if (!form.cargo.trim()) { showToast("Cargo obrigatório", "error"); return; }
+    if (!form.instituicao.trim()) { showToast("Instituição obrigatória", "error"); return; }
     setSalvando(true);
     const updates = {
       nome: form.nome.trim(), nome_publico: form.nome_publico.trim(), cpf: form.cpf, cargo: form.cargo.trim(), instituicao: form.instituicao,
-      ...(isPalestrante && { titulo: form.titulo, area: form.area, mini_bio: form.mini_bio }),
+      ...(isPalestrante && { mini_bio: form.mini_bio }),
     };
     await atualizarProfile(ctxUser.id, updates);
     setParticipantes(participantes.map(p => p.id === ctxUser.id ? { ...p, ...updates } : p));
@@ -74,7 +76,7 @@ function MeusDados() {
   return (
     <div>
       <div className="admin-topbar">
-        <div><h1>Meus Dados</h1></div>
+        <div><h1>Meus Dados</h1><p>Informações do seu perfil no evento</p></div>
       </div>
       <div style={{ maxWidth: 760 }}>
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem" }}>
@@ -90,11 +92,11 @@ function MeusDados() {
             <div>
               <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.15rem" }}>{ctxUser?.nome}</div>
               <div style={{ fontSize: "0.82rem", color: "var(--text3)" }}>{ctxUser?.email}</div>
-              <div style={{ fontSize: "0.78rem", color: "var(--text3)", marginTop: 2 }}>{ROLE_LABEL[ctxUser?.role] || ctxUser?.role}</div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text3)", marginTop: 2 }}>{ctxUser?.instituicao || "—"}</div>
             </div>
             {!editando && (
               <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }}
-                onClick={() => { setForm({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
+                onClick={() => { setForm({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
                 ✏️ Editar
               </button>
             )}
@@ -104,7 +106,7 @@ function MeusDados() {
             <div>
               <div className="form-grid">
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                  <label className="form-label">Nome completo</label>
+                  <label className="form-label">Nome completo *</label>
                   <input className="form-input" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
                 </div>
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
@@ -112,7 +114,7 @@ function MeusDados() {
                   <input className="form-input" placeholder="Como você quer ser chamado(a) no crachá" value={form.nome_publico} onChange={e => setForm(f => ({ ...f, nome_publico: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">CPF</label>
+                  <label className="form-label">CPF *</label>
                   <input className="form-input" style={{ fontFamily: "monospace" }} placeholder="000.000.000-00"
                     value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} maxLength={14} />
                 </div>
@@ -121,11 +123,11 @@ function MeusDados() {
                   <input className="form-input" value={ctxUser?.email} disabled style={{ background: "var(--surface2)", color: "var(--text3)" }} />
                 </div>
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                  <label className="form-label">Cargo / Título</label>
+                  <label className="form-label">Cargo / Título *</label>
                   <input className="form-input" value={form.cargo} onChange={e => setForm(f => ({ ...f, cargo: e.target.value }))} />
                 </div>
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                  <label className="form-label">Instituição</label>
+                  <label className="form-label">Instituição *</label>
                   <select className="form-input" value={instSelectVal}
                     onChange={e => setForm(f => ({ ...f, instituicao: e.target.value === "__outro__" ? "" : e.target.value }))}>
                     <option value="">Selecione...</option>
@@ -137,20 +139,12 @@ function MeusDados() {
                       value={form.instituicao} onChange={e => setForm(f => ({ ...f, instituicao: e.target.value }))} autoFocus />
                   )}
                 </div>
-                {isPalestrante && (<>
-                  <div className="form-group">
-                    <label className="form-label">Título / Formação</label>
-                    <input className="form-input" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Área de Atuação</label>
-                    <input className="form-input" value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} />
-                  </div>
+                {isPalestrante && (
                   <div className="form-group" style={{ gridColumn: "1/-1" }}>
                     <label className="form-label">Mini Biografia</label>
-                    <textarea className="form-input" rows={3} value={form.mini_bio} onChange={e => setForm(f => ({ ...f, mini_bio: e.target.value }))} />
+                    <textarea className="form-input" rows={6} value={form.mini_bio} onChange={e => setForm(f => ({ ...f, mini_bio: e.target.value }))} />
                   </div>
-                </>)}
+                )}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
                 <button className="btn btn-primary btn-sm" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</button>
@@ -167,8 +161,6 @@ function MeusDados() {
                 ["Cargo",       ctxUser?.cargo,       "1/-1"],
                 ["Instituição", ctxUser?.instituicao, "1/-1"],
                 ...(isPalestrante ? [
-                  ["Título",   ctxUser?.titulo,   null],
-                  ["Área",     ctxUser?.area,     null],
                   ["Mini Bio", ctxUser?.mini_bio, "1/-1"],
                 ] : []),
               ].map(([label, val, span]) => (
@@ -267,8 +259,8 @@ export function PainelAdmin(props) {
                 {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
               </div>
               <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome}</div>
-                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>{ROLE_LABEL[user?.role] || user?.role}</div>
+                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nomeExibicao(user)}</div>
+                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.instituicao || ROLE_LABEL[user?.role] || user?.role}</div>
               </div>
             </NavLink>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginBottom: "0.5rem" }}>
