@@ -12,6 +12,7 @@ import {
   atualizarConvidado, deletarConvidado, marcarEmailEnviado,
 } from "../../../../lib/db";
 import { gerarTemplateHTML } from "../../../../lib/emailTemplate";
+import { erroFuncaoEdge } from "../../../../utils/helpers";
 
 const STATUS_CONFIG = {
   pendente: { label: "Pendente", cls: "badge-warn"    },
@@ -244,7 +245,7 @@ export function AbaPreConvidados() {
         },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (error) throw error;
+      if (error) throw new Error(await erroFuncaoEdge(error));
       if (data?.error) throw new Error(data.error);
 
       const enviados = data?.sent || [];

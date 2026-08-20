@@ -68,6 +68,18 @@ export function nomeExibicao(pessoa) {
   return (pessoa?.nome_publico && pessoa.nome_publico.trim()) || pessoa?.nome || "";
 }
 
+// supabase.functions.invoke() erra com uma mensagem genérica ("Edge Function
+// returned a non-2xx status code") que esconde o motivo real, que vem no
+// corpo (JSON) da resposta da function — extrai esse corpo quando disponível.
+export async function erroFuncaoEdge(error) {
+  if (!error) return "";
+  try {
+    const body = await error.context?.clone?.()?.json?.();
+    if (body?.error) return body.error;
+  } catch { /* corpo não é JSON — segue com a mensagem padrão */ }
+  return error.message || String(error);
+}
+
 // Contagem regressiva até um dia (formato "YYYY-MM-DD") — null quando já passou
 export function faltamDiasLabel(diaStr) {
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);

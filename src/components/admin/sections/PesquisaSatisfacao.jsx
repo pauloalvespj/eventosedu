@@ -7,7 +7,7 @@ import {
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
 import { supabase } from "../../../lib/supabase";
-import { baixarCSV, calcPresenca } from "../../../utils/helpers";
+import { baixarCSV, calcPresenca, erroFuncaoEdge } from "../../../utils/helpers";
 import { gerarTemplateHTMLPesquisa, DEFAULT_MENSAGEM_PESQUISA } from "../../../lib/emailTemplate";
 import {
   fetchPerguntasPesquisa, inserirPerguntaPesquisa, atualizarPerguntaPesquisa, deletarPerguntaPesquisa,
@@ -231,7 +231,7 @@ function AbaEnviar({ event, setEvent, participantes, showToast }) {
         body: { destinatarios, event, pesquisaUrl, ...template },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (error) throw error;
+      if (error) throw new Error(await erroFuncaoEdge(error));
       if (data?.error) throw new Error(data.error);
       const enviados = data?.sent || [];
       const falhas = data?.failed || [];

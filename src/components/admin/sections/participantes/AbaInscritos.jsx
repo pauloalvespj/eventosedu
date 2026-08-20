@@ -5,7 +5,7 @@ import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
 import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, registrarLog } from "../../../../lib/db";
-import { baixarCSV } from "../../../../utils/helpers";
+import { baixarCSV, erroFuncaoEdge } from "../../../../utils/helpers";
 import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
@@ -185,7 +185,7 @@ export function AbaInscritos() {
       },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
-    if (error) throw error;
+    if (error) throw new Error(await erroFuncaoEdge(error));
     if (data?.error) throw new Error(data.error);
     return data;
   }
