@@ -433,7 +433,7 @@ tr:hover td{background:var(--surface2)}
 /* MOBILE NAV — overlay e hamburger */
 .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199}
 .mobile-header{display:none;align-items:center;justify-content:space-between;padding:0 1rem;height:54px;background:var(--admin-sb-bg);color:#fff;position:sticky;top:0;z-index:150;flex-shrink:0;gap:0.75rem}
-.mobile-header-title{font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--admin-sb-accent-lg);flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobile-header-title{font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--admin-sb-accent-lg);flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0.4rem;display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s}
 

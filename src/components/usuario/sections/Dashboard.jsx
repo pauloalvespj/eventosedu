@@ -40,12 +40,18 @@ export function Dashboard() {
       <div className="dash-top-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
         {/* Card do Evento */}
         <div className="dash-event-card" style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"1.5rem", textAlign:"center" }}>
-          {event.logo_url && (
-            <img src={event.logo_url} alt={event.nome} style={{ maxHeight:56, maxWidth:"70%", objectFit:"contain", margin:"0 auto 0.85rem", display:"block" }} />
-          )}
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", fontWeight:800, color:"var(--navy)", lineHeight:1.15, marginBottom:"0.25rem" }}>{event.nome}</div>
-          {event.nome_completo && event.nome_completo !== event.nome && (
-            <div style={{ fontSize:"0.85rem", color:"var(--text2)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
+          {event.logo_url ? (
+            <>
+              <img src={event.logo_url} alt={event.nome} style={{ maxHeight:56, maxWidth:"70%", objectFit:"contain", margin:"0 auto 0.85rem", display:"block" }} />
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.15rem", fontWeight:800, color:"var(--navy)", lineHeight:1.25, marginBottom:"0.25rem" }}>{event.nome_completo || event.nome}</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", fontWeight:800, color:"var(--navy)", lineHeight:1.15, marginBottom:"0.25rem" }}>{event.nome}</div>
+              {event.nome_completo && event.nome_completo !== event.nome && (
+                <div style={{ fontSize:"0.85rem", color:"var(--text2)", marginBottom:"0.2rem" }}>{event.nome_completo}</div>
+              )}
+            </>
           )}
           {event.subtitulo && (
             <div style={{ fontSize:"0.8rem", color:"var(--text3)", fontStyle:"italic", marginBottom:"0.6rem" }}>{event.subtitulo}</div>
