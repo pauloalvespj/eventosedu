@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { formatData, diaSemana, qrPresencaValue, faltamDiasLabel, TIPO_LABEL } from "../../../utils/helpers";
+import { formatData, diaSemana, qrPresencaValue, faltamDiasLabel, TIPO_LABEL, nomeExibicao } from "../../../utils/helpers";
 import { QRCodeCanvas, StarRating } from "../../base/index";
 import { uploadMaterial, deletarMaterial, atualizarAtividade } from "../../../lib/db";
 import { useUsuario } from "../UsuarioContext";
@@ -99,7 +99,7 @@ export function MinhasPalestras() {
                 </h3>
                 {outrosPalestrantes.length > 0 && (
                   <div style={{ fontSize:"0.8rem", color:"var(--text2)", marginBottom:"0.35rem" }}>
-                    🎤 {outrosPalestrantes.map(p => p.nome).join(", ")}
+                    🎤 {outrosPalestrantes.map(p => nomeExibicao(p)).join(", ")}
                   </div>
                 )}
                 {a.local && <div style={{ fontSize:"0.8rem", color:"var(--text3)", marginBottom:"0.35rem" }}>📍 {a.local}</div>}

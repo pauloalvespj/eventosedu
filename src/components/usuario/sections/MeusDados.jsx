@@ -12,20 +12,21 @@ export function MeusDados() {
   const navigate = useNavigate();
   const editando = location.pathname.endsWith("/editar");
 
-  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
+  const [formEdit, setFormEdit] = useState({ nome: user.nome || "", nome_publico: user.nome_publico || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
   const [cancelando, setCancelando] = useState(false);
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [erroMotivoCancelamento, setErroMotivoCancelamento] = useState(false);
 
   function abrirEdicao() {
-    setFormEdit({ nome: user.nome || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
+    setFormEdit({ nome: user.nome || "", nome_publico: user.nome_publico || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
     navigate("/painel/dados/editar");
   }
 
   async function salvarEdicao() {
     const updates = {
       nome: formEdit.nome.trim() || user.nome,
+      nome_publico: formEdit.nome_publico.trim(),
       cpf: formEdit.cpf,
       instituicao: formEdit.instituicao,
       cargo: formEdit.cargo,
@@ -53,8 +54,8 @@ export function MeusDados() {
       </div>
 
       {perfilIncompleto && (
-        <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "0.9rem 1.1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "var(--warn)" }}>
-          ⚠️ Seu cadastro está incompleto — falta preencher {[!user.cpf && "CPF", !user.email && "e-mail", !user.instituicao && "instituição", !user.cargo && "cargo", isPalestrante && !user.mini_bio && "mini biografia"].filter(Boolean).join(", ")}. Isso é importante para o credenciamento e a emissão do certificado.
+        <div style={{ background: "#fde2ea", border: "1px solid #f3a8c0", borderRadius: "var(--radius-sm)", padding: "0.9rem 1.1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#8b0f2f", fontWeight: 600 }}>
+          ⚠️ Seu cadastro está incompleto — falta preencher {[!user.cpf && "CPF", !user.email && "e-mail", !user.nome_publico && "nome para crachá e divulgação", !user.instituicao && "instituição", !user.cargo && "cargo", isPalestrante && !user.mini_bio && "mini biografia"].filter(Boolean).join(", ")}. Isso é importante para o credenciamento e o crachá do evento.
         </div>
       )}
 
@@ -85,6 +86,10 @@ export function MeusDados() {
               <div className="form-group" style={{ gridColumn: "1/-1" }}>
                 <label className="form-label">Nome completo *</label>
                 <input className="form-input" value={formEdit.nome} onChange={e => setFormEdit(f => ({ ...f, nome: e.target.value }))} />
+              </div>
+              <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                <label className="form-label">Nome para Crachá e Divulgação *</label>
+                <input className="form-input" placeholder="Como você quer ser chamado(a) no crachá" value={formEdit.nome_publico} onChange={e => setFormEdit(f => ({ ...f, nome_publico: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">CPF *</label>
@@ -119,6 +124,7 @@ export function MeusDados() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
             {[
+              ["Nome para Crachá e Divulgação", user.nome_publico, "1/-1"],
               ["CPF",         user.cpf,         null],
               ["E-mail",      user.email,       null],
               ["Cargo",       user.cargo,       "1/-1"],

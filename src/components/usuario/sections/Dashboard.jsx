@@ -98,8 +98,8 @@ export function Dashboard() {
               onClick={() => navigate("/painel/dados/editar")} title="Editar dados"><IconEdit /></button>
           </div>
           {perfilIncompleto && (
-            <div style={{ background:"var(--gold-pale)", border:"1px solid rgba(201,168,76,0.4)", borderRadius:"var(--radius-sm)", padding:"0.65rem 0.85rem", marginBottom:"0.85rem", fontSize:"0.78rem", color:"var(--warn)" }}>
-              ⚠️ Cadastro incompleto — falta {[!user.cpf && "CPF", !user.email && "e-mail", !user.instituicao && "instituição", !user.cargo && "cargo", bioFaltando && "mini biografia"].filter(Boolean).join(", ")}.
+            <div style={{ background:"#fde2ea", border:"1px solid #f3a8c0", borderRadius:"var(--radius-sm)", padding:"0.65rem 0.85rem", marginBottom:"0.85rem", fontSize:"0.78rem", color:"#8b0f2f", fontWeight:600 }}>
+              ⚠️ Cadastro incompleto — falta {[!user.cpf && "CPF", !user.email && "e-mail", !user.nome_publico && "nome para crachá e divulgação", !user.instituicao && "instituição", !user.cargo && "cargo", bioFaltando && "mini biografia"].filter(Boolean).join(", ")}.
             </div>
           )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.65rem", marginBottom: isPalestrante ? "0.85rem" : 0 }}>

@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faQrcode, faUserCheck, faPenToSquare, faTrash, faCheck, faMicrophone,
+  faQrcode, faPenToSquare, faTrash, faCheck, faMicrophone,
   faDownload, faClock, faFileAlt, faEye, faEyeSlash, faFilePdf,
   faExpand, faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
-import { formatData, formatPeriodo, formatCPF, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, qrPresencaTurnoValue, diaSemana } from "../../../utils/helpers";
+import { formatData, formatPeriodo, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, qrPresencaTurnoValue, diaSemana } from "../../../utils/helpers";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
-  inserirPresenca, uploadMaterial, deletarMaterial, atualizarEvento,
+  uploadMaterial, deletarMaterial, atualizarEvento,
   fetchQrToken,
   inserirTurno, atualizarTurno, deletarTurno,
-  fetchQrTokenTurno, inserirPresencaTurno,
+  fetchQrTokenTurno,
   registrarLog,
 } from "../../../lib/db";
 
@@ -26,8 +26,8 @@ function formatBytes(b) {
 
 export function Programacao() {
   const {
-    atividades, setAtividades, palestrantes, participantes, presencas, setPresencas,
-    turnos, setTurnos, presencasTurno, setPresencasTurno,
+    atividades, setAtividades, palestrantes, presencas,
+    turnos, setTurnos, presencasTurno,
     event, setEvent, showToast,
   } = useAdmin();
 
@@ -43,8 +43,6 @@ export function Programacao() {
     if (!modalQR) { setQrToken(null); return; }
     fetchQrToken(modalQR.id).then(setQrToken);
   }, [modalQR]);
-  const [modalPresManual, setModalPresManual]   = useState(null);
-  const [presencaCPF, setPresencaCPF]           = useState("");
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
 
   // ── Turnos (modo de frequência "por turno") ───────────────────
@@ -57,8 +55,6 @@ export function Programacao() {
     if (!modalQRTurno) { setQrTokenTurno(null); return; }
     fetchQrTokenTurno(modalQRTurno.id).then(setQrTokenTurno);
   }, [modalQRTurno]);
-  const [modalPresManualTurno, setModalPresManualTurno] = useState(null);
-  const [presencaCPFTurno, setPresencaCPFTurno]         = useState("");
 
   // ── Telão (exibição em tela cheia do QR do turno para o telão do evento) ──
   const [telaoTurno, setTelaoTurno]             = useState(false);
@@ -102,19 +98,6 @@ export function Programacao() {
     showToast("Turno excluído", "info");
   }
 
-  async function registrarPresencaManualTurno() {
-    const cpf = presencaCPFTurno.replace(/\D/g, "");
-    const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
-    if (!part) { showToast("Participante não encontrado", "error"); return; }
-    if (!part.credenciado) { showToast(`${part.nome} ainda não foi credenciado(a) — credencie antes de registrar presença.`, "error"); return; }
-    if (presencasTurno.find(p => p.participante_id === part.id && p.turno_id === modalPresManualTurno.id)) { showToast("Presença já registrada", "error"); return; }
-    const nova = { id: Date.now(), participante_id: part.id, turno_id: modalPresManualTurno.id, data_hora: new Date().toISOString() };
-    setPresencasTurno(prev => [...prev, nova]);
-    setPresencaCPFTurno("");
-    showToast(`Presença de ${part.nome} registrada!`, "success");
-    inserirPresencaTurno(part.id, modalPresManualTurno.id);
-  }
-
   function getPalestrantes(atv) {
     return (atv.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
   }
@@ -142,19 +125,6 @@ export function Programacao() {
     deletarAtividade(id);
     registrarLog("atividade.excluir", "atividade", id, a?.titulo);
     showToast("Atividade excluída", "info");
-  }
-
-  async function registrarPresencaManual() {
-    const cpf = presencaCPF.replace(/\D/g, "");
-    const part = participantes.find(p => p.cpf && p.cpf.replace(/\D/g, "") === cpf);
-    if (!part) { showToast("Participante não encontrado", "error"); return; }
-    if (!part.credenciado) { showToast(`${part.nome} ainda não foi credenciado(a) — credencie antes de registrar presença.`, "error"); return; }
-    if (presencas.find(p => p.participante_id === part.id && p.atividade_id === modalPresManual.id)) { showToast("Presença já registrada", "error"); return; }
-    const nova = { id: Date.now(), participante_id: part.id, atividade_id: modalPresManual.id, data_hora: new Date().toISOString() };
-    setPresencas(prev => [...prev, nova]);
-    setPresencaCPF("");
-    showToast(`Presença de ${part.nome} registrada!`, "success");
-    inserirPresenca(part.id, modalPresManual.id);
   }
 
   const filtradas = atividades.filter(a => a.titulo.toLowerCase().includes(busca.toLowerCase()));
@@ -389,8 +359,7 @@ export function Programacao() {
                 <td style={{ textAlign:"center" }}>{presencas.filter(p => p.atividade_id === a.id).length}</td>
                 <td>
                   <div style={{ display: "flex", gap: "0.2rem" }}>
-                    {a.conta_certificado && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>}
-                    {a.conta_certificado && <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManual(a); setPresencaCPF(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>}
+                    {a.conta_certificado && event.modo_frequencia !== "turno" && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>}
                     <button className="btn btn-sm btn-outline" onClick={() => { setFormAtv({ ...a, conta_certificado: a.conta_certificado ? "true" : "false", palestrantes_ids: a.palestrantes_ids || [], materiais: a.materiais || [] }); setModalAtv(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
                     <button className="btn btn-sm btn-danger" onClick={() => excluirAtividade(a.id)}><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
@@ -429,7 +398,6 @@ export function Programacao() {
                 <td>
                   <div style={{ display: "flex", gap: "0.2rem" }}>
                     <button className="btn btn-sm btn-outline" onClick={() => setModalQRTurno(t)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
-                    <button className="btn btn-sm btn-outline" onClick={() => { setModalPresManualTurno(t); setPresencaCPFTurno(""); }} title="Presença manual"><FontAwesomeIcon icon={faUserCheck} /></button>
                     <button className="btn btn-sm btn-outline" onClick={() => { setFormTurno({ ...t, conta_certificado: t.conta_certificado ? "true" : "false" }); setModalTurno(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
                     <button className="btn btn-sm btn-danger" onClick={() => excluirTurno(t.id)}><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
@@ -522,35 +490,6 @@ export function Programacao() {
         </div>
       )}
 
-      {/* MODAL PRESENÇA MANUAL DO TURNO */}
-      <Modal show={!!modalPresManualTurno} onClose={() => setModalPresManualTurno(null)} title="Registrar Presença Manual">
-        {modalPresManualTurno && (
-          <div>
-            <p style={{ color: "var(--text2)", marginBottom: "1rem" }}>{modalPresManualTurno.nome}</p>
-            <div className="form-group">
-              <label className="form-label">CPF do Participante</label>
-              <input className="form-input" placeholder="000.000.000-00" value={presencaCPFTurno}
-                onChange={e => setPresencaCPFTurno(formatCPF(e.target.value))} maxLength={14} />
-            </div>
-            <button className="btn btn-success btn-block" onClick={registrarPresencaManualTurno}>Registrar Presença</button>
-            <div style={{ marginTop: "1.5rem" }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text2)", marginBottom: "0.5rem" }}>
-                Presenças neste turno ({presencasTurno.filter(p => p.turno_id === modalPresManualTurno.id).length})
-              </div>
-              {presencasTurno.filter(p => p.turno_id === modalPresManualTurno.id).map(p => {
-                const part = participantes.find(x => x.id === p.participante_id);
-                return part ? (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                    <span>{part.nome}</span>
-                    <span style={{ color: "var(--text3)" }}>{p.data_hora}</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </div>
-        )}
-      </Modal>
-
       {/* MODAL ATIVIDADE */}
       <Modal show={modalAtv} onClose={() => setModalAtv(false)} title={formAtv.id ? "Editar Atividade" : "Nova Atividade"}>
         <div className="form-group">
@@ -570,7 +509,6 @@ export function Programacao() {
           <DatePickerInput label="Dia *" value={formAtv.dia || ""} onChange={v => setFormAtv(f => ({ ...f, dia: v }))} />
           <div className="form-group"><label className="form-label">Horário início *</label><input type="time" className="form-input" value={formAtv.horario || ""} onChange={e => setFormAtv(f => ({ ...f, horario: e.target.value }))} /></div>
           <div className="form-group"><label className="form-label">Horário fim</label><input type="time" className="form-input" value={formAtv.horario_fim || ""} onChange={e => setFormAtv(f => ({ ...f, horario_fim: e.target.value }))} /></div>
-          <div className="form-group"><label className="form-label">Local</label><input className="form-input" value={formAtv.local || ""} onChange={e => setFormAtv(f => ({ ...f, local: e.target.value }))} /></div>
           <div className="form-group"><label className="form-label">Carga Horária (h)</label><input type="number" min={0} step={0.25} className="form-input" value={formAtv.carga_horaria || 0} onChange={e => setFormAtv(f => ({ ...f, carga_horaria: e.target.value }))} /></div>
           <div className="form-group" style={{ gridColumn:"1/-1" }}>
             <label className="form-label">Palestrantes</label>
@@ -668,34 +606,6 @@ export function Programacao() {
         )}
       </Modal>
 
-      {/* MODAL PRESENÇA MANUAL */}
-      <Modal show={!!modalPresManual} onClose={() => setModalPresManual(null)} title="Registrar Presença Manual">
-        {modalPresManual && (
-          <div>
-            <p style={{ color: "var(--text2)", marginBottom: "1rem" }}>{modalPresManual.titulo}</p>
-            <div className="form-group">
-              <label className="form-label">CPF do Participante</label>
-              <input className="form-input" placeholder="000.000.000-00" value={presencaCPF}
-                onChange={e => setPresencaCPF(formatCPF(e.target.value))} maxLength={14} />
-            </div>
-            <button className="btn btn-success btn-block" onClick={registrarPresencaManual}>Registrar Presença</button>
-            <div style={{ marginTop: "1.5rem" }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text2)", marginBottom: "0.5rem" }}>
-                Presenças nesta atividade ({presencas.filter(p => p.atividade_id === modalPresManual.id).length})
-              </div>
-              {presencas.filter(p => p.atividade_id === modalPresManual.id).map(p => {
-                const part = participantes.find(x => x.id === p.participante_id);
-                return part ? (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                    <span>{part.nome}</span>
-                    <span style={{ color: "var(--text3)" }}>{p.data_hora}</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

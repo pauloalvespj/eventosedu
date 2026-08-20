@@ -5,7 +5,7 @@ import { inserirEnrollment } from "../../lib/db";
 import { InstSelect } from "../admin/sections/InstSelect";
 
 export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
-  const [form, setForm] = useState({ cpf: "", nome: "", instituicao: "", cargo: "", email: "", senha: "", confirmSenha: "" });
+  const [form, setForm] = useState({ cpf: "", nome: "", nome_publico: "", instituicao: "", cargo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -64,6 +64,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     const e = {};
     if (!validateCPF(form.cpf)) e.cpf = "CPF inválido";
     if (!form.nome.trim()) e.nome = "Nome obrigatório";
+    if (!form.nome_publico.trim()) e.nome_publico = "Nome para crachá e divulgação obrigatório";
     if (!form.instituicao.trim()) e.instituicao = "Instituição obrigatória";
     if (!form.cargo.trim()) e.cargo = "Cargo obrigatório";
     if (!form.email.includes("@")) e.email = "E-mail inválido";
@@ -111,6 +112,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     const instituicaoFinal = form.instituicao.trim();
     const profileData = {
       nome:        form.nome.trim(),
+      nome_publico: form.nome_publico.trim(),
       cpf:         cpfFormatado,
       instituicao: instituicaoFinal,
       cargo:       form.cargo.trim(),
@@ -336,6 +338,12 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           <input className={`form-input${erros.nome ? " error" : ""}`} placeholder="Seu nome completo"
             value={form.nome} onChange={e => set("nome", e.target.value)} />
           {erros.nome && <div className="form-error">{erros.nome}</div>}
+        </div>
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
+          <label className="form-label">Nome para Crachá e Divulgação *</label>
+          <input className={`form-input${erros.nome_publico ? " error" : ""}`} placeholder="Como você quer ser chamado(a) no crachá"
+            value={form.nome_publico} onChange={e => set("nome_publico", e.target.value)} />
+          {erros.nome_publico && <div className="form-error">{erros.nome_publico}</div>}
         </div>
         <div className="form-group">
           <label className="form-label">E-mail *</label>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import enaudinMapa from "../../assets/enaudin-mapa.png";
 import { FAQ_ITEMS } from "../../data/initial";
 import { TIPO_COLOR } from "../../utils/helpers";
-import { formatData, formatPeriodo, diaSemana } from "../../utils/helpers";
+import { formatData, formatPeriodo, diaSemana, nomeExibicao } from "../../utils/helpers";
 import { TipoBadge } from "../base/index";
 
 function inscricoesAbertas(event) {
@@ -173,7 +173,6 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   <div key={a.id} className="prog-item" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)", gridTemplateColumns:"130px 1fr" }}>
                     <div>
                       <div className="prog-hora">{a.horario}</div>
-                      <div className="prog-local" style={{ marginTop: 4 }}>{a.local}</div>
                     </div>
                     <div>
                       <div style={{ marginBottom:6 }}><TipoBadge tipo={a.tipo} /></div>
@@ -187,7 +186,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                               <span
                                 onClick={() => setPalPopup(p)}
                                 style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 }}
-                              >{p.nome}</span>
+                              >{nomeExibicao(p)}</span>
                               {p.instituicao && <span> – {p.instituicao}</span>}
                             </div>
                           ))}
@@ -235,7 +234,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                     ? <img src={p.foto_url} alt={p.nome} className="palestrante-avatar" style={{ objectFit:"cover", fontSize:0 }} />
                     : <div className="palestrante-avatar">{p.foto_iniciais}</div>
                   }
-                  <div className="palestrante-nome">{p.nome}</div>
+                  <div className="palestrante-nome">{nomeExibicao(p)}</div>
                   <div className="palestrante-titulo">{p.cargo}</div>
                   {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginBottom:"0.4rem" }}>{p.instituicao}</div>}
                   {p.mini_bio && (
@@ -276,7 +275,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                       : <div style={{ width:56, height:56, borderRadius:"50%", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1rem" }}>{palPopup.foto_iniciais}</div>
                     }
                     <div>
-                      <div style={{ fontWeight:700, color:"var(--text)", fontSize:"1rem" }}>{palPopup.nome}</div>
+                      <div style={{ fontWeight:700, color:"var(--text)", fontSize:"1rem" }}>{nomeExibicao(palPopup)}</div>
                       {palPopup.cargo && <div style={{ fontSize:"0.8rem", color:"var(--text2)" }}>{palPopup.cargo}</div>}
                       {palPopup.instituicao && (() => {
                         const inst = (instituicoes || []).find(i => i.sigla === palPopup.instituicao);

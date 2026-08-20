@@ -62,6 +62,12 @@ export function diaSemana(d) {
   return DIAS_PT[dt.getDay()];
 }
 
+// Nome público (crachá/divulgação) quando preenchido, senão o nome completo —
+// usar em qualquer exibição de nome na programação/lista de palestrantes.
+export function nomeExibicao(pessoa) {
+  return (pessoa?.nome_publico && pessoa.nome_publico.trim()) || pessoa?.nome || "";
+}
+
 // Contagem regressiva até um dia (formato "YYYY-MM-DD") — null quando já passou
 export function faltamDiasLabel(diaStr) {
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);

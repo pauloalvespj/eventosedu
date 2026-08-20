@@ -73,7 +73,7 @@ export function AreaUsuario(props) {
 
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
-  const perfilIncompleto = !user.cpf || !user.email || !user.instituicao || !user.cargo || (isPalestrante && !user.mini_bio);
+  const perfilIncompleto = !user.cpf || !user.email || !user.nome_publico || !user.instituicao || !user.cargo || (isPalestrante && !user.mini_bio);
   const [minhaAreaAberta, setMinhaAreaAberta] = useState(false);
   const [altoContraste, setAltoContraste] = useState(isHighContrast);
 

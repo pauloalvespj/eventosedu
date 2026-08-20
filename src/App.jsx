@@ -211,6 +211,7 @@ export default function App() {
   const [linkExpirado, setLinkExpirado] = useState(null); // { email } quando link de confirmação expirou
   const [confirmandoEmail, setConfirmandoEmail] = useState(false); // true quando veio de link de confirmação válido
   const criandoProfile = useRef(false); // guarda contra criação duplicada de profile
+  const profilesRecarregado = useRef(false); // garante 1 refetch de profiles já autenticado (ver comentário abaixo)
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((msg, type = "info") => {
@@ -294,7 +295,9 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
+      // INITIAL_SESSION é o evento disparado ao restaurar uma sessão já
+      // existente (refresh de página) — SIGNED_IN só ocorre em login novo.
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         setAuthUser(session.user);
       }
       if (event === "SIGNED_OUT") {
@@ -343,6 +346,17 @@ export default function App() {
       }
     }
 
+    // Corrige uma corrida rara: se loadData() rodou antes do client anexar o
+    // JWT de vez (getSession() às vezes resolve cedo demais), fetchProfiles()
+    // sai como se fosse anônimo e traz só o recorte público (ex: só
+    // palestrantes). Se o próprio usuário também for palestrante, seu profile
+    // aparece nesse recorte e o fluxo normal nunca detectava a lista
+    // incompleta — só um F5 corrigia. Refaz o fetch 1x aqui, já autenticado.
+    if (!profilesRecarregado.current) {
+      profilesRecarregado.current = true;
+      fetchProfiles().then(({ data }) => { if (data) setProfiles(data); });
+    }
+
     const prof = profiles.find(p => p.id === authUser.id);
     if (prof) {
       setUser(prof);
@@ -370,6 +384,7 @@ export default function App() {
                 role:        "participante",
                 email:       authUser.email,
                 nome:        meta.nome,
+                nome_publico: meta.nome_publico || "",
                 cpf:         meta.cpf || "",
                 instituicao: meta.instituicao || "",
                 cargo:       meta.cargo || "",

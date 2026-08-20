@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useAdmin } from "./AdminContext";
 
 // ── helpers locais ─────────────────────────────────────────────
@@ -45,7 +46,8 @@ function InscricoesBadge({ event }) {
 
 // ── componente principal ───────────────────────────────────────
 export function Dashboard() {
-  const { event, participantes, palestrantes, presencas } = useAdmin();
+  const { event, user, participantes, palestrantes, presencas } = useAdmin();
+  const navigate = useNavigate();
   const inscricoes = [...participantes]
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     .slice(0, 20);
@@ -64,6 +66,15 @@ export function Dashboard() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
+
+      {!user?.nome_publico && (
+        <div style={{ background:"#fde2ea", border:"1px solid #f3a8c0", borderRadius:"var(--radius-sm)", padding:"0.75rem 1rem", fontSize:"0.85rem", color:"#8b0f2f", fontWeight:600, display:"flex", alignItems:"center", justifyContent:"space-between", gap:"0.75rem", flexWrap:"wrap" }}>
+          <span>⚠️ Seu cadastro está incompleto — falta preencher o nome para crachá e divulgação.</span>
+          <button className="btn btn-sm" style={{ background:"#8b0f2f", color:"#fff", flexShrink:0 }} onClick={() => navigate("/painel/meus-dados")}>
+            Completar cadastro
+          </button>
+        </div>
+      )}
 
       {/* ══ 1. Hero compacto ══ */}
       <div className="card-hero dash-hero" style={{ padding:"1rem 1.5rem" }}>

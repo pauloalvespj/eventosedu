@@ -4,12 +4,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faCircleUser, faClipboardList,
+  faArrowRightFromBracket, faBuilding, faCircleUser, faClipboardList, faCircleHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
 import { AvatarUpload } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
+import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
 
 import { Dashboard }            from "./sections/Dashboard";
 import { Evento }               from "./sections/Evento";
@@ -49,14 +50,15 @@ function MeusDados() {
   const { user: ctxUser, participantes, setParticipantes, instituicoes, showToast } = useAdmin();
   const isPalestrante = ctxUser?.is_palestrante;
   const [editando, setEditando] = useState(false);
-  const [form, setForm] = useState({ nome: ctxUser?.nome || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" });
+  const [form, setForm] = useState({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" });
   const [salvando, setSalvando] = useState(false);
 
   async function salvar() {
     if (!form.nome.trim()) { showToast("Nome obrigatório", "error"); return; }
+    if (!form.nome_publico.trim()) { showToast("Nome para crachá e divulgação obrigatório", "error"); return; }
     setSalvando(true);
     const updates = {
-      nome: form.nome.trim(), cpf: form.cpf, cargo: form.cargo.trim(), instituicao: form.instituicao,
+      nome: form.nome.trim(), nome_publico: form.nome_publico.trim(), cpf: form.cpf, cargo: form.cargo.trim(), instituicao: form.instituicao,
       ...(isPalestrante && { titulo: form.titulo, area: form.area, mini_bio: form.mini_bio }),
     };
     await atualizarProfile(ctxUser.id, updates);
@@ -92,7 +94,7 @@ function MeusDados() {
             </div>
             {!editando && (
               <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }}
-                onClick={() => { setForm({ nome: ctxUser?.nome || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
+                onClick={() => { setForm({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", titulo: ctxUser?.titulo || "", area: ctxUser?.area || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
                 ✏️ Editar
               </button>
             )}
@@ -104,6 +106,10 @@ function MeusDados() {
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
                   <label className="form-label">Nome completo</label>
                   <input className="form-input" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+                </div>
+                <div className="form-group" style={{ gridColumn: "1/-1" }}>
+                  <label className="form-label">Nome para Crachá e Divulgação *</label>
+                  <input className="form-input" placeholder="Como você quer ser chamado(a) no crachá" value={form.nome_publico} onChange={e => setForm(f => ({ ...f, nome_publico: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">CPF</label>
@@ -155,6 +161,7 @@ function MeusDados() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
               {[
                 ["Nome",        ctxUser?.nome,        "1/-1"],
+                ["Nome para Crachá e Divulgação", ctxUser?.nome_publico, "1/-1"],
                 ["CPF",         ctxUser?.cpf,         null],
                 ["E-mail",      ctxUser?.email,       null],
                 ["Cargo",       ctxUser?.cargo,       "1/-1"],
@@ -207,6 +214,7 @@ export function PainelAdmin(props) {
   const { user, event, participantes, onLogout, onSwitchRole } = props;
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
   const [navAberta, setNavAberta] = useState(false);
+  const [altoContraste, setAltoContraste] = useState(isHighContrast);
   const navigate = useNavigate();
 
   return (
@@ -251,7 +259,10 @@ export function PainelAdmin(props) {
             ))}
           </nav>
           <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
+            <NavLink to="/painel/meus-dados" title="Meus Dados"
+              style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem", textDecoration: "none", borderRadius: "var(--radius-sm)", padding: "0.3rem", margin: "-0.3rem -0.3rem 0.45rem" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--gold-light)", flexShrink: 0 }}>
                 {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
               </div>
@@ -259,10 +270,14 @@ export function PainelAdmin(props) {
                 <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome}</div>
                 <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>{ROLE_LABEL[user?.role] || user?.role}</div>
               </div>
-            </div>
+            </NavLink>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginBottom: "0.5rem" }}>
               {participantes.length} inscritos · {participantes.filter(p=>p.credenciado).length} credenciados
             </div>
+            <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginBottom: "0.4rem" }}
+              onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
+              <FontAwesomeIcon icon={faCircleHalfStroke} style={{ marginRight: 6 }} />Alto contraste
+            </button>
             {onSwitchRole && (
               <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginBottom: "0.4rem" }} onClick={onSwitchRole}>
                 ⇄ Trocar perfil
