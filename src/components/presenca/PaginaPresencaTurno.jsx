@@ -23,7 +23,7 @@ function BotaoVoltar({ onVoltar, onLogout, claro }) {
   );
 }
 
-export function PaginaPresencaTurno({ turnoId, turnos, presencasTurno, setPresencasTurno, user, onVoltar, onLoginClick, onLogout }) {
+export function PaginaPresencaTurno({ turnoId, turnos, presencasTurno, setPresencasTurno, user, onVoltar, onLogout }) {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("t");
 
@@ -211,21 +211,6 @@ export function PaginaPresencaTurno({ turnoId, turnos, presencasTurno, setPresen
               disabled={!identificadorValido(cpf) || salvando}>
               {salvando ? "Registrando…" : "Confirmar Presença"}
             </button>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1.25rem 0 1rem" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              <span style={{ fontSize: "0.78rem", color: "var(--text3)", fontWeight: 600 }}>ou</span>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            </div>
-
-            <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "1rem", textAlign: "center" }}>
-              <p style={{ fontSize: "0.88rem", color: "var(--warn)", fontWeight: 600, marginBottom: "0.5rem" }}>
-                ⚡ Faça login para confirmar com 1 clique da próxima vez
-              </p>
-              <button className="btn btn-primary btn-sm" onClick={onLoginClick}>
-                Entrar na minha conta
-              </button>
-            </div>
           </div>
         )}
         </div>

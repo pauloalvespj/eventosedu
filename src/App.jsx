@@ -481,7 +481,7 @@ export default function App() {
   // Elemento da área logada — servido tanto em /painel quanto em /login
   // (rota mais amigável usada no link de "complete seu cadastro" por e-mail).
   const painelElement = !effectiveUser
-    ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} />
+    ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} eventLoaded={eventLoaded} />
     : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
       ? <PainelAdmin {...adminProps} />
       : <AreaUsuario
@@ -580,7 +580,7 @@ export default function App() {
               instituicoes={instituicoes}
               user={user}
               onInscricaoClick={() => setShowInscricao(true)}
-              onLoginClick={() => user ? navigate("/painel") : setShowLogin(true)}
+              onLoginClick={() => navigate("/painel")}
             />
           )
         } />

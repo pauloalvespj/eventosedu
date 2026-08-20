@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { formatCPF, formatData, TIPO_LABEL, pareceCpfEmDigitacao, identificadorValido } from "../../utils/helpers";
 import { registrarPresencaQR } from "../../lib/db";
 
-export function PaginaPresenca({ atividadeId, atividades, presencas, setPresencas, user, onVoltar, onLoginClick }) {
+export function PaginaPresenca({ atividadeId, atividades, presencas, setPresencas, user, onVoltar }) {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("t");
 
@@ -162,24 +162,9 @@ export function PaginaPresenca({ atividadeId, atividades, presencas, setPresenca
           </div>
         )}
 
-        {/* Não logado: login ou CPF */}
+        {/* Não logado: confirma pelo CPF/e-mail — sem opção de login aqui (evita muita gente logando ao mesmo tempo) */}
         {!logadoComoParticipante && (
           <div>
-            <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "1rem", marginBottom: "1.25rem", textAlign: "center" }}>
-              <p style={{ fontSize: "0.88rem", color: "var(--warn)", fontWeight: 600, marginBottom: "0.5rem" }}>
-                ⚡ Faça login para confirmar com 1 clique
-              </p>
-              <button className="btn btn-primary btn-sm" onClick={onLoginClick}>
-                Entrar na minha conta
-              </button>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1rem 0" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              <span style={{ fontSize: "0.78rem", color: "var(--text3)", fontWeight: 600 }}>ou confirme pelo CPF/e-mail</span>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            </div>
-
             <div className="form-group">
               <label className="form-label">Seu CPF ou e-mail</label>
               <input

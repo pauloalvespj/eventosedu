@@ -1,32 +1,25 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendarDays } from "@fortawesome/free-solid-svg-icons";
 import { FormLogin } from "./auth/FormLogin";
 import { FormInscricao } from "./auth/FormInscricao";
 import { Modal } from "./base/index";
 import { useState } from "react";
 
-export function PainelLogin({ onLogin, instituicoes = [], showToast, event }) {
+export function PainelLogin({ onLogin, instituicoes = [], showToast, event, eventLoaded }) {
   const [showInscricao, setShowInscricao] = useState(false);
+  const logoUrl = eventLoaded ? event?.logo_url : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--hero-gradient)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          {event?.logo_url ? (
-            <img src={event.logo_url} alt={event.nome} style={{ maxHeight: 72, maxWidth: 220, objectFit: "contain", marginBottom: "1rem" }} />
-          ) : (
-            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "2px solid var(--gold)", marginBottom: "1rem" }}>
-              <FontAwesomeIcon icon={faCalendarDays} style={{ color: "var(--gold)", fontSize: "1.4rem" }} />
-            </div>
-          )}
-        </div>
-
-        {/* Card de login */}
-        <div style={{ background: "#fff", borderRadius: "var(--radius-lg)", padding: "2rem", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        {logoUrl && (
+          <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+            <img src={logoUrl} alt={event?.nome} style={{ maxHeight: 56, maxWidth: 200, objectFit: "contain" }} />
+          </div>
+        )}
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "28px" }}>
           <FormLogin
             onLogin={onLogin}
-            onClose={() => {}}
+            event={event}
+            eventLoaded={eventLoaded}
             onInscricaoClick={() => setShowInscricao(true)}
           />
         </div>

@@ -42,7 +42,10 @@
       "Bash(supabase migration *)",
       "Bash(supabase db *)",
       "Bash(git checkout *)",
-      "Bash(grep -v \"no-unused-vars\\\\|never used\\\\|^$\")"
+      "Bash(grep -v \"no-unused-vars\\\\|never used\\\\|^$\")",
+      "Bash(supabase --help)",
+      "Bash(supabase config *)",
+      "Bash(grep -v \"set-state-in-effect\\\\|Effects are intended\\\\|Update external\\\\|Subscribe for\\\\|https://react.dev\\\\|^$\\\\|^--\\\\|^  1\\\\|^  2\\\\|^  3\\\\|^>\")"
     ]
   }
 }
