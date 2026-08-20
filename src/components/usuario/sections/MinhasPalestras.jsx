@@ -90,7 +90,10 @@ export function MinhasPalestras() {
           <div key={a.id} className="presenca-card" style={{ borderLeft:"4px solid var(--teal)", marginBottom:"1.25rem" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
               <div>
-                <div style={{ fontSize:"0.85rem", fontWeight:600, color:"var(--text2)", marginBottom:"0.7rem" }}>📅 {diaSemana(a.dia)}, {formatData(a.dia)} · ⏱ {a.horario}{a.horario_fim?`–${a.horario_fim}`:""}</div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:"0.7rem" }}>
+                  <span style={{ fontSize:"0.85rem", fontWeight:600, color:"var(--text2)" }}>📅 {diaSemana(a.dia)}, {formatData(a.dia)} · ⏱ {a.horario}{a.horario_fim?`–${a.horario_fim}`:""}</span>
+                  <span className="prog-ch">{a.carga_horaria}h</span>
+                </div>
                 <h3 style={{ fontWeight:700, color:"var(--navy)", fontSize:"1rem", marginBottom:"0.35rem" }}>
                   <span style={{ color:"var(--text3)", fontWeight:600 }}>{TIPO_LABEL[a.tipo] || a.tipo}:</span> {a.titulo}
                 </h3>
@@ -101,14 +104,10 @@ export function MinhasPalestras() {
                 )}
                 {a.local && <div style={{ fontSize:"0.8rem", color:"var(--text3)", marginBottom:"0.35rem" }}>📍 {a.local}</div>}
                 {contagem && (
-                  <div style={{ marginBottom:6 }}>
+                  <div>
                     <span className={`badge ${contagem.startsWith("🔴") ? "badge-danger" : "badge-navy"}`}>{contagem}</span>
                   </div>
                 )}
-                <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
-                  <span className="prog-ch">{a.carga_horaria}h</span>
-                  <span className={`badge badge-${a.conta_certificado?"success":"warn"}`}>{a.conta_certificado?"Certificado":"Não conta"}</span>
-                </div>
               </div>
               {!porTurno && (
                 <div style={{ textAlign:"right", flexShrink:0 }}>
