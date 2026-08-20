@@ -191,6 +191,7 @@ export default function App() {
   // ── Auth ─────────────────────────────────────────────────────
   const [user, setUser] = useState(null);         // profile do usuário logado
   const [authUser, setAuthUser] = useState(null); // supabase auth.user
+  const [authChecked, setAuthChecked] = useState(false); // já checou se existe sessão salva (evita flash de tela de login no F5)
   const loginExplicito = useRef(false);
   const [activeRole, setActiveRole] = useState(null);       // role ativo na sessão
   const [showRoleSelector, setShowRoleSelector] = useState(false);
@@ -291,6 +292,7 @@ export default function App() {
     // da lista completa — daí números menores que só se corrigiam ao atualizar.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) setAuthUser(session.user);
+      setAuthChecked(true);
       loadData().catch(err => console.error("Erro ao carregar dados:", err));
     });
 
@@ -300,6 +302,7 @@ export default function App() {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         setAuthUser(session.user);
       }
+      if (event === "INITIAL_SESSION") setAuthChecked(true);
       if (event === "SIGNED_OUT") {
         setAuthUser(null);
         setUser(null);
@@ -370,7 +373,10 @@ export default function App() {
           if (found) {
             setUser(found);
             setConfirmandoEmail(false);
-            showToast(`Bem-vindo(a), ${found.nome.split(" ")[0]}!`, "success");
+            // Só cumprimenta em login explícito — esse ramo (profile não
+            // achado na 1ª leitura de profiles) também acontece num F5 comum,
+            // quando authUser resolve antes de profiles terminar de carregar.
+            if (loginExplicito.current) showToast(`Bem-vindo(a), ${found.nome.split(" ")[0]}!`, "success");
             resolveRole(found);
           } else {
             // Profile não encontrado — cria a partir do user_metadata (caso em que
@@ -493,9 +499,16 @@ export default function App() {
     showToast,
   };
 
+  // Ainda não sabemos se existe sessão salva (getSession() não voltou) ou já
+  // sabemos que tem sessão mas o profile ainda não resolveu — evita mostrar a
+  // tela de login por um instante antes de trocar pro painel real no F5.
+  const authResolving = !authChecked || (!!authUser && !effectiveUser);
+
   // Elemento da área logada — servido tanto em /painel quanto em /login
   // (rota mais amigável usada no link de "complete seu cadastro" por e-mail).
-  const painelElement = !effectiveUser
+  const painelElement = authResolving
+    ? <CarregandoPainel />
+    : !effectiveUser
     ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} eventLoaded={eventLoaded} />
     : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
       ? <PainelAdmin {...adminProps} />
