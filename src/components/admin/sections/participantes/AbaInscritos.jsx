@@ -25,7 +25,8 @@ export function AbaInscritos() {
   const [filtroRole, setFiltroRole]     = useState("todos");
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const [mostrarPendentes, setMostrarPendentes]   = useState(false); // fila de aprovação (limite de inscrições)
-  const [mostrarIncompletos, setMostrarIncompletos] = useState(false); // cadastro sem CPF/órgão/cargo
+  const [mostrarIncompletos, setMostrarIncompletos] = useState(false); // cadastro sem CPF/órgão/cargo/nome publico
+  const [mostrarCompletos, setMostrarCompletos]     = useState(false);
   const [modalPart, setModalPart]       = useState(null);
   const [formPart, setFormPart]         = useState({});
   const [reativando, setReativando]     = useState(null);
@@ -33,7 +34,7 @@ export function AbaInscritos() {
   const [ordenacao, setOrdenacao]       = useState({ campo: null, dir: "asc" });
 
   function estaIncompleto(p) {
-    return !p.cpf || !p.instituicao || !p.cargo || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2;
+    return !p.cpf || !p.instituicao || !p.cargo || !p.nome_publico || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2;
   }
 
   const totPendentes = participantes.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
@@ -54,6 +55,7 @@ export function AbaInscritos() {
     if (mostrarCancelados)   return ok && roleMatch && cancelado;
     if (mostrarPendentes)    return ok && pendenteAprovacao;
     if (mostrarIncompletos)  return ok && incompleto;
+    if (mostrarCompletos)    return ok && roleMatch && !cancelado && !pendenteAprovacao && !incompleto;
     return ok && roleMatch && !cancelado && !pendenteAprovacao;
   });
 
@@ -161,6 +163,7 @@ export function AbaInscritos() {
   const totP = participantes.filter(p => p.ativo !== false).length;
   const totCancelados = participantes.filter(p => p.ativo === false).length;
   const incompletos = participantes.filter(p => p.ativo !== false && estaIncompleto(p));
+  const completos = participantes.filter(p => p.ativo !== false && p.status_inscricao !== "pendente" && !estaIncompleto(p));
 
   async function dispararAtualizacaoCadastro(leads) {
     const template = (event.convite_templates || []).find(t => t.id === "tpl-atualizacao-cadastro");
@@ -268,7 +271,7 @@ export function AbaInscritos() {
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <button
               className={`btn btn-sm ${mostrarPendentes ? "btn-gold" : "btn-outline"}`}
-              onClick={() => { setMostrarPendentes(v => !v); setMostrarCancelados(false); setMostrarIncompletos(false); }}
+              onClick={() => { setMostrarPendentes(v => !v); setMostrarCancelados(false); setMostrarIncompletos(false); setMostrarCompletos(false); }}
               title="Exibir inscrições pendentes de aprovação (fila do limite de inscrições)"
               style={{ whiteSpace: "nowrap" }}
             >
@@ -276,21 +279,29 @@ export function AbaInscritos() {
             </button>
             <button
               className={`btn btn-sm ${mostrarIncompletos ? "btn-gold" : "btn-outline"}`}
-              onClick={() => { setMostrarIncompletos(v => !v); setMostrarCancelados(false); setMostrarPendentes(false); }}
-              title="Exibir inscritos sem CPF, órgão ou cargo preenchido"
+              onClick={() => { setMostrarIncompletos(v => !v); setMostrarCancelados(false); setMostrarPendentes(false); setMostrarCompletos(false); }}
+              title="Exibir inscritos sem CPF, órgão, cargo ou nome para crachá preenchido"
               style={{ whiteSpace: "nowrap" }}
             >
-              {mostrarIncompletos ? "Ver todos" : `Cadastro incompleto${incompletos.length > 0 ? ` (${incompletos.length})` : ""}`}
+              {mostrarIncompletos ? "Ver todos" : `Incompleto${incompletos.length > 0 ? ` (${incompletos.length})` : ""}`}
+            </button>
+            <button
+              className={`btn btn-sm ${mostrarCompletos ? "btn-gold" : "btn-outline"}`}
+              onClick={() => { setMostrarCompletos(v => !v); setMostrarCancelados(false); setMostrarPendentes(false); setMostrarIncompletos(false); }}
+              title="Exibir inscritos com cadastro completo (CPF, órgão, cargo e nome para crachá preenchidos)"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {mostrarCompletos ? "Ver todos" : `Completo${completos.length > 0 ? ` (${completos.length})` : ""}`}
             </button>
             <button
               className={`btn btn-sm ${mostrarCancelados ? "btn-danger" : "btn-outline"}`}
-              onClick={() => { setMostrarCancelados(v => !v); setMostrarPendentes(false); setMostrarIncompletos(false); }}
+              onClick={() => { setMostrarCancelados(v => !v); setMostrarPendentes(false); setMostrarIncompletos(false); setMostrarCompletos(false); }}
               title="Exibir inscrições canceladas"
               style={{ whiteSpace: "nowrap" }}
             >
               {mostrarCancelados ? "Ver todos" : `Cancelados${totCancelados > 0 ? ` (${totCancelados})` : ""}`}
             </button>
-            {!mostrarCancelados && !mostrarPendentes && !mostrarIncompletos && (
+            {!mostrarCancelados && !mostrarPendentes && !mostrarIncompletos && !mostrarCompletos && (
               <select className="search-input" style={{ width: "auto", borderRadius: "var(--radius-sm)" }}
                 value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
                 <option value="todos">Todos</option>
@@ -322,6 +333,9 @@ export function AbaInscritos() {
                       }
                       <div style={{ display: "flex", flexDirection: "column", gap: 0, lineHeight: 1.2 }}>
                         <span style={{ fontWeight: 500 }}>{p.nome}</span>
+                        {p.nome_publico && p.nome_publico.trim() !== p.nome?.trim() && (
+                          <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)" }}>Crachá: {p.nome_publico}</span>
+                        )}
                         {p.is_palestrante && (
                           <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)", fontWeight: 500 }}>Palestrante</span>
                         )}
@@ -503,7 +517,7 @@ export function AbaInscritos() {
       <Modal show={modalAtualizacao} onClose={() => setModalAtualizacao(false)} title="Pedir atualização de cadastro">
         <p style={{ fontSize: "0.9rem", color: "var(--text2)", lineHeight: 1.6, marginBottom: "1rem" }}>
           Envia o modelo <strong>"Atualização de Cadastro"</strong> (editável em Participantes → Modelos) para os{" "}
-          <strong>{incompletos.length}</strong> inscrito{incompletos.length !== 1 ? "s" : ""} sem CPF, sem instituição, ou que preencheram só um nome.
+          <strong>{incompletos.length}</strong> inscrito{incompletos.length !== 1 ? "s" : ""} sem CPF, sem instituição, sem nome para crachá, ou que preencheram só um nome.
         </p>
         <div style={{ maxHeight: 220, overflowY: "auto", background: "var(--surface2)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.85rem", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
           {incompletos.map(p => (
