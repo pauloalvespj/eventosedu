@@ -196,17 +196,13 @@ export default function App() {
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [roleSelectorOptions, setRoleSelectorOptions] = useState([]);
 
-  // Usuário efetivo: mesmo profile mas com o role selecionado na sessão
+  // Usuário efetivo: mesmo profile mas com o role selecionado na sessão.
+  // is_palestrante não é mais afetado pelo role escolhido — participante
+  // que também é palestrante vê os dois perfis mesclados, sem precisar trocar.
   const effectiveUser = useMemo(() => {
     if (!user) return null;
     const role = activeRole ?? user.role;
-    return {
-      ...user,
-      role,
-      is_palestrante: role === "palestrante" ? true
-        : role === "participante" ? false
-        : user.is_palestrante,
-    };
+    return { ...user, role };
   }, [user, activeRole]);
 
   // ── UI ───────────────────────────────────────────────────────
@@ -316,10 +312,11 @@ export default function App() {
 
     // Verifica se o usuário tem múltiplos perfis e decide o que fazer
     function resolveRole(prof) {
+      // "palestrante" não é mais um role selecionável: quem é participante
+      // (ou admin) e também é palestrante vê os dois perfis mesclados direto.
       const derivedRoles = [
         ...(prof.role === "admin" ? ["admin"] : ["participante"]),
         ...(prof.is_credenciador ? ["credenciador"] : []),
-        ...(prof.is_palestrante  ? ["palestrante"]  : []),
         ...(prof.role === "admin" ? ["participante"] : []),
       ];
       const allRoles = derivedRoles.length > 1 ? derivedRoles : null;

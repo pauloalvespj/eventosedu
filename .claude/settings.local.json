@@ -38,7 +38,11 @@
       "Skill(run)",
       "Bash(npx --yes playwright --version)",
       "Bash(npm init *)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(supabase migration *)",
+      "Bash(supabase db *)",
+      "Bash(git checkout *)",
+      "Bash(grep -v \"no-unused-vars\\\\|never used\\\\|^$\")"
     ]
   }
 }

@@ -54,7 +54,7 @@ export function MeusDados() {
 
       {perfilIncompleto && (
         <div style={{ background: "var(--gold-pale)", border: "1px solid rgba(201,168,76,0.4)", borderRadius: "var(--radius-sm)", padding: "0.9rem 1.1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "var(--warn)" }}>
-          ⚠️ Seu cadastro está incompleto — falta preencher {[!user.cpf && "CPF", !user.instituicao && "instituição", !user.cargo && "cargo"].filter(Boolean).join(", ")}. Isso é importante para o credenciamento e a emissão do certificado.
+          ⚠️ Seu cadastro está incompleto — falta preencher {[!user.cpf && "CPF", !user.email && "e-mail", !user.instituicao && "instituição", !user.cargo && "cargo", isPalestrante && !user.mini_bio && "mini biografia"].filter(Boolean).join(", ")}. Isso é importante para o credenciamento e a emissão do certificado.
         </div>
       )}
 
@@ -83,11 +83,11 @@ export function MeusDados() {
           <div>
             <div className="form-grid">
               <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                <label className="form-label">Nome completo</label>
+                <label className="form-label">Nome completo *</label>
                 <input className="form-input" value={formEdit.nome} onChange={e => setFormEdit(f => ({ ...f, nome: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="form-label">CPF</label>
+                <label className="form-label">CPF *</label>
                 <input className="form-input" style={{ fontFamily: "monospace" }} placeholder="000.000.000-00"
                   value={formEdit.cpf} onChange={e => setFormEdit(f => ({ ...f, cpf: formatCPF(e.target.value) }))} maxLength={14} />
               </div>
@@ -96,24 +96,24 @@ export function MeusDados() {
                 <input className="form-input" value={user.email} disabled style={{ background: "var(--surface2)", color: "var(--text3)" }} />
               </div>
               <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                <label className="form-label">Cargo / Função</label>
+                <label className="form-label">Cargo / Função *</label>
                 <input className="form-input" value={formEdit.cargo} onChange={e => setFormEdit(f => ({ ...f, cargo: e.target.value }))} />
               </div>
               <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                <label className="form-label">Instituição</label>
+                <label className="form-label">Instituição *</label>
                 <InstSelect value={formEdit.instituicao} onChange={v => setFormEdit(f => ({ ...f, instituicao: v }))}
                   instituicoes={instituicoes} onCriada={i => setInstituicoes?.(prev => [...prev, i])} />
               </div>
               {isPalestrante && (
                 <div className="form-group" style={{ gridColumn: "1/-1" }}>
-                  <label className="form-label">Mini Biografia</label>
-                  <textarea className="form-input" rows={3} value={formEdit.mini_bio} onChange={e => setFormEdit(f => ({ ...f, mini_bio: e.target.value }))} />
+                  <label className="form-label">Mini Biografia *</label>
+                  <textarea className="form-input" rows={6} value={formEdit.mini_bio} onChange={e => setFormEdit(f => ({ ...f, mini_bio: e.target.value }))} />
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
               <button className="btn btn-outline btn-sm" onClick={() => navigate("/painel/dados")}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
             </div>
           </div>
         ) : (

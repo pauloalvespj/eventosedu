@@ -46,6 +46,34 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:#1a1a2e;scroll-
   --admin-hd:#234c82;
 }
 
+/* ── ALTO CONTRASTE (acessibilidade / PCD) ── */
+:root.high-contrast{
+  --navy:#ffff00;--navy-dark:#000000;--navy-light:#ffff00;
+  --hero:#000000;
+  --gold:#ffff00;--gold-light:#ffff00;--gold-pale:#000000;
+  --gold-on-dark:#ffff00;--gold-label:#ffff00;--gold-tint:#000000;--gold-border:#ffff00;--gold-divider:#ffff00;
+  --white-hi:#ffffff;--white-mid:#ffffff;--white-low:#ffffff;--white-faint:#ffffff;
+  --teal:#ffff00;--teal-light:#ffff00;
+  --bg:#000000;--surface:#000000;--surface2:#0a0a0a;
+  --text:#ffffff;--text2:#ffffff;--text3:#ffff00;
+  --border:#ffffff;--border2:#ffffff;
+  --success:#00ff00;--success-bg:#000000;
+  --danger:#ff6666;--danger-bg:#000000;
+  --warn:#ffff00;--warn-bg:#000000;
+  --shadow:none;--shadow-lg:none;
+  --nav-bg:#000000;
+  --hero-gradient:#000000;--hero-dark:#000000;
+  --admin-sb-bg:#000000;--admin-sb-accent:#ffff00;--admin-sb-accent-lg:#ffff00;--admin-sb-active:#333300;--admin-hd:#000000;
+}
+:root.high-contrast body{background:#000;color:#fff}
+:root.high-contrast *{text-shadow:none !important;box-shadow:none !important}
+:root.high-contrast a,:root.high-contrast button,:root.high-contrast .btn{text-decoration:underline;text-underline-offset:2px}
+:root.high-contrast img:not([src*=".svg"]){filter:grayscale(1) contrast(1.3)}
+:root.high-contrast .btn,:root.high-contrast input,:root.high-contrast select,:root.high-contrast textarea{border:2px solid #ffff00 !important}
+.a11y-toggle{background:transparent;border:2px solid rgba(255,255,255,0.5);border-radius:var(--radius-sm);color:#fff;font-size:0.72rem;font-weight:700;padding:0.3rem 0.6rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;white-space:nowrap}
+.a11y-toggle:hover{border-color:#fff;background:rgba(255,255,255,0.1)}
+:root.high-contrast .a11y-toggle{background:#ffff00;color:#000;border-color:#ffff00}
+
 /* ── Utilitários de paleta ── */
 .card-white{background:#fff;border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem}
 .card-hero{background:var(--hero);border-radius:var(--radius-lg);padding:1.5rem 2rem;color:var(--white-hi)}
@@ -150,6 +178,13 @@ input,select,textarea{font-family:inherit}
 .prog-ch{background:var(--gold-pale);color:var(--warn);padding:0.25rem 0.6rem;border-radius:50px;font-size:0.75rem;font-weight:600;white-space:nowrap}
 .prog-local{font-size:0.75rem;color:var(--text3);margin-top:0.25rem}
 
+/* Programação (participante) — cards compactos: hora > tema > palestrante/órgão */
+.pgrid-card{background:var(--surface);border-radius:var(--radius-sm);padding:0.75rem 0.9rem;margin-bottom:0.5rem;border-left:3px solid var(--navy);box-shadow:var(--shadow)}
+.pgrid-top{font-size:0.78rem;font-weight:700;color:var(--teal);margin-bottom:0.3rem;display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem}
+.pgrid-titulo-row{display:flex;align-items:baseline;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem}
+.pgrid-titulo{font-weight:700;font-size:0.9rem;color:var(--navy);line-height:1.3}
+.pgrid-palestrante{font-size:0.78rem;color:var(--text2);margin-top:0.2rem;line-height:1.4}
+
 /* PALESTRANTES */
 .palestrantes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem}
 .palestrante-card{background:var(--surface);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;box-shadow:var(--shadow);border:1px solid var(--border);transition:all 0.3s}
@@ -173,14 +208,14 @@ input,select,textarea{font-family:inherit}
 .faq-a{padding:0 1.5rem 1.25rem;color:var(--text2);font-size:0.92rem;line-height:1.6}
 
 /* FORMS */
-.form-group{margin-bottom:1.25rem}
+.form-group{margin-bottom:1.25rem;min-width:0}
 .form-label{display:block;font-size:0.85rem;font-weight:600;color:var(--text);margin-bottom:0.4rem;letter-spacing:0.02em}
-.form-input{width:100%;padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.92rem;color:var(--text);background:var(--surface);transition:border-color 0.2s,box-shadow 0.2s}
+.form-input{width:100%;max-width:100%;padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.92rem;color:var(--text);background:var(--surface);transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box}
 .form-input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--gold-tint)}
 .form-input.error{border-color:var(--danger)}
 .form-error{font-size:0.78rem;color:var(--danger);margin-top:0.3rem}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.form-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;min-width:0}
+.form-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;min-width:0}
 .dash-event-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
 .dash-participant-card{display:grid;grid-template-columns:1fr 1fr;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);margin-bottom:1rem}
 .dash-stats-3{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1rem}
@@ -314,9 +349,19 @@ tr:hover td{background:var(--surface2)}
 .part-nav-item{display:flex;align-items:center;gap:0.65rem;padding:0.65rem 1rem;color:#B8D2F4;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.2s;border-left:3px solid transparent;white-space:nowrap}
 .part-nav-item:hover{background:rgba(255,255,255,0.10);color:#fff}
 .part-nav-item.active{background:var(--admin-sb-active);color:var(--admin-sb-accent-lg);border-left-color:var(--admin-sb-accent)}
-.part-topbar{background:var(--admin-hd);color:#fff;padding:0 2rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.part-topbar-title{font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--admin-sb-accent-lg)}
 .part-content{flex:1;min-width:0;padding:2rem;box-sizing:border-box}
+
+/* Minha Área (popover mobile) */
+.minha-area-fullscreen{position:fixed;top:54px;left:0;right:0;bottom:calc(4.75rem + env(safe-area-inset-bottom));z-index:190;background:var(--surface);display:flex;flex-direction:column;overflow-y:auto}
+.minha-area-fs-header{position:relative;flex-shrink:0;padding:2.5rem 1.5rem 1.75rem;display:flex;flex-direction:column;align-items:center;text-align:center;color:#fff}
+.minha-area-fs-close{position:absolute;top:1rem;right:1rem;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.minha-area-fs-nome{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-top:0.85rem}
+.minha-area-fs-cargo{font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:0.25rem}
+.minha-area-fs-list{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.15rem;padding-bottom:calc(1rem + env(safe-area-inset-bottom))}
+.minha-area-item{display:flex;align-items:center;gap:0.75rem;padding:0.9rem 0.85rem;font-size:0.92rem;font-weight:600;color:var(--text);border-radius:var(--radius-sm);background:none;border:none;text-align:left;cursor:pointer;min-height:48px}
+.minha-area-item:hover{background:var(--surface2)}
+.minha-area-item.danger{color:var(--danger)}
+.minha-area-divider{height:1px;background:var(--border);margin:0.5rem 0.25rem}
 
 /* PROGRESSO */
 .progress-bar{height:10px;background:var(--border);border-radius:50px;overflow:hidden}
@@ -392,6 +437,9 @@ tr:hover td{background:var(--surface2)}
 .hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0.4rem;display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s}
 
+/* Bottom nav (mobile) — participante/palestrante */
+.bottom-nav{display:none}
+
 .ev-view-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
 .ev-main-card{display:flex;justify-content:space-between;align-items:flex-start;gap:2rem}
 .ev-main-info{flex:1;min-width:0}
@@ -407,6 +455,7 @@ tr:hover td{background:var(--surface2)}
   .form-grid-4{grid-template-columns:1fr}
   .form-grid-4 > *{grid-column:1/-1 !important}
   .dash-event-grid{grid-template-columns:1fr}
+  .dash-top-grid{grid-template-columns:1fr !important}
   .dash-participant-card{grid-template-columns:1fr}
   .dash-stats-3{grid-template-columns:1fr}
   /* QR code centralizado */
@@ -424,14 +473,23 @@ tr:hover td{background:var(--surface2)}
   .navbar-nav .btn-login-mobile{display:flex}
   .dash-grid{grid-template-columns:repeat(2,1fr)}
 
-  /* Mobile header visível */
-  .mobile-header{display:flex}
-
-  /* Participant sidebar — off-canvas */
+  /* Mobile: navegação é 100% pelo header + bottom nav + Minha Área — sidebar de desktop some */
   .part-layout{flex-direction:column}
-  .part-sidebar{position:fixed;top:0;left:0;bottom:0;width:260px;height:100vh;z-index:200;transform:translateX(-100%);transition:transform 0.25s ease}
-  .part-sidebar.open{transform:translateX(0)}
-  .part-content{padding:1rem;width:100%}
+  .mobile-header{display:flex;position:fixed;top:0;left:0;right:0}
+  .part-sidebar{display:none}
+  .part-content{padding:1rem;width:100%;padding-top:calc(1rem + 54px);padding-bottom:calc(4.75rem + env(safe-area-inset-bottom))}
+
+  /* Bottom nav — navegação principal no mobile, estilo iFood (ícone + label) */
+  .bottom-nav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:200;
+    border-top:1px solid rgba(255,255,255,0.10);
+    box-shadow:0 -2px 10px rgba(0,0,0,0.15);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0.5rem 0.25rem;color:rgba(255,255,255,0.55);font-size:0.64rem;font-weight:600;min-height:56px;text-align:center;white-space:nowrap;transition:color 0.2s;background:none;border:none;cursor:pointer}
+  .bottom-nav-item svg{font-size:1.15rem}
+  .bottom-nav-item.active{color:#fff}
+  .bottom-nav-item.active svg{color:var(--gold-on-dark,#e8c96a)}
 
   /* Admin sidebar — off-canvas */
   .admin-layout{flex-direction:column}

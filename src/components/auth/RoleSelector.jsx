@@ -2,10 +2,17 @@ const ROLE_INFO = {
   admin:        { icon: "⚙️",  label: "Administrador",  desc: "Gerenciar evento, participantes e configurações" },
   credenciador: { icon: "🪪",  label: "Credenciador",   desc: "Credenciar participantes no evento" },
   participante: { icon: "👤",  label: "Participante",   desc: "Minha área, programação, presenças e fórum" },
-  palestrante:  { icon: "🎤",  label: "Palestrante",    desc: "Minhas palestras e presentes" },
 };
 
 export function RoleSelector({ user, roles, onSelect }) {
+  // Card "Participante" mescla também a área de Palestrante quando o
+  // profile tem os dois perfis — não existe mais role "palestrante" separado.
+  const infoFor = role => {
+    if (role === "participante" && user.is_palestrante) {
+      return { icon: "👤🎤", label: "Participante e Palestrante", desc: "Minha área, programação, presenças, fórum e minhas palestras" };
+    }
+    return ROLE_INFO[role] || { icon: "👤", label: role, desc: "" };
+  };
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
@@ -25,7 +32,7 @@ export function RoleSelector({ user, roles, onSelect }) {
 
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center", maxWidth: 680, width: "100%" }}>
         {roles.map(role => {
-          const info = ROLE_INFO[role] || { icon: "👤", label: role, desc: "" };
+          const info = infoFor(role);
           return (
             <button key={role} onClick={() => onSelect(role)}
               style={{

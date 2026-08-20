@@ -1,15 +1,50 @@
 import { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { formatData, diaSemana, qrPresencaValue } from "../../../utils/helpers";
-import { TipoBadge, QRCodeCanvas, StarRating } from "../../base/index";
+import { formatData, diaSemana, qrPresencaValue, faltamDiasLabel, TIPO_LABEL } from "../../../utils/helpers";
+import { QRCodeCanvas, StarRating } from "../../base/index";
 import { uploadMaterial, deletarMaterial, atualizarAtividade } from "../../../lib/db";
 import { useUsuario } from "../UsuarioContext";
 
+// Observações privadas do palestrante sobre a própria atividade — só ele vê/edita
+function ObservacaoBox({ atividade, userId, onSave }) {
+  const inicial = (atividade.observacoes_palestrantes || {})[userId] || "";
+  const [texto, setTexto] = useState(inicial);
+  const [salvando, setSalvando] = useState(false);
+  const dirty = texto !== inicial;
+
+  async function salvar() {
+    setSalvando(true);
+    await onSave(texto);
+    setSalvando(false);
+  }
+
+  return (
+    <div style={{ border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:"1rem", marginTop:"1rem" }}>
+      <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.88rem", marginBottom:"0.5rem" }}>
+        📝 Minhas Observações <span style={{ fontWeight:400, color:"var(--text3)", fontSize:"0.72rem" }}>(privado, só você vê)</span>
+      </div>
+      <textarea className="form-input" rows={3} placeholder="Anotações pessoais sobre esta atividade…" value={texto} onChange={e => setTexto(e.target.value)} />
+      {dirty && (
+        <div style={{ display:"flex", justifyContent:"flex-end", marginTop:"0.5rem" }}>
+          <button className="btn btn-sm btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MinhasPalestras() {
-  const { atividades, setAtividades, presencas, avaliacoes, minhasPalestras, qrTokens } = useUsuario();
+  const { user, atividades, setAtividades, presencas, avaliacoes, minhasPalestras, qrTokens, porTurno, palestrantes } = useUsuario();
   const [uploadingId, setUploadingId] = useState(null);
   const fileRefs = useRef({});
+
+  async function handleSalvarObservacao(atividadeId, texto) {
+    const atv = atividades.find(a => a.id === atividadeId);
+    const novasObs = { ...(atv?.observacoes_palestrantes || {}), [user.id]: texto };
+    await atualizarAtividade(atividadeId, { observacoes_palestrantes: novasObs });
+    if (setAtividades) setAtividades(prev => prev.map(a => a.id === atividadeId ? { ...a, observacoes_palestrantes: novasObs } : a));
+  }
 
   async function handleUploadMaterial(atividadeId, file) {
     setUploadingId(atividadeId);
@@ -37,7 +72,7 @@ export function MinhasPalestras() {
 
   return (
     <div>
-      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"1.5rem" }}>🎙 Minhas Palestras & QR Codes</h2>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"1.5rem" }}>🎙 Minhas Palestras{!porTurno && " & QR Codes"}</h2>
       {minhasPalestras.length === 0 ? (
         <div style={{ textAlign:"center", padding:"3rem", color:"var(--text2)" }}>
           <div style={{ fontSize:"3rem", marginBottom:"1rem" }}>🎙</div>
@@ -47,22 +82,40 @@ export function MinhasPalestras() {
         const nPres = presencas.filter(p => p.atividade_id === a.id).length;
         const avsAtv = avaliacoes.filter(av => av.atividade_id === a.id);
         const mediaAvs = avsAtv.length ? avsAtv.reduce((s,av)=>s+av.estrelas,0)/avsAtv.length : 0;
+        const contagem = faltamDiasLabel(a.dia);
+        const outrosPalestrantes = (a.palestrantes_ids || [])
+          .map(id => palestrantes.find(p => p.id === id))
+          .filter(p => p && p.id !== user.id);
         return (
           <div key={a.id} className="presenca-card" style={{ borderLeft:"4px solid var(--teal)", marginBottom:"1.25rem" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
               <div>
-                <div style={{ marginBottom:4 }}><TipoBadge tipo={a.tipo}/></div>
-                <h3 style={{ fontWeight:700, color:"var(--navy)", fontSize:"1rem", marginBottom:"0.25rem" }}>{a.titulo}</h3>
-                <div style={{ fontSize:"0.82rem", color:"var(--text2)" }}>📅 {diaSemana(a.dia)}, {formatData(a.dia)} · ⏱ {a.horario}{a.horario_fim?`–${a.horario_fim}`:""} · 📍 {a.local}</div>
-                <div style={{ marginTop:6, display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
+                <div style={{ fontSize:"0.85rem", fontWeight:600, color:"var(--text2)", marginBottom:"0.7rem" }}>📅 {diaSemana(a.dia)}, {formatData(a.dia)} · ⏱ {a.horario}{a.horario_fim?`–${a.horario_fim}`:""}</div>
+                <h3 style={{ fontWeight:700, color:"var(--navy)", fontSize:"1rem", marginBottom:"0.35rem" }}>
+                  <span style={{ color:"var(--text3)", fontWeight:600 }}>{TIPO_LABEL[a.tipo] || a.tipo}:</span> {a.titulo}
+                </h3>
+                {outrosPalestrantes.length > 0 && (
+                  <div style={{ fontSize:"0.8rem", color:"var(--text2)", marginBottom:"0.35rem" }}>
+                    🎤 {outrosPalestrantes.map(p => p.nome).join(", ")}
+                  </div>
+                )}
+                {a.local && <div style={{ fontSize:"0.8rem", color:"var(--text3)", marginBottom:"0.35rem" }}>📍 {a.local}</div>}
+                {contagem && (
+                  <div style={{ marginBottom:6 }}>
+                    <span className={`badge ${contagem.startsWith("🔴") ? "badge-danger" : "badge-navy"}`}>{contagem}</span>
+                  </div>
+                )}
+                <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
                   <span className="prog-ch">{a.carga_horaria}h</span>
-                  <span className={`badge badge-${a.conta_certificado?"success":"warn"}`}>{a.conta_certificado?"✓ Cert.":"Não conta"}</span>
+                  <span className={`badge badge-${a.conta_certificado?"success":"warn"}`}>{a.conta_certificado?"Certificado":"Não conta"}</span>
                 </div>
               </div>
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:700, color:"var(--teal)" }}>{nPres}</div>
-                <div style={{ fontSize:"0.75rem", color:"var(--text3)" }}>presentes</div>
-              </div>
+              {!porTurno && (
+                <div style={{ textAlign:"right", flexShrink:0 }}>
+                  <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"2rem", fontWeight:700, color:"var(--teal)" }}>{nPres}</div>
+                  <div style={{ fontSize:"0.75rem", color:"var(--text3)" }}>presentes</div>
+                </div>
+              )}
             </div>
             {a.descricao && <p style={{ fontSize:"0.85rem", color:"var(--text2)", marginBottom:"1rem", lineHeight:1.6 }}>{a.descricao}</p>}
 
@@ -102,38 +155,36 @@ export function MinhasPalestras() {
                 ))}
               </div>
             )}
-            {avsAtv.length === 0 && (
-              <div style={{ fontSize:"0.82rem", color:"var(--text3)", marginBottom:"0.75rem", fontStyle:"italic" }}>Nenhuma avaliação recebida ainda.</div>
+            {/* QR Code — não existe no modo "presença por turno" (o check-in não é por atividade) */}
+            {!porTurno && (
+              <div style={{ background:"var(--surface2)", borderRadius:"var(--radius)", padding:"1.25rem", display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap", marginBottom:"1rem" }}>
+                <div style={{ textAlign:"center", flexShrink:0 }}>
+                  {qrTokens[a.id]
+                    ? <QRCodeCanvas ref={el => { fileRefs.current[`qr-${a.id}`] = el; }} value={qrPresencaValue(a.id, qrTokens[a.id])} size={140}/>
+                    : <div style={{ width:140, height:140, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface)", borderRadius:8, color:"var(--text3)", fontSize:"0.8rem" }}>Carregando QR…</div>}
+                  <button className="btn btn-sm btn-outline" style={{ marginTop:"0.6rem", width:"100%" }}
+                    onClick={() => {
+                      const canvas = fileRefs.current[`qr-${a.id}`];
+                      if (!canvas) return;
+                      const link = document.createElement("a");
+                      link.href = canvas.toDataURL("image/png");
+                      link.download = `qrcode-${a.titulo.replace(/\s+/g,"-").toLowerCase()}.png`;
+                      link.click();
+                    }}>
+                    <FontAwesomeIcon icon={faDownload} style={{ marginRight:4 }} />Baixar QR Code
+                  </button>
+                </div>
+                <div style={{ flex:1, minWidth:180 }}>
+                  <div style={{ fontWeight:700, color:"var(--navy)", marginBottom:"0.5rem", fontSize:"0.9rem" }}>Como usar este QR Code</div>
+                  <ol style={{ fontSize:"0.85rem", color:"var(--text2)", lineHeight:1.8, paddingLeft:"1.2rem" }}>
+                    <li>Exiba no projetor durante a atividade</li>
+                    <li>Participantes apontam a câmera</li>
+                    <li>Se logados, confirmam com 1 clique</li>
+                    <li>Presença registrada automaticamente</li>
+                  </ol>
+                </div>
+              </div>
             )}
-
-            {/* QR Code */}
-            <div style={{ background:"var(--surface2)", borderRadius:"var(--radius)", padding:"1.25rem", display:"flex", gap:"1.5rem", alignItems:"center", flexWrap:"wrap", marginBottom:"1rem" }}>
-              <div style={{ textAlign:"center", flexShrink:0 }}>
-                {qrTokens[a.id]
-                  ? <QRCodeCanvas ref={el => { fileRefs.current[`qr-${a.id}`] = el; }} value={qrPresencaValue(a.id, qrTokens[a.id])} size={140}/>
-                  : <div style={{ width:140, height:140, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface)", borderRadius:8, color:"var(--text3)", fontSize:"0.8rem" }}>Carregando QR…</div>}
-                <button className="btn btn-sm btn-outline" style={{ marginTop:"0.6rem", width:"100%" }}
-                  onClick={() => {
-                    const canvas = fileRefs.current[`qr-${a.id}`];
-                    if (!canvas) return;
-                    const link = document.createElement("a");
-                    link.href = canvas.toDataURL("image/png");
-                    link.download = `qrcode-${a.titulo.replace(/\s+/g,"-").toLowerCase()}.png`;
-                    link.click();
-                  }}>
-                  <FontAwesomeIcon icon={faDownload} style={{ marginRight:4 }} />Baixar QR Code
-                </button>
-              </div>
-              <div style={{ flex:1, minWidth:180 }}>
-                <div style={{ fontWeight:700, color:"var(--navy)", marginBottom:"0.5rem", fontSize:"0.9rem" }}>Como usar este QR Code</div>
-                <ol style={{ fontSize:"0.85rem", color:"var(--text2)", lineHeight:1.8, paddingLeft:"1.2rem" }}>
-                  <li>Exiba no projetor durante a atividade</li>
-                  <li>Participantes apontam a câmera</li>
-                  <li>Se logados, confirmam com 1 clique</li>
-                  <li>Presença registrada automaticamente</li>
-                </ol>
-              </div>
-            </div>
 
             {/* Materiais */}
             <div style={{ border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:"1rem" }}>
@@ -165,6 +216,8 @@ export function MinhasPalestras() {
                 </div>
               )}
             </div>
+
+            <ObservacaoBox atividade={a} userId={user.id} onSave={texto => handleSalvarObservacao(a.id, texto)} />
           </div>
         );
       })}

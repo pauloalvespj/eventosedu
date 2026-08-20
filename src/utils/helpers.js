@@ -62,6 +62,22 @@ export function diaSemana(d) {
   return DIAS_PT[dt.getDay()];
 }
 
+// Contagem regressiva até um dia (formato "YYYY-MM-DD") — null quando já passou
+export function faltamDiasLabel(diaStr) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const dia = new Date(diaStr + "T00:00:00");
+  const diff = Math.round((dia - hoje) / 86400000);
+  if (diff === 0) return "🔴 É hoje!";
+  if (diff < 0) return null;
+  return `Falta${diff === 1 ? "" : "m"} ${diff} dia${diff === 1 ? "" : "s"}`;
+}
+
+export function formatDataHora(iso) {
+  if (!iso) return "–";
+  const dt = new Date(iso);
+  return `${dt.toLocaleDateString("pt-BR")} às ${dt.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" })}`;
+}
+
 export function timeAgo(dt) {
   const diff = Date.now() - new Date(dt).getTime();
   const m = Math.floor(diff / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);

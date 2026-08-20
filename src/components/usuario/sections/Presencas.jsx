@@ -1,4 +1,4 @@
-import { formatData, diaSemana, TIPO_COLOR } from "../../../utils/helpers";
+import { formatData, diaSemana, TIPO_COLOR, formatDataHora } from "../../../utils/helpers";
 import { ProgressBar, TipoBadge, AvaliacaoWidget } from "../../base/index";
 import { useUsuario } from "../UsuarioContext";
 
@@ -44,8 +44,7 @@ export function Presencas() {
                   </div>
                 </div>
                 <div style={{ fontSize:"0.78rem",color:"var(--text3)",marginTop:"0.5rem",display:"flex",gap:"1.5rem",flexWrap:"wrap" }}>
-                  <span>🕐 {p.data_hora}</span>
-                  {t.conta_certificado&&<span style={{ color:"var(--teal)",fontWeight:600 }}>✓ Conta p/ certificado</span>}
+                  <span>🕐 {formatDataHora(p.data_hora)}</span>
                 </div>
               </div>
             );
@@ -72,8 +71,7 @@ export function Presencas() {
                   </div>
                 </div>
                 <div style={{ fontSize:"0.78rem",color:"var(--text3)",marginTop:"0.5rem",display:"flex",gap:"1.5rem",flexWrap:"wrap" }}>
-                  <span>🕐 {p.data_hora}</span>
-                  {at.conta_certificado&&<span style={{ color:"var(--teal)",fontWeight:600 }}>✓ Conta p/ certificado</span>}
+                  <span>🕐 {formatDataHora(p.data_hora)}</span>
                 </div>
                 {podeAvaliar && (
                   <AvaliacaoWidget

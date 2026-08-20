@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRoutes, Navigate, NavLink } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
+  faHandshake, faClipboardList, faCircleUser, faMicrophone, faCircleHalfStroke, faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId } from "../../utils/helpers";
+import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
 import { AvatarUpload } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
@@ -67,8 +73,9 @@ export function AreaUsuario(props) {
 
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
-  const perfilIncompleto = !user.cpf || !user.instituicao || !user.cargo;
-  const [navAberta, setNavAberta] = useState(false);
+  const perfilIncompleto = !user.cpf || !user.email || !user.instituicao || !user.cargo || (isPalestrante && !user.mini_bio);
+  const [minhaAreaAberta, setMinhaAreaAberta] = useState(false);
+  const [altoContraste, setAltoContraste] = useState(isHighContrast);
 
   // Tokens de QR das atividades do palestrante (lidos do banco; o RLS
   // permite para palestrantes da atividade, admin e credenciador)
@@ -158,22 +165,27 @@ export function AreaUsuario(props) {
 
   // Menu dinâmico — abas comuns + extras p/ palestrante
   const MENU_COMUM = [
-    ["",              "🏠 Início"],
-    ["programacao",   "📅 Programação"],
-    ["presencas",     "✅ Presenças"],
-    ...(event.certificado_disponivel ? [["certificado", "🏆 Certificado"]] : []),
-    ...(event.forum_ativo !== false ? [["forum", "💬 Fórum"]] : []),
-    ...(event.gamificacao_ativa !== false ? [["ranking", "🏅 Ranking"]] : []),
-    ...(event.rede_visivel !== false ? [["rede", "🤝 Rede"]] : []),
-    ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", "📝 Pesquisa de Satisfação"]] : []),
-    ["dados",         "👤 Meus Dados"],
+    ["",              faHouse,         "Início"],
+    ["programacao",   faCalendarDays,  "Programação"],
+    ["presencas",     faCircleCheck,   "Presenças"],
+    ...(event.certificado_disponivel ? [["certificado", faTrophy, "Certificado"]] : []),
+    ...(event.forum_ativo !== false ? [["forum", faComments, "Fórum"]] : []),
+    ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
+    ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
+    ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa de Satisfação"]] : []),
+    ["dados",         faCircleUser,    "Meus Dados"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
-    ["palestras", "🎙 Minhas Palestras"],
+    ["palestras", faMicrophone, "Minhas Palestras"],
   ];
   const ABAS = isPalestrante
     ? [MENU_COMUM[0], ...MENU_PALESTRANTE_EXTRA, ...MENU_COMUM.slice(1)]
     : MENU_COMUM;
+  // Bottom nav (mobile): Início + Programação sempre, Minhas Palestras só para
+  // quem é palestrante — Presenças e o resto ficam dentro de "Minha Área"
+  const ABAS_BOTTOM = isPalestrante
+    ? [MENU_COMUM[0], MENU_COMUM.find(([k]) => k === "programacao"), MENU_PALESTRANTE_EXTRA[0]].filter(Boolean)
+    : [MENU_COMUM[0], MENU_COMUM.find(([k]) => k === "programacao")].filter(Boolean);
 
   const contextValue = {
     ...props,
@@ -185,28 +197,25 @@ export function AreaUsuario(props) {
     qrTokens, respondeuPesquisa, setRespondeuPesquisa,
   };
 
+  const headerBgH = isPalestrante ? "linear-gradient(90deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)";
+  const headerBgV = isPalestrante ? "linear-gradient(180deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)";
+  // user.instituicao guarda a sigla — exibe o nome completo do órgão quando encontrado na lista
+  const instituicaoNome = (instituicoes || []).find(i => i.sigla === user.instituicao || i.nome === user.instituicao)?.nome || user.instituicao;
+
   return (
     <UsuarioContext.Provider value={contextValue}>
       <div className="part-layout">
-        {/* ── MOBILE HEADER ── */}
-        <div className="mobile-header" style={{ background: isPalestrante ? "linear-gradient(90deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)" }}>
-          <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
-            <span/><span/><span/>
-          </button>
+        {/* ── HEADER (mobile) — nome do evento + alto contraste ── */}
+        <div className="mobile-header" style={{ background: headerBgH }}>
           <span className="mobile-header-title">{event.nome}</span>
-          {onSwitchRole && (
-            <button onClick={onSwitchRole} title="Trocar perfil" style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:"var(--radius-sm)", color:"#fff", fontSize:"0.72rem", fontWeight:600, padding:"0.3rem 0.55rem", cursor:"pointer", flexShrink:0, whiteSpace:"nowrap" }}>⇄</button>
-          )}
-          <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"#fff", flexShrink:0 }}>
-            {user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
-          </div>
+          <button onClick={() => setAltoContraste(toggleHighContrast())} title="Alternar alto contraste (acessibilidade)" aria-pressed={altoContraste}
+            style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:"var(--radius-sm)", color:"#fff", fontSize:"0.85rem", padding:"0.4rem 0.55rem", cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center" }}>
+            <FontAwesomeIcon icon={faCircleHalfStroke} />
+          </button>
         </div>
 
-        {/* ── OVERLAY ── */}
-        {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
-
-        {/* ── SIDEBAR ── */}
-        <div className={`part-sidebar${navAberta ? " open" : ""}`} style={{ background: isPalestrante ? "linear-gradient(180deg,var(--hero-dark),var(--hero))" : "var(--navy-dark)" }}>
+        {/* ── SIDEBAR (desktop) ── */}
+        <div className="part-sidebar" style={{ background: headerBgV }}>
           <div className="part-sidebar-header">
             <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"0.75rem" }}>
               <AvatarUpload
@@ -230,15 +239,19 @@ export function AreaUsuario(props) {
           </div>
 
           <nav className="part-nav">
-            {ABAS.map(([k,l]) => (
+            {ABAS.map(([k,icon,l]) => (
               <NavLink key={k || "inicio"} to={k ? `/painel/${k}` : "/painel"} end={!k}
-                className={({ isActive }) => `part-nav-item${isActive ? " active" : ""}`}
-                onClick={() => setNavAberta(false)}>{l}</NavLink>
+                className={({ isActive }) => `part-nav-item${isActive ? " active" : ""}`}>
+                <FontAwesomeIcon icon={icon} className="admin-nav-icon" fixedWidth />{l}
+              </NavLink>
             ))}
           </nav>
 
           <div style={{ padding:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ fontSize:"0.68rem", color:"var(--white-faint)", marginBottom:"0.5rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{event.nome}</div>
+            <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem" }}
+              onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
+              <FontAwesomeIcon icon={faCircleHalfStroke} style={{ marginRight:6 }} />Alto contraste
+            </button>
             {onSwitchRole && (
               <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem" }} onClick={onSwitchRole}>
                 ⇄ Trocar perfil
@@ -248,10 +261,64 @@ export function AreaUsuario(props) {
           </div>
         </div>
 
-        {/* ── CONTEÚDO — roteado por AreaUsuarioRoutes ── */}
+        {/* ── CONTEÚDO ── */}
         <div className="part-content">
           <AreaUsuarioRoutes />
         </div>
+
+        {/* ── BOTTOM NAV (mobile) — ícone + label, estilo apps de delivery ── */}
+        <nav className="bottom-nav" style={{ background: headerBgH }}>
+          {ABAS_BOTTOM.map(([k,icon,l]) => (
+            <NavLink key={k || "inicio"} to={k ? `/painel/${k}` : "/painel"} end={!k}
+              className={({ isActive }) => `bottom-nav-item${isActive ? " active" : ""}`}
+              onClick={() => setMinhaAreaAberta(false)}>
+              <FontAwesomeIcon icon={icon} />
+              <span>{l}</span>
+            </NavLink>
+          ))}
+          <button type="button" className={`bottom-nav-item${minhaAreaAberta ? " active" : ""}`} onClick={() => setMinhaAreaAberta(v => !v)}>
+            <FontAwesomeIcon icon={faCircleUser} />
+            <span>Minha Área</span>
+          </button>
+        </nav>
+
+        {/* ── MINHA ÁREA (mobile) — tela cheia com perfil no topo ── */}
+        {minhaAreaAberta && (
+          <div className="minha-area-fullscreen">
+            <div className="minha-area-fs-header" style={{ background: headerBgV }}>
+              <button type="button" className="minha-area-fs-close" onClick={() => setMinhaAreaAberta(false)} aria-label="Fechar">
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+              <AvatarUpload
+                userId={user.id}
+                fotoUrl={user.foto_url}
+                iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
+                size={76}
+                onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
+              />
+              <div className="minha-area-fs-nome">{user.nome}</div>
+              {(user.cargo || user.titulo || user.instituicao) && (
+                <div className="minha-area-fs-cargo">{[user.cargo || user.titulo, instituicaoNome].filter(Boolean).join(" · ")}</div>
+              )}
+            </div>
+
+            <div className="minha-area-fs-list">
+              <NavLink to="/painel/dados" className="minha-area-item" onClick={() => setMinhaAreaAberta(false)}>
+                <FontAwesomeIcon icon={faCircleUser} fixedWidth />Meus Dados
+              </NavLink>
+              <NavLink to="/painel/presencas" className="minha-area-item" onClick={() => setMinhaAreaAberta(false)}>
+                <FontAwesomeIcon icon={faCircleCheck} fixedWidth />Minhas Presenças
+              </NavLink>
+              {onSwitchRole && (
+                <button type="button" className="minha-area-item" onClick={() => { setMinhaAreaAberta(false); onSwitchRole(); }}>
+                  ⇄ Trocar perfil
+                </button>
+              )}
+              <div className="minha-area-divider" />
+              <button type="button" className="minha-area-item danger" onClick={onLogout}>← Sair</button>
+            </div>
+          </div>
+        )}
       </div>
     </UsuarioContext.Provider>
   );
