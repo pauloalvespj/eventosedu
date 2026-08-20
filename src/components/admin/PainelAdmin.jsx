@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { useRoutes, NavLink, Navigate } from "react-router-dom";
+import { useRoutes, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faArrowRightFromBracket, faBuilding, faClipboardList, faCircleHalfStroke,
+  faBuilding,
   faEye, faEyeSlash,
 } from "@fortawesome/free-solid-svg-icons";
-import { ROLE_LABEL, nomeExibicao, validarSenha } from "../../utils/helpers";
+import { ROLE_LABEL, validarSenha } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
-import { AvatarUpload } from "../base/index";
+import { AvatarUpload, Sidebar } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
 import { supabase } from "../../lib/supabase";
@@ -26,9 +26,8 @@ import { Relatorios }     from "./sections/Relatorios";
 import { Avaliacoes }     from "./sections/Avaliacoes";
 import { ForumAdmin }     from "./sections/ForumAdmin";
 import { Gamificacao }    from "./sections/Gamificacao";
-import { Usuarios }       from "./sections/Usuarios";
+import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
-import { Logs }           from "./sections/Logs";
 
 const MENU = [
   { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin","credenciador"] },
@@ -41,10 +40,9 @@ const MENU = [
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
   { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
   { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
-  { path: "usuarios",       icon: faLock,         label: "Usuários",        roles: ["admin"] },
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
   { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
-  { path: "logs",           icon: faClipboardList,label: "Logs",            roles: ["admin"] },
+  { path: "administracao",  icon: faLock,         label: "Administração",   roles: ["admin"] },
 ];
 
 function MeusDados() {
@@ -259,16 +257,17 @@ function AdminRoutes() {
     { path: "avaliacoes",        element: <Avaliacoes /> },
     { path: "forum",             element: <ForumAdmin /> },
     { path: "gamificacao",       element: <Gamificacao /> },
-    { path: "usuarios",          element: <Usuarios /> },
     { path: "instituicoes",      element: <Instituicoes /> },
-    { path: "logs",              element: <Logs /> },
+    { path: "administracao",     element: <Administracao /> },
+    { path: "usuarios",          element: <Navigate to="/painel/administracao" replace /> },
+    { path: "logs",              element: <Navigate to="/painel/administracao" replace /> },
     { path: "meus-dados",        element: <MeusDados /> },
     { path: "*",                 element: <Navigate to="/painel" replace /> },
   ]);
 }
 
 export function PainelAdmin(props) {
-  const { user, event, participantes, onLogout, onSwitchRole } = props;
+  const { user, event, onLogout, onSwitchRole } = props;
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
   const [navAberta, setNavAberta] = useState(false);
   const [altoContraste, setAltoContraste] = useState(isHighContrast);
@@ -291,56 +290,27 @@ export function PainelAdmin(props) {
         {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
 
         {/* SIDEBAR */}
-        <div className={`admin-sidebar${navAberta ? " open" : ""}`}>
-          <div style={{ padding: "0.85rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <NavLink to="/painel/meus-dados" title="Meus Dados"
-              style={{ display: "flex", alignItems: "center", gap: "0.6rem", textDecoration: "none", borderRadius: "var(--radius-sm)", padding: "0.3rem", margin: "-0.3rem" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--gold-light)", flexShrink: 0 }}>
-                {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
-              </div>
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nomeExibicao(user)}</div>
-                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.instituicao || ROLE_LABEL[user?.role] || user?.role}</div>
-              </div>
-            </NavLink>
-            {onSwitchRole && (
-              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginTop: "0.75rem" }} onClick={onSwitchRole}>
-                ⇄ Trocar perfil
-              </button>
-            )}
-          </div>
-          <nav className="admin-nav">
-            {menu.map(m => (
-              <NavLink
-                key={m.path || "dashboard"}
-                to={m.path ? `/painel/${m.path}` : "/painel"}
-                end={!m.path}
-                className={({ isActive }) => `admin-nav-item${isActive ? " active" : ""}`}
-                onClick={() => setNavAberta(false)}
-              >
-                <span className="admin-nav-icon"><FontAwesomeIcon icon={m.icon} fixedWidth /></span>
-                {m.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginBottom: "0.5rem" }}>
-              {participantes.length} inscritos · {participantes.filter(p=>p.credenciado).length} credenciados
-            </div>
-            <div style={{ display: "flex", gap: "0.4rem" }}>
-              <button className="btn btn-sm btn-outline" title="Alto contraste" aria-label="Alto contraste"
-                style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", flexShrink: 0, padding: "0.4rem 0.6rem" }}
-                onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
-                <FontAwesomeIcon icon={faCircleHalfStroke} />
-              </button>
-              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", flex: 1 }} onClick={onLogout}>
-                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ marginRight: 6 }} />Sair
-              </button>
-            </div>
-          </div>
-        </div>
+        <Sidebar
+          wrapClassName="admin-sidebar"
+          open={navAberta}
+          user={user}
+          roleLabel={user?.instituicao || ROLE_LABEL[user?.role] || user?.role}
+          meusDadosPath="/painel/meus-dados"
+          onSwitchRole={onSwitchRole}
+          navWrapClassName="admin-nav"
+          navItems={menu.map(m => ({
+            key: m.path || "dashboard",
+            to: m.path ? `/painel/${m.path}` : "/painel",
+            end: !m.path,
+            icon: m.icon,
+            label: m.label,
+            itemClassName: "admin-nav-item",
+            onClick: () => setNavAberta(false),
+          }))}
+          altoContraste={altoContraste}
+          onToggleAltoContraste={() => setAltoContraste(toggleHighContrast())}
+          onLogout={onLogout}
+        />
 
         {/* CONTEÚDO — roteado por AdminRoutes */}
         <div className="admin-content">

@@ -67,7 +67,7 @@ export function Usuarios() {
   return (
     <div>
       <div className="admin-topbar">
-        <div><h1>Usuários</h1><p>Equipe administrativa e credenciadores</p></div>
+        <div><h2 style={{ margin: 0, fontSize: "1.1rem" }}>Usuários</h2><p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Equipe administrativa e credenciadores</p></div>
         {userRole === "admin" && (
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Usuário</button>
         )}

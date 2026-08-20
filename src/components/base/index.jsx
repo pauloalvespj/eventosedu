@@ -4,6 +4,7 @@ import { TIPO_BG, TIPO_COLOR, TIPO_ICON, TIPO_LABEL, ROLE_LABEL } from "../../ut
 import { salvarAvaliacao } from "../../lib/db";
 export { AvatarUpload } from "./AvatarUpload";
 export { DatePickerInput } from "./DatePickerInput";
+export { Sidebar } from "./Sidebar";
 
 // ── Toast ─────────────────────────────────────────────────────
 export function Toast({ toast }) {

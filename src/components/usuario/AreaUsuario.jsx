@@ -7,7 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
-import { AvatarUpload } from "../base/index";
+import { AvatarUpload, Sidebar } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
@@ -214,58 +214,33 @@ export function AreaUsuario(props) {
         </div>
 
         {/* ── SIDEBAR (desktop) ── */}
-        <div className="part-sidebar" style={{ background: headerBgV }}>
-          <div className="part-sidebar-header">
-            <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"0.75rem" }}>
-              <AvatarUpload
-                userId={user.id}
-                fotoUrl={user.foto_url}
-                iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
-                size={36}
-                readonly
-              />
-              <div style={{ overflow:"hidden" }}>
-                <div style={{ fontSize:"0.78rem", color:"var(--white-hi)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome.split(" ")[0]}</div>
-                <div style={{ fontSize:"0.68rem", color:"var(--white-low)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
-              </div>
-            </div>
-            {onSwitchRole && (
-              <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.75rem" }} onClick={onSwitchRole}>
-                ⇄ Trocar perfil
-              </button>
-            )}
-            {event.gamificacao_ativa !== false && (
+        <Sidebar
+          wrapClassName="part-sidebar"
+          background={headerBgV}
+          user={user}
+          roleLabel={isPalestrante ? "Palestrante" : "Participante"}
+          meusDadosPath="/painel/dados"
+          onSwitchRole={onSwitchRole}
+          extraTop={event.gamificacao_ativa !== false && (
+            <div style={{ padding:"0 1rem 0.85rem", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
               <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
                 <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
                 <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
               </div>
-            )}
-          </div>
-
-          <nav className="part-nav">
-            {ABAS.map(([k,icon,l]) => (
-              <NavLink key={k || "inicio"} to={k ? `/painel/${k}` : "/painel"} end={!k}
-                className={({ isActive }) => `part-nav-item${isActive ? " active" : ""}`}>
-                <FontAwesomeIcon icon={icon} className="admin-nav-icon" fixedWidth />{l}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div style={{ padding:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-            <NavLink to="/painel/dados" className="btn btn-sm btn-outline"
-              style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem", textDecoration:"none" }}>
-              <FontAwesomeIcon icon={faCircleUser} style={{ marginRight:6 }} />Meus Dados
-            </NavLink>
-            <div style={{ display:"flex", gap:"0.4rem" }}>
-              <button className="btn btn-sm btn-outline" title="Alto contraste" aria-label="Alto contraste"
-                style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", flexShrink:0, padding:"0.4rem 0.6rem" }}
-                onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
-                <FontAwesomeIcon icon={faCircleHalfStroke} />
-              </button>
-              <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", flex:1 }} onClick={onLogout}>← Sair</button>
             </div>
-          </div>
-        </div>
+          )}
+          navWrapClassName="part-nav"
+          navItems={ABAS.map(([k, icon, l]) => ({
+            key: k || "inicio",
+            to: k ? `/painel/${k}` : "/painel",
+            end: !k,
+            icon, label: l,
+            itemClassName: "part-nav-item",
+          }))}
+          altoContraste={altoContraste}
+          onToggleAltoContraste={() => setAltoContraste(toggleHighContrast())}
+          onLogout={onLogout}
+        />
 
         {/* ── CONTEÚDO ── */}
         <div className="part-content">

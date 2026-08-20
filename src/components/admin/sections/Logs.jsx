@@ -39,7 +39,7 @@ export function Logs() {
   return (
     <div>
       <div className="admin-topbar">
-        <div><h1>Logs de Auditoria</h1><p>Ações administrativas sensíveis — quem fez o quê</p></div>
+        <div><h2 style={{ margin: 0, fontSize: "1.1rem" }}>Logs de Auditoria</h2><p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Ações administrativas sensíveis — quem fez o quê</p></div>
       </div>
       <div className="table-wrap">
         <div className="table-header">
