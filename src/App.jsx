@@ -544,6 +544,7 @@ export default function App() {
             });
           }}
           onLogout={handleLogout}
+          showToast={showToast}
         />;
 
   return (

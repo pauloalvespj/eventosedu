@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { useRoutes, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { useRoutes, NavLink, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
   faArrowRightFromBracket, faBuilding, faClipboardList, faCircleHalfStroke,
+  faEye, faEyeSlash,
 } from "@fortawesome/free-solid-svg-icons";
-import { ROLE_LABEL, nomeExibicao } from "../../utils/helpers";
+import { ROLE_LABEL, nomeExibicao, validarSenha } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
 import { AvatarUpload } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
+import { supabase } from "../../lib/supabase";
 
 import { Dashboard }            from "./sections/Dashboard";
 import { Evento }               from "./sections/Evento";
@@ -51,6 +53,24 @@ function MeusDados() {
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" });
   const [salvando, setSalvando] = useState(false);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmaSenha, setConfirmaSenha] = useState("");
+  const [erroSenha, setErroSenha] = useState("");
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+
+  async function salvarNovaSenha() {
+    setErroSenha("");
+    const erroValidacao = validarSenha(novaSenha);
+    if (erroValidacao) { setErroSenha(erroValidacao); return; }
+    if (novaSenha !== confirmaSenha) { setErroSenha("As senhas não conferem."); return; }
+    setSalvandoSenha(true);
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    setSalvandoSenha(false);
+    if (error) { setErroSenha(error.message || "Não foi possível salvar a senha. Tente novamente."); return; }
+    setNovaSenha(""); setConfirmaSenha("");
+    showToast("Senha alterada com sucesso!", "success");
+  }
 
   async function salvar() {
     if (!form.nome.trim()) { showToast("Nome obrigatório", "error"); return; }
@@ -172,6 +192,51 @@ function MeusDados() {
             </div>
           )}
         </div>
+
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", marginTop: "1.25rem" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--navy)", marginBottom: "0.25rem" }}>Alterar senha</div>
+          <p style={{ fontSize: "0.82rem", color: "var(--text3)", marginBottom: "1rem" }}>Defina uma nova senha de acesso para sua conta.</p>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Nova senha</label>
+              <div style={{ position: "relative" }}>
+                <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Mín. 6 caracteres" value={novaSenha}
+                  style={{ paddingRight: "2.5rem" }}
+                  onChange={e => { setNovaSenha(e.target.value); setErroSenha(""); }} />
+                <button type="button" onClick={() => setMostrarSenha(v => !v)}
+                  title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
+                  <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
+                </button>
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: "0.3rem" }}>Use letras e números.</div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirmar nova senha</label>
+              <div style={{ position: "relative" }}>
+                <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Repita a senha" value={confirmaSenha}
+                  style={{ paddingRight: "2.5rem" }}
+                  onChange={e => { setConfirmaSenha(e.target.value); setErroSenha(""); }}
+                  onKeyDown={e => e.key === "Enter" && !salvandoSenha && salvarNovaSenha()} />
+                <button type="button" onClick={() => setMostrarSenha(v => !v)}
+                  title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
+                  <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
+                </button>
+              </div>
+            </div>
+          </div>
+          {erroSenha && (
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+              {erroSenha}
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+            <button className="btn btn-primary btn-sm" onClick={salvarNovaSenha} disabled={salvandoSenha}>
+              {salvandoSenha ? "Salvando…" : "Salvar nova senha"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -207,7 +272,6 @@ export function PainelAdmin(props) {
   const menu = MENU.filter(m => m.roles.includes(user?.role || "admin"));
   const [navAberta, setNavAberta] = useState(false);
   const [altoContraste, setAltoContraste] = useState(isHighContrast);
-  const navigate = useNavigate();
 
   return (
     <AdminContext.Provider value={props}>
@@ -228,13 +292,24 @@ export function PainelAdmin(props) {
 
         {/* SIDEBAR */}
         <div className={`admin-sidebar${navAberta ? " open" : ""}`}>
-          <div className="admin-sidebar-logo">
-            <h2
-              onClick={() => navigate("/")}
-              title="Ver site"
-              style={{ cursor: "pointer" }}
-            >{event.nome}</h2>
-            <p style={{ fontSize: "0.68rem", opacity: 0.5, marginTop: "0.1rem" }}>Painel Administrativo</p>
+          <div style={{ padding: "0.85rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <NavLink to="/painel/meus-dados" title="Meus Dados"
+              style={{ display: "flex", alignItems: "center", gap: "0.6rem", textDecoration: "none", borderRadius: "var(--radius-sm)", padding: "0.3rem", margin: "-0.3rem" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--gold-light)", flexShrink: 0 }}>
+                {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nomeExibicao(user)}</div>
+                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.instituicao || ROLE_LABEL[user?.role] || user?.role}</div>
+              </div>
+            </NavLink>
+            {onSwitchRole && (
+              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginTop: "0.75rem" }} onClick={onSwitchRole}>
+                ⇄ Trocar perfil
+              </button>
+            )}
           </div>
           <nav className="admin-nav">
             {menu.map(m => (
@@ -251,33 +326,19 @@ export function PainelAdmin(props) {
             ))}
           </nav>
           <div style={{ padding: "1rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <NavLink to="/painel/meus-dados" title="Meus Dados"
-              style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem", textDecoration: "none", borderRadius: "var(--radius-sm)", padding: "0.3rem", margin: "-0.3rem -0.3rem 0.45rem" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--gold-light)", flexShrink: 0 }}>
-                {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
-              </div>
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nomeExibicao(user)}</div>
-                <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.instituicao || ROLE_LABEL[user?.role] || user?.role}</div>
-              </div>
-            </NavLink>
             <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginBottom: "0.5rem" }}>
               {participantes.length} inscritos · {participantes.filter(p=>p.credenciado).length} credenciados
             </div>
-            <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginBottom: "0.4rem" }}
-              onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
-              <FontAwesomeIcon icon={faCircleHalfStroke} style={{ marginRight: 6 }} />Alto contraste
-            </button>
-            {onSwitchRole && (
-              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%", marginBottom: "0.4rem" }} onClick={onSwitchRole}>
-                ⇄ Trocar perfil
+            <div style={{ display: "flex", gap: "0.4rem" }}>
+              <button className="btn btn-sm btn-outline" title="Alto contraste" aria-label="Alto contraste"
+                style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", flexShrink: 0, padding: "0.4rem 0.6rem" }}
+                onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
+                <FontAwesomeIcon icon={faCircleHalfStroke} />
               </button>
-            )}
-            <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", width: "100%" }} onClick={onLogout}>
-              <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ marginRight: 6 }} />Sair
-            </button>
+              <button className="btn btn-sm btn-outline" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)", flex: 1 }} onClick={onLogout}>
+                <FontAwesomeIcon icon={faArrowRightFromBracket} style={{ marginRight: 6 }} />Sair
+              </button>
+            </div>
           </div>
         </div>
 

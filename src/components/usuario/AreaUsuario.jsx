@@ -173,7 +173,6 @@ export function AreaUsuario(props) {
     ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
     ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa de Satisfação"]] : []),
-    ["dados",         faCircleUser,    "Meus Dados"],
   ];
   const MENU_PALESTRANTE_EXTRA = [
     ["palestras", faMicrophone, "Minhas Palestras"],
@@ -223,13 +222,18 @@ export function AreaUsuario(props) {
                 fotoUrl={user.foto_url}
                 iniciais={user.nome ? user.nome.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() : (user.foto_iniciais || "?")}
                 size={36}
-                onUploaded={url => setUser(prev => ({ ...prev, foto_url: url }))}
+                readonly
               />
               <div style={{ overflow:"hidden" }}>
                 <div style={{ fontSize:"0.78rem", color:"var(--white-hi)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.nome.split(" ")[0]}</div>
                 <div style={{ fontSize:"0.68rem", color:"var(--white-low)" }}>{isPalestrante ? "Palestrante" : "Participante"}</div>
               </div>
             </div>
+            {onSwitchRole && (
+              <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.75rem" }} onClick={onSwitchRole}>
+                ⇄ Trocar perfil
+              </button>
+            )}
             {event.gamificacao_ativa !== false && (
               <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
                 <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
@@ -248,16 +252,18 @@ export function AreaUsuario(props) {
           </nav>
 
           <div style={{ padding:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-            <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem" }}
-              onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
-              <FontAwesomeIcon icon={faCircleHalfStroke} style={{ marginRight:6 }} />Alto contraste
-            </button>
-            {onSwitchRole && (
-              <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem" }} onClick={onSwitchRole}>
-                ⇄ Trocar perfil
+            <NavLink to="/painel/dados" className="btn btn-sm btn-outline"
+              style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%", marginBottom:"0.4rem", textDecoration:"none" }}>
+              <FontAwesomeIcon icon={faCircleUser} style={{ marginRight:6 }} />Meus Dados
+            </NavLink>
+            <div style={{ display:"flex", gap:"0.4rem" }}>
+              <button className="btn btn-sm btn-outline" title="Alto contraste" aria-label="Alto contraste"
+                style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", flexShrink:0, padding:"0.4rem 0.6rem" }}
+                onClick={() => setAltoContraste(toggleHighContrast())} aria-pressed={altoContraste}>
+                <FontAwesomeIcon icon={faCircleHalfStroke} />
               </button>
-            )}
-            <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", width:"100%" }} onClick={onLogout}>← Sair</button>
+              <button className="btn btn-sm btn-outline" style={{ color:"rgba(255,255,255,0.6)", borderColor:"rgba(255,255,255,0.2)", flex:1 }} onClick={onLogout}>← Sair</button>
+            </div>
           </div>
         </div>
 

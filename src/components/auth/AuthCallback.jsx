@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { validarSenha } from "../../utils/helpers";
 
 // Capturado no load do módulo, antes de o Supabase limpar o hash da URL.
 // type=recovery indica link de redefinição de senha.
@@ -17,7 +18,8 @@ export function AuthCallback() {
 
   async function salvarNovaSenha() {
     setErroSenha("");
-    if (novaSenha.length < 6) { setErroSenha("A senha deve ter no mínimo 6 caracteres."); return; }
+    const erroValidacao = validarSenha(novaSenha);
+    if (erroValidacao) { setErroSenha(erroValidacao); return; }
     if (novaSenha !== confirmaSenha) { setErroSenha("As senhas não conferem."); return; }
     setSalvandoSenha(true);
     const { error } = await supabase.auth.updateUser({ password: novaSenha });
@@ -119,6 +121,7 @@ export function AuthCallback() {
             <label className="form-label">Nova senha</label>
             <input className="form-input" type="password" placeholder="Mín. 6 caracteres" value={novaSenha}
               onChange={e => { setNovaSenha(e.target.value); setErroSenha(""); }} autoFocus />
+            <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: "0.3rem" }}>Use letras e números.</div>
           </div>
           <div className="form-group">
             <label className="form-label">Confirmar nova senha</label>

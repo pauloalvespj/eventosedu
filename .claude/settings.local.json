@@ -47,7 +47,8 @@
       "Bash(supabase config *)",
       "Bash(grep -v \"set-state-in-effect\\\\|Effects are intended\\\\|Update external\\\\|Subscribe for\\\\|https://react.dev\\\\|^$\\\\|^--\\\\|^  1\\\\|^  2\\\\|^  3\\\\|^>\")",
       "Bash(grep -v \"set-state-in-effect\\\\|Effects are intended\\\\|Update external\\\\|Subscribe for\\\\|https://react.dev\\\\|^$\\\\|^--\\\\|^  4[0-9]\\\\s\\\\|^>\")",
-      "Bash(grep -v \"set-state-in-effect\\\\|Effects are intended\\\\|Update external\\\\|Subscribe for\\\\|https://react.dev\\\\|^$\\\\|^--\\\\|never used\\\\|no-unused-vars\")"
+      "Bash(grep -v \"set-state-in-effect\\\\|Effects are intended\\\\|Update external\\\\|Subscribe for\\\\|https://react.dev\\\\|^$\\\\|^--\\\\|never used\\\\|no-unused-vars\")",
+      "Bash(grep -v \"unused-vars\\\\|no-unused-vars\\\\|set-state-in-effect\\\\|Effects are intended\\\\|In general\\\\|Calling setState\\\\|^$\\\\|^--\")"
     ]
   }
 }

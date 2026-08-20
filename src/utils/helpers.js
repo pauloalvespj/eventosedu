@@ -68,6 +68,15 @@ export function nomeExibicao(pessoa) {
   return (pessoa?.nome_publico && pessoa.nome_publico.trim()) || pessoa?.nome || "";
 }
 
+// Validação de senha — usada em qualquer tela que defina/altere senha
+// (Meus Dados do admin/participante, recuperação de senha, etc).
+// Retorna a mensagem de erro, ou "" se a senha for válida.
+export function validarSenha(senha) {
+  if (senha.length < 6) return "A senha deve ter no mínimo 6 caracteres.";
+  if (!/[a-zA-Z]/.test(senha) || !/[0-9]/.test(senha)) return "A senha deve ter letras e números.";
+  return "";
+}
+
 // supabase.functions.invoke() erra com uma mensagem genérica ("Edge Function
 // returned a non-2xx status code") que esconde o motivo real, que vem no
 // corpo (JSON) da resposta da function — extrai esse corpo quando disponível.
