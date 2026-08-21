@@ -448,12 +448,7 @@ export function AbaInscritos() {
                   disabled={locked}
                   onClick={() => {
                     if (locked) return;
-                    setFormPart(f => {
-                      const next = { ...f, [key]: !f[key] };
-                      if (key === "_admin"        && next._admin)        next._credenciador = false;
-                      if (key === "_credenciador" && next._credenciador) next._admin = false;
-                      return next;
-                    });
+                    setFormPart(f => ({ ...f, [key]: !f[key] }));
                   }}
                   style={{
                     padding: "0.3rem 0.9rem", borderRadius: 99, fontSize: "0.82rem", fontWeight: 600,
