@@ -5,6 +5,7 @@ import { salvarAvaliacao } from "../../lib/db";
 export { AvatarUpload } from "./AvatarUpload";
 export { DatePickerInput } from "./DatePickerInput";
 export { Sidebar } from "./Sidebar";
+export { AlterarSenha } from "./AlterarSenha";
 
 // ── Toast ─────────────────────────────────────────────────────
 export function Toast({ toast }) {

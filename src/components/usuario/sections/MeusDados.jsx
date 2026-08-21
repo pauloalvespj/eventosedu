@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import { formatCPF, validarSenha } from "../../../utils/helpers";
-import { AvatarUpload, IconEdit } from "../../base/index";
+import { faKey, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { formatCPF } from "../../../utils/helpers";
+import { AvatarUpload } from "../../base/index";
 import { InstSelect } from "../../admin/sections/InstSelect";
 import { atualizarProfile, cancelarInscricao } from "../../../lib/db";
-import { supabase } from "../../../lib/supabase";
 import { useUsuario } from "../UsuarioContext";
 
 export function MeusDados() {
@@ -20,24 +19,6 @@ export function MeusDados() {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [erroMotivoCancelamento, setErroMotivoCancelamento] = useState(false);
-  const [novaSenha, setNovaSenha] = useState("");
-  const [confirmaSenha, setConfirmaSenha] = useState("");
-  const [erroSenha, setErroSenha] = useState("");
-  const [salvandoSenha, setSalvandoSenha] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-
-  async function salvarNovaSenha() {
-    setErroSenha("");
-    const erroValidacao = validarSenha(novaSenha);
-    if (erroValidacao) { setErroSenha(erroValidacao); return; }
-    if (novaSenha !== confirmaSenha) { setErroSenha("As senhas não conferem."); return; }
-    setSalvandoSenha(true);
-    const { error } = await supabase.auth.updateUser({ password: novaSenha });
-    setSalvandoSenha(false);
-    if (error) { setErroSenha(error.message || "Não foi possível salvar a senha. Tente novamente."); return; }
-    setNovaSenha(""); setConfirmaSenha("");
-    showToast("Senha alterada com sucesso!", "success");
-  }
 
   function abrirEdicao() {
     setFormEdit({ nome: user.nome || "", nome_publico: user.nome_publico || "", cpf: user.cpf || "", instituicao: user.instituicao || "", cargo: user.cargo || "", titulo: user.titulo || "", area: user.area || "", mini_bio: user.mini_bio || "" });
@@ -77,10 +58,22 @@ export function MeusDados() {
   }
 
   return (
-    <div style={{ maxWidth: 760 }}>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"0.25rem" }}>Meus Dados</h2>
-        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Informações do seu perfil no evento</p>
+    <div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        <div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.4rem", color:"var(--navy)", marginBottom:"0.25rem" }}>Meus Dados</h2>
+          <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>Informações do seu perfil no evento</p>
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+          <NavLink to="/painel/senha" className="btn btn-sm" style={{ textDecoration: "none", background: "#ffd452", borderColor: "#ffd452", color: "#3a2e00" }}>
+            <FontAwesomeIcon icon={faKey} style={{ marginRight: 6 }} />Alterar senha
+          </NavLink>
+          {!editando && (
+            <button className="btn btn-outline btn-sm" onClick={abrirEdicao}>
+              <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: 6 }} />Alterar dados
+            </button>
+          )}
+        </div>
       </div>
 
       {perfilIncompleto && (
@@ -89,14 +82,7 @@ export function MeusDados() {
         </div>
       )}
 
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", position:"relative" }}>
-        {/* Botão editar — canto superior direito */}
-        {!editando && (
-          <button className="btn btn-outline btn-sm" style={{ position:"absolute", top:"1.25rem", right:"1.25rem" }}
-            onClick={abrirEdicao}
-            title="Editar dados"><IconEdit /></button>
-        )}
-
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem" }}>
         {/* Avatar + nome centralizado */}
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:"1.75rem", paddingBottom:"1.25rem", borderBottom:"1px solid var(--border)" }}>
           <AvatarUpload
@@ -170,51 +156,6 @@ export function MeusDados() {
             ))}
           </div>
         )}
-      </div>
-
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", marginTop: "1.25rem" }}>
-        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--navy)", marginBottom: "0.25rem" }}>Alterar senha</div>
-        <p style={{ fontSize: "0.82rem", color: "var(--text3)", marginBottom: "1rem" }}>Defina uma nova senha de acesso para sua conta.</p>
-        <div className="form-grid">
-          <div className="form-group">
-            <label className="form-label">Nova senha</label>
-            <div style={{ position: "relative" }}>
-              <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Mín. 6 caracteres" value={novaSenha}
-                style={{ paddingRight: "2.5rem" }}
-                onChange={e => { setNovaSenha(e.target.value); setErroSenha(""); }} />
-              <button type="button" onClick={() => setMostrarSenha(v => !v)}
-                title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
-                <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
-              </button>
-            </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: "0.3rem" }}>Use letras e números.</div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Confirmar nova senha</label>
-            <div style={{ position: "relative" }}>
-              <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Repita a senha" value={confirmaSenha}
-                style={{ paddingRight: "2.5rem" }}
-                onChange={e => { setConfirmaSenha(e.target.value); setErroSenha(""); }}
-                onKeyDown={e => e.key === "Enter" && !salvandoSenha && salvarNovaSenha()} />
-              <button type="button" onClick={() => setMostrarSenha(v => !v)}
-                title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
-                <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
-              </button>
-            </div>
-          </div>
-        </div>
-        {erroSenha && (
-          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-            {erroSenha}
-          </div>
-        )}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
-          <button className="btn btn-primary btn-sm" onClick={salvarNovaSenha} disabled={salvandoSenha}>
-            {salvandoSenha ? "Salvando…" : "Salvar nova senha"}
-          </button>
-        </div>
       </div>
 
       {/* Zona de perigo — cancelamento de inscrição */}

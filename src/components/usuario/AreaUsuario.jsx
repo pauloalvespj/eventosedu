@@ -7,7 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
-import { AvatarUpload, Sidebar } from "../base/index";
+import { AvatarUpload, Sidebar, AlterarSenha } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
@@ -47,6 +47,10 @@ function CredenciamentoTab() {
   const { participantes, setParticipantes, showToast } = useUsuario();
   return <Credenciamento participantes={participantes} setParticipantes={setParticipantes} showToast={showToast} />;
 }
+function AlterarSenhaTab() {
+  const { showToast } = useUsuario();
+  return <AlterarSenha showToast={showToast} voltarPath="/painel/dados" />;
+}
 
 function AreaUsuarioRoutes() {
   const { event, isPalestrante, isCredenciador, perfilIncompleto, podeResponderPesquisa } = useUsuario();
@@ -62,6 +66,7 @@ function AreaUsuarioRoutes() {
     { path: "pesquisa",    element: (event.pesquisa_ativa && podeResponderPesquisa) ? <PesquisaTab /> : <Navigate to="/painel" replace /> },
     { path: "dados",         element: <MeusDados /> },
     { path: "dados/editar",  element: <MeusDados /> },
+    { path: "senha",         element: <AlterarSenhaTab /> },
     { path: "palestras",   element: isPalestrante ? <MinhasPalestras /> : <Navigate to="/painel" replace /> },
     { path: "presentes",   element: isPalestrante ? <PresentesPal /> : <Navigate to="/painel" replace /> },
     { path: "credenciamento", element: isCredenciador ? <CredenciamentoTab /> : <Navigate to="/painel" replace /> },

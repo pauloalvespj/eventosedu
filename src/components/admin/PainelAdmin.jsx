@@ -1,18 +1,16 @@
 import { useState } from "react";
-import { useRoutes, Navigate } from "react-router-dom";
+import { useRoutes, Navigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faBuilding,
-  faEye, faEyeSlash,
+  faBuilding, faKey,
 } from "@fortawesome/free-solid-svg-icons";
-import { ROLE_LABEL, validarSenha } from "../../utils/helpers";
+import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
-import { AvatarUpload, Sidebar } from "../base/index";
+import { AvatarUpload, Sidebar, AlterarSenha } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
-import { supabase } from "../../lib/supabase";
 
 import { Dashboard }            from "./sections/Dashboard";
 import { Evento }               from "./sections/Evento";
@@ -51,24 +49,6 @@ function MeusDados() {
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" });
   const [salvando, setSalvando] = useState(false);
-  const [novaSenha, setNovaSenha] = useState("");
-  const [confirmaSenha, setConfirmaSenha] = useState("");
-  const [erroSenha, setErroSenha] = useState("");
-  const [salvandoSenha, setSalvandoSenha] = useState(false);
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-
-  async function salvarNovaSenha() {
-    setErroSenha("");
-    const erroValidacao = validarSenha(novaSenha);
-    if (erroValidacao) { setErroSenha(erroValidacao); return; }
-    if (novaSenha !== confirmaSenha) { setErroSenha("As senhas não conferem."); return; }
-    setSalvandoSenha(true);
-    const { error } = await supabase.auth.updateUser({ password: novaSenha });
-    setSalvandoSenha(false);
-    if (error) { setErroSenha(error.message || "Não foi possível salvar a senha. Tente novamente."); return; }
-    setNovaSenha(""); setConfirmaSenha("");
-    showToast("Senha alterada com sucesso!", "success");
-  }
 
   async function salvar() {
     if (!form.nome.trim()) { showToast("Nome obrigatório", "error"); return; }
@@ -81,9 +61,13 @@ function MeusDados() {
       nome: form.nome.trim(), nome_publico: form.nome_publico.trim(), cpf: form.cpf, cargo: form.cargo.trim(), instituicao: form.instituicao,
       ...(isPalestrante && { mini_bio: form.mini_bio }),
     };
-    await atualizarProfile(ctxUser.id, updates);
-    setParticipantes(participantes.map(p => p.id === ctxUser.id ? { ...p, ...updates } : p));
+    const { error } = await atualizarProfile(ctxUser.id, updates);
     setSalvando(false);
+    if (error) {
+      showToast("Erro ao salvar dados: " + error.message, "error");
+      return;
+    }
+    setParticipantes(participantes.map(p => p.id === ctxUser.id ? { ...p, ...updates } : p));
     setEditando(false);
     showToast("Dados atualizados!", "success");
   }
@@ -95,8 +79,19 @@ function MeusDados() {
     <div>
       <div className="admin-topbar">
         <div><h1>Meus Dados</h1><p>Informações do seu perfil no evento</p></div>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <NavLink to="/painel/senha" className="btn btn-sm" style={{ textDecoration: "none", background: "#ffd452", borderColor: "#ffd452", color: "#3a2e00" }}>
+            <FontAwesomeIcon icon={faKey} style={{ marginRight: 6 }} />Alterar senha
+          </NavLink>
+          {!editando && (
+            <button className="btn btn-outline btn-sm"
+              onClick={() => { setForm({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
+              ✏️ Alterar dados
+            </button>
+          )}
+        </div>
       </div>
-      <div style={{ maxWidth: 760 }}>
+      <div>
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem" }}>
           {/* Cabeçalho */}
           <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.75rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
@@ -112,12 +107,6 @@ function MeusDados() {
               <div style={{ fontSize: "0.82rem", color: "var(--text3)" }}>{ctxUser?.email}</div>
               <div style={{ fontSize: "0.78rem", color: "var(--text3)", marginTop: 2 }}>{ctxUser?.instituicao || "—"}</div>
             </div>
-            {!editando && (
-              <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }}
-                onClick={() => { setForm({ nome: ctxUser?.nome || "", nome_publico: ctxUser?.nome_publico || "", cpf: ctxUser?.cpf || "", cargo: ctxUser?.cargo || "", instituicao: ctxUser?.instituicao || "", mini_bio: ctxUser?.mini_bio || "" }); setEditando(true); }}>
-                ✏️ Editar
-              </button>
-            )}
           </div>
 
           {editando ? (
@@ -190,51 +179,6 @@ function MeusDados() {
             </div>
           )}
         </div>
-
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "1.75rem", marginTop: "1.25rem" }}>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--navy)", marginBottom: "0.25rem" }}>Alterar senha</div>
-          <p style={{ fontSize: "0.82rem", color: "var(--text3)", marginBottom: "1rem" }}>Defina uma nova senha de acesso para sua conta.</p>
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Nova senha</label>
-              <div style={{ position: "relative" }}>
-                <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Mín. 6 caracteres" value={novaSenha}
-                  style={{ paddingRight: "2.5rem" }}
-                  onChange={e => { setNovaSenha(e.target.value); setErroSenha(""); }} />
-                <button type="button" onClick={() => setMostrarSenha(v => !v)}
-                  title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
-                  <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
-                </button>
-              </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: "0.3rem" }}>Use letras e números.</div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Confirmar nova senha</label>
-              <div style={{ position: "relative" }}>
-                <input className="form-input" type={mostrarSenha ? "text" : "password"} placeholder="Repita a senha" value={confirmaSenha}
-                  style={{ paddingRight: "2.5rem" }}
-                  onChange={e => { setConfirmaSenha(e.target.value); setErroSenha(""); }}
-                  onKeyDown={e => e.key === "Enter" && !salvandoSenha && salvarNovaSenha()} />
-                <button type="button" onClick={() => setMostrarSenha(v => !v)}
-                  title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
-                  <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
-                </button>
-              </div>
-            </div>
-          </div>
-          {erroSenha && (
-            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-              {erroSenha}
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
-            <button className="btn btn-primary btn-sm" onClick={salvarNovaSenha} disabled={salvandoSenha}>
-              {salvandoSenha ? "Salvando…" : "Salvar nova senha"}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -267,8 +211,14 @@ function AdminRoutes() {
     { path: "usuarios",          element: <Navigate to="/painel/administracao" replace /> },
     { path: "logs",              element: <Navigate to="/painel/administracao" replace /> },
     { path: "meus-dados",        element: <MeusDados /> },
+    { path: "senha",             element: <AlterarSenhaTab /> },
     { path: "*",                 element: <Navigate to="/painel" replace /> },
   ]);
+}
+
+function AlterarSenhaTab() {
+  const { showToast } = useAdmin();
+  return <AlterarSenha showToast={showToast} voltarPath="/painel/meus-dados" />;
 }
 
 export function PainelAdmin(props) {
