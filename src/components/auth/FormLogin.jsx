@@ -55,9 +55,12 @@ const IconSquare = ({ icon }) => (
   </div>
 );
 
+const LEMBRAR_KEY = "enaudin_lembrar_identificador";
+
 export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
   const [etapa, setEtapa] = useState("login"); // "login" | "codigo"
-  const [identificador, setIdentificador] = useState("");
+  const [identificador, setIdentificador] = useState(() => localStorage.getItem(LEMBRAR_KEY) || "");
+  const [lembrar, setLembrar] = useState(() => !!localStorage.getItem(LEMBRAR_KEY));
   const [senha, setSenha] = useState("");
   const [emailResolvido, setEmailResolvido] = useState("");
   const [erro, setErro] = useState("");
@@ -100,6 +103,11 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
     return { email: data.email.trim().toLowerCase(), error: null };
   }
 
+  function salvarLembranca() {
+    if (lembrar) localStorage.setItem(LEMBRAR_KEY, identificador.trim());
+    else localStorage.removeItem(LEMBRAR_KEY);
+  }
+
   async function handleLoginSenha() {
     setErro("");
     setEmailNaoConfirmado(false);
@@ -119,6 +127,7 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
       }
       return;
     }
+    salvarLembranca();
     onLogin(data.user);
   }
 
@@ -240,6 +249,7 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
       setErroCodigo(traduzirErroAuth(error.message));
       return;
     }
+    salvarLembranca();
     onLogin(data.user);
   }
 
@@ -284,6 +294,15 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
                 <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
               </button>
             </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem" }}>
+            <input type="checkbox" id="lembrar-identificador" checked={lembrar}
+              onChange={e => setLembrar(e.target.checked)}
+              style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--color-primary)" }} />
+            <label htmlFor="lembrar-identificador" style={{ fontSize: "0.82rem", color: "var(--text3)", cursor: "pointer" }}>
+              Lembrar e-mail/CPF
+            </label>
           </div>
 
           {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
