@@ -44,6 +44,8 @@ export function MeusDados() {
     navigate("/painel/dados/editar");
   }
 
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
   async function salvarEdicao() {
     const updates = {
       nome: formEdit.nome.trim() || user.nome,
@@ -53,8 +55,15 @@ export function MeusDados() {
       cargo: formEdit.cargo,
       ...(isPalestrante && { mini_bio: formEdit.mini_bio }),
     };
+    setSalvandoEdicao(true);
+    const { error } = await atualizarProfile(user.id, updates);
+    setSalvandoEdicao(false);
+    if (error) {
+      showToast("Erro ao salvar dados: " + error.message, "error");
+      return;
+    }
     if (setUser) setUser(prev => ({ ...prev, ...updates }));
-    await atualizarProfile(user.id, updates);
+    showToast("Dados atualizados!", "success");
     navigate("/painel/dados");
   }
 
@@ -138,8 +147,8 @@ export function MeusDados() {
               )}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
-              <button className="btn btn-outline btn-sm" onClick={() => navigate("/painel/dados")}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={salvarEdicao}>Salvar</button>
+              <button className="btn btn-outline btn-sm" onClick={() => navigate("/painel/dados")} disabled={salvandoEdicao}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={salvarEdicao} disabled={salvandoEdicao}>{salvandoEdicao ? "Salvando…" : "Salvar"}</button>
             </div>
           </div>
         ) : (

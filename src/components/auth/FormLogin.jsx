@@ -69,6 +69,8 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false);
   const [reenvioOk, setReenvioOk] = useState(false);
+  const [enviandoReset, setEnviandoReset] = useState(false);
+  const [resetEnviado, setResetEnviado] = useState(false);
   const [codigo, setCodigo] = useState(["", "", "", "", "", ""]);
   const digitRefs = useRef([]);
 
@@ -118,6 +120,22 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
       return;
     }
     onLogin(data.user);
+  }
+
+  async function handleEsqueciSenha() {
+    setErro("");
+    setResetEnviado(false);
+    if (!identificadorValido(identificador)) { setErro("Informe seu e-mail ou CPF para recuperar a senha."); return; }
+    setEnviandoReset(true);
+    const { email: emailResolv, error: erroResolucao } = await resolverEmailOuCpf(identificador);
+    if (erroResolucao) { setEnviandoReset(false); setErro(erroResolucao); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(emailResolv, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    });
+    setEnviandoReset(false);
+    if (error) { logAuthError("resetPasswordForEmail", error); setErro(traduzirErroAuth(error.message)); return; }
+    setEmailResolvido(emailResolv);
+    setResetEnviado(true);
   }
 
   async function reenviarConfirmacao() {
@@ -292,6 +310,20 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
           <button className="btn btn-primary btn-block" onClick={handleLoginSenha} disabled={enviando || !identificadorValido(identificador)}>
             {enviando ? "Entrando…" : "Entrar"}
           </button>
+
+          <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
+            <button type="button" onClick={handleEsqueciSenha} disabled={enviandoReset}
+              style={{ background: "none", border: "none", padding: 0, color: "var(--text3)", fontSize: "0.82rem", cursor: "pointer", textDecoration: "underline" }}>
+              {enviandoReset ? "Enviando…" : "Esqueci minha senha"}
+            </button>
+          </div>
+
+          {resetEnviado && (
+            <div style={{ background: "var(--success-bg)", border: "1px solid var(--success)", borderRadius: "var(--radius-sm)", padding: "0.85rem 1rem", marginTop: "1rem", color: "var(--success)", fontSize: "0.85rem", lineHeight: 1.6 }}>
+              ✅ Enviamos um link para redefinir sua senha para <strong>{emailResolvido}</strong>.<br />
+              Verifique sua caixa de entrada e a pasta de spam.
+            </div>
+          )}
 
           {/* Divisor "ou" */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1.25rem 0" }}>

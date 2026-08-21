@@ -140,12 +140,16 @@ export function AbaInscritos() {
         }
         await atualizarProfile(formPart.id, { email: emailNovo });
       }
+      const { error: updErr } = await atualizarProfile(formPart.id, { nome: formPart.nome, nome_publico: formPart.nome_publico, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
+      setSalvando(false);
+      if (updErr) {
+        showToast("Erro ao salvar inscrito: " + (updErr.message || JSON.stringify(updErr)), "error");
+        return;
+      }
       setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, is_palestrante, is_credenciador } : x));
-      atualizarProfile(formPart.id, { nome: formPart.nome, nome_publico: formPart.nome_publico, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
       if (original && (original.role !== role || !!original.is_credenciador !== is_credenciador)) {
         registrarLog("usuario.editar_role", "participante", formPart.id, formPart.nome, { role_antes: original.role, role_depois: role, credenciador_antes: !!original.is_credenciador, credenciador_depois: is_credenciador });
       }
-      setSalvando(false);
       showToast("Inscrito atualizado!", "success");
     }
     setModalPart(null);
