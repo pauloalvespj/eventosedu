@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import { atualizarCredenciamento } from "../../../lib/db";
+import { atualizarCredenciamento, registrarLog } from "../../../lib/db";
 
 export function Credenciamento({ participantes, setParticipantes, showToast }) {
   const [busca, setBusca] = useState("");
@@ -10,6 +10,8 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
     const credenciado_em = val ? new Date().toISOString() : null;
     setParticipantes(participantes.map(p => p.id === id ? { ...p, credenciado: val, credenciado_em } : p));
     atualizarCredenciamento(id, val);
+    const alvo = participantes.find(p => p.id === id);
+    registrarLog(val ? "participante.credenciar" : "participante.remover_credenciamento", "participante", id, alvo?.nome);
     showToast(val ? "Participante credenciado!" : "Credenciamento removido", val ? "success" : "info");
   }
 
