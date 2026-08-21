@@ -66,6 +66,7 @@ export function AuthCallback() {
       // precisa definir a nova senha antes de seguir
       function concluir(session) {
         if (HASH_TYPE === "recovery") {
+          sessionStorage.removeItem("enaudin_reset_pendente");
           setDefinindoSenha(true);
         } else {
           navigate("/painel", { replace: true });

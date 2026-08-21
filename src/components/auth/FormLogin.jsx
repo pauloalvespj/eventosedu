@@ -134,6 +134,9 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
     });
     setEnviandoReset(false);
     if (error) { logAuthError("resetPasswordForEmail", error); setErro(traduzirErroAuth(error.message)); return; }
+    // Se o link vier expirado/inválido, o App usa esse flag pra saber que
+    // era um pedido de redefinição de senha (não confirmação de cadastro).
+    sessionStorage.setItem("enaudin_reset_pendente", "1");
     setEmailResolvido(emailResolv);
     setResetEnviado(true);
   }
