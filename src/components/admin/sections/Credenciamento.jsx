@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import { useAdmin } from "./AdminContext";
 import { atualizarCredenciamento } from "../../../lib/db";
 
-export function Credenciamento() {
-  const { participantes, setParticipantes, showToast } = useAdmin();
+export function Credenciamento({ participantes, setParticipantes, showToast }) {
   const [busca, setBusca] = useState("");
 
   async function credenciar(id, val) {

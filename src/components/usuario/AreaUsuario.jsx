@@ -3,7 +3,7 @@ import { useRoutes, Navigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
-  faHandshake, faClipboardList, faCircleUser, faMicrophone, faCircleHalfStroke, faXmark,
+  faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge, faCircleHalfStroke, faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
@@ -23,6 +23,7 @@ import { Presencas } from "./sections/Presencas";
 import { Certificado } from "./sections/Certificado";
 import { CredencialQR } from "./sections/CredencialQR";
 import { MeusDados } from "./sections/MeusDados";
+import { Credenciamento } from "../admin/sections/Credenciamento";
 
 // ── Pequenos adaptadores — encaixam os componentes de view genéricos
 // (usados também em outras telas) no formato de rota desta área ──
@@ -42,9 +43,13 @@ function PesquisaTab() {
   const { event, user, perguntasPesquisa, setRespondeuPesquisa } = useUsuario();
   return <PesquisaSatisfacaoForm event={event} user={user} perguntasPesquisa={perguntasPesquisa} onRespondido={() => setRespondeuPesquisa(true)} />;
 }
+function CredenciamentoTab() {
+  const { participantes, setParticipantes, showToast } = useUsuario();
+  return <Credenciamento participantes={participantes} setParticipantes={setParticipantes} showToast={showToast} />;
+}
 
 function AreaUsuarioRoutes() {
-  const { event, isPalestrante, perfilIncompleto, podeResponderPesquisa } = useUsuario();
+  const { event, isPalestrante, isCredenciador, perfilIncompleto, podeResponderPesquisa } = useUsuario();
   return useRoutes([
     { index: true, element: perfilIncompleto ? <Navigate to="/painel/dados/editar" replace /> : <Dashboard /> },
     { path: "programacao", element: <Programacao /> },
@@ -59,6 +64,7 @@ function AreaUsuarioRoutes() {
     { path: "dados/editar",  element: <MeusDados /> },
     { path: "palestras",   element: isPalestrante ? <MinhasPalestras /> : <Navigate to="/painel" replace /> },
     { path: "presentes",   element: isPalestrante ? <PresentesPal /> : <Navigate to="/painel" replace /> },
+    { path: "credenciamento", element: isCredenciador ? <CredenciamentoTab /> : <Navigate to="/painel" replace /> },
     { path: "*",            element: <Navigate to="/painel" replace /> },
   ]);
 }
@@ -73,6 +79,7 @@ export function AreaUsuario(props) {
 
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
+  const isCredenciador = user.is_credenciador;
   const perfilIncompleto = !user.cpf || !user.email || !user.nome_publico || !user.instituicao || !user.cargo || (isPalestrante && !user.mini_bio);
   const [minhaAreaAberta, setMinhaAreaAberta] = useState(false);
   const [altoContraste, setAltoContraste] = useState(isHighContrast);
@@ -174,22 +181,21 @@ export function AreaUsuario(props) {
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
     ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa de Satisfação"]] : []),
   ];
-  const MENU_PALESTRANTE_EXTRA = [
-    ["palestras", faMicrophone, "Minhas Palestras"],
-  ];
-  const ABAS = isPalestrante
-    ? [MENU_COMUM[0], ...MENU_PALESTRANTE_EXTRA, ...MENU_COMUM.slice(1)]
-    : MENU_COMUM;
-  // Bottom nav (mobile): Início + Programação sempre, Minhas Palestras só para
-  // quem é palestrante — Presenças e o resto ficam dentro de "Minha Área"
-  const ABAS_BOTTOM = isPalestrante
-    ? [MENU_COMUM[0], MENU_COMUM.find(([k]) => k === "programacao"), MENU_PALESTRANTE_EXTRA[0]].filter(Boolean)
-    : [MENU_COMUM[0], MENU_COMUM.find(([k]) => k === "programacao")].filter(Boolean);
+  const MENU_CREDENCIADOR_EXTRA = isCredenciador
+    ? [["credenciamento", faIdBadge, "Credenciar"]]
+    : [];
+  const MENU_PALESTRANTE_EXTRA = isPalestrante
+    ? [["palestras", faMicrophone, "Minhas Palestras"]]
+    : [];
+  const ABAS = [MENU_COMUM[0], ...MENU_CREDENCIADOR_EXTRA, ...MENU_PALESTRANTE_EXTRA, ...MENU_COMUM.slice(1)];
+  // Bottom nav (mobile): Início + Programação sempre, Credenciamento/Minhas
+  // Palestras só para quem tem o respectivo perfil — o resto fica em "Minha Área"
+  const ABAS_BOTTOM = [MENU_COMUM[0], MENU_COMUM.find(([k]) => k === "programacao"), ...MENU_CREDENCIADOR_EXTRA, ...MENU_PALESTRANTE_EXTRA].filter(Boolean);
 
   const contextValue = {
     ...props,
     turnos, presencasTurno, perguntasPesquisa,
-    porTurno, isPalestrante, perfilIncompleto,
+    porTurno, isPalestrante, isCredenciador, perfilIncompleto,
     uid, meusPts, nivel,
     minasPresencas, minhasPresencasTurno, presencaCalc, podeResponderPesquisa,
     minhasPalestras, totalCH_pal, totalPresentes_pal,

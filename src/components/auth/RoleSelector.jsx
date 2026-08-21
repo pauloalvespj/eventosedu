@@ -1,6 +1,5 @@
 const ROLE_INFO = {
   admin:        { icon: "⚙️",  label: "Administrador",  desc: "Gerenciar evento, participantes e configurações" },
-  credenciador: { icon: "🪪",  label: "Credenciador",   desc: "Credenciar participantes no evento" },
   participante: { icon: "👤",  label: "Participante",   desc: "Minha área, programação, presenças e fórum" },
 };
 

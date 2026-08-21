@@ -318,11 +318,11 @@ export default function App() {
 
     // Verifica se o usuário tem múltiplos perfis e decide o que fazer
     function resolveRole(prof) {
-      // "palestrante" não é mais um role selecionável: quem é participante
-      // (ou admin) e também é palestrante vê os dois perfis mesclados direto.
+      // "palestrante" e "credenciador" não são mais roles selecionáveis: quem é
+      // participante (ou admin) e também é palestrante/credenciador vê tudo
+      // mesclado direto na própria área, sem precisar trocar de perfil.
       const derivedRoles = [
         ...(prof.role === "admin" ? ["admin"] : ["participante"]),
-        ...(prof.is_credenciador ? ["credenciador"] : []),
         ...(prof.role === "admin" ? ["participante"] : []),
       ];
       const allRoles = derivedRoles.length > 1 ? derivedRoles : null;
@@ -510,12 +510,13 @@ export default function App() {
     ? <CarregandoPainel />
     : !effectiveUser
     ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} eventLoaded={eventLoaded} />
-    : (effectiveUser.role === "admin" || effectiveUser.role === "credenciador")
+    : effectiveUser.role === "admin"
       ? <PainelAdmin {...adminProps} />
       : <AreaUsuario
           user={effectiveUser}
           setUser={u => setUser(typeof u === "function" ? u(user) : u)}
           onSwitchRole={roleSelectorOptions.length > 1 ? () => setShowRoleSelector(true) : null}
+          setParticipantes={updated => setProfiles(() => updated)}
           event={event} atividades={atividades} setAtividades={setAtividades}
           palestrantes={palestrantes} presencas={presencas}
           turnos={turnos} presencasTurno={presencasTurno}

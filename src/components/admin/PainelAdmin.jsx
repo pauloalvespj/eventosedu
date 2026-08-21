@@ -30,11 +30,11 @@ import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
 
 const MENU = [
-  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin","credenciador"] },
+  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin"] },
   { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["admin"] },
   { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["admin"] },
   { path: "participantes",  icon: faUsers,        label: "Participantes",   roles: ["admin"] },
-  { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["admin","credenciador"] },
+  { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["admin"] },
   { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["admin"] },
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
@@ -240,6 +240,11 @@ function MeusDados() {
   );
 }
 
+function CredenciamentoTab() {
+  const { participantes, setParticipantes, showToast } = useAdmin();
+  return <Credenciamento participantes={participantes} setParticipantes={setParticipantes} showToast={showToast} />;
+}
+
 function AdminRoutes() {
   return useRoutes([
     { index: true,               element: <Dashboard /> },
@@ -249,7 +254,7 @@ function AdminRoutes() {
     { path: "participantes",     element: <GestaoParticipantes /> },
     { path: "inscricoes",        element: <Navigate to="/painel/participantes" replace /> },
     { path: "palestrantes",      element: <Navigate to="/painel/participantes" replace /> },
-    { path: "credenciamento",    element: <Credenciamento /> },
+    { path: "credenciamento",    element: <CredenciamentoTab /> },
     { path: "presencas",         element: <Presencas /> },
     { path: "certificados",      element: <Certificados /> },
     { path: "modelo-cert",       element: <ModeloCertificado /> },
