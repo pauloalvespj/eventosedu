@@ -4,6 +4,25 @@ import { supabase } from "../../lib/supabase";
 import { inserirEnrollment } from "../../lib/db";
 import { InstSelect } from "../admin/sections/InstSelect";
 
+// Traduz mensagens de política de senha do Supabase Auth (em inglês) pra
+// algo legível — o texto exato varia conforme a config de senha do projeto.
+function traduzirErroSenha(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes("at least one character of each") || m.includes("should contain")) {
+    const partes = [];
+    if (m.includes("lowercase")) partes.push("letra minúscula");
+    if (m.includes("uppercase")) partes.push("letra maiúscula");
+    if (m.includes("digit") || m.includes("number")) partes.push("número");
+    if (m.includes("symbol") || m.includes("special")) partes.push("símbolo (ex: !@#$%)");
+    return partes.length
+      ? `A senha deve conter: ${partes.join(", ")}.`
+      : "Senha não atende aos requisitos de segurança.";
+  }
+  const minLength = msg.match(/at least (\d+) character/i);
+  if (minLength) return `Senha deve ter no mínimo ${minLength[1]} caracteres.`;
+  return "Senha não atende aos requisitos de segurança.";
+}
+
 export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
   const [form, setForm] = useState({ cpf: "", nome: "", nome_publico: "", instituicao: "", cargo: "", email: "", senha: "", confirmSenha: "" });
   const [erros, setErros] = useState({});
@@ -126,8 +145,11 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
 
     if (signUpError) {
       setEnviando(false);
-      if (signUpError.message.includes("already registered")) {
+      const msg = signUpError.message.toLowerCase();
+      if (msg.includes("already registered")) {
         setErros({ email: "E-mail já cadastrado." });
+      } else if (msg.includes("password")) {
+        setErros({ senha: traduzirErroSenha(signUpError.message) });
       } else {
         setErros({ email: signUpError.message });
       }
@@ -372,11 +394,6 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
               >
                 Acessar por link →
               </button>
-            </div>
-          )}
-          {emailCheck.status === "free" && (
-            <div style={{ fontSize: "0.8rem", color: "var(--success)", marginTop: "0.3rem" }}>
-              ✓ E-mail disponível
             </div>
           )}
           {erros.email && <div className="form-error">{erros.email}</div>}
