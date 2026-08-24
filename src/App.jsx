@@ -102,22 +102,15 @@ function PresencaTurnoRoute({ turnos, presencasTurno, setPresencasTurno, user, o
   );
 }
 
-function LinkExpiradoModal({ email, tipo = "signup", onClose, onLogin }) {
+function LinkExpiradoModal({ email, onClose, onLogin }) {
   const [enviando, setEnviando] = useState(false);
   const [reenvioOk, setReenvioOk] = useState(false);
   const [emailInput, setEmailInput] = useState(email || "");
-  const recovery = tipo === "recovery";
 
   async function reenviar() {
     if (!emailInput.includes("@")) return;
     setEnviando(true);
-    if (recovery) {
-      await supabase.auth.resetPasswordForEmail(emailInput.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      });
-    } else {
-      await supabase.auth.resend({ type: "signup", email: emailInput });
-    }
+    await supabase.auth.resend({ type: "signup", email: emailInput });
     setEnviando(false);
     setReenvioOk(true);
   }
@@ -126,12 +119,10 @@ function LinkExpiradoModal({ email, tipo = "signup", onClose, onLogin }) {
     <div style={{ textAlign: "center", padding: "0.5rem 0" }}>
       <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔗</div>
       <p style={{ color: "var(--text2)", marginBottom: "0.5rem", lineHeight: 1.6 }}>
-        Este link de {recovery ? "redefinição de senha" : "confirmação"} <strong>já foi utilizado ou expirou</strong>.
+        Este link de confirmação <strong>já foi utilizado ou expirou</strong>.
       </p>
       <p style={{ color: "var(--text3)", fontSize: "0.85rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
-        {recovery
-          ? <>Isso pode acontecer se o link demorou pra ser aberto, foi usado mais de uma vez, ou foi verificado automaticamente pelo seu provedor de e-mail. Solicite um novo abaixo.</>
-          : <>Se você já confirmou seu e-mail anteriormente, basta fazer login normalmente.<br />Caso contrário, solicite um novo link abaixo.</>}
+        Se você já confirmou seu e-mail anteriormente, basta fazer login normalmente.<br />Caso contrário, solicite um novo link abaixo.
       </p>
       {!reenvioOk ? (
         <>
@@ -142,7 +133,7 @@ function LinkExpiradoModal({ email, tipo = "signup", onClose, onLogin }) {
           </div>
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
             <button className="btn btn-primary" style={{ flex: 1 }} onClick={reenviar} disabled={enviando || !emailInput.includes("@")}>
-              {enviando ? "Enviando…" : recovery ? "↩ Reenviar link de redefinição" : "↩ Reenviar link de confirmação"}
+              {enviando ? "Enviando…" : "↩ Reenviar link de confirmação"}
             </button>
             <button className="btn btn-outline" onClick={onClose}>Fechar</button>
           </div>
@@ -238,12 +229,7 @@ export default function App() {
       const errorCode = params.get("error_code");
       const email     = params.get("email") || "";
       if (errorCode === "otp_expired" || params.get("error") === "access_denied") {
-        // "Esqueci minha senha" marca esse flag antes de sair pro e-mail —
-        // se o link vier com erro, sabemos que era um link de redefinição de
-        // senha (não de confirmação de cadastro) e ajustamos a mensagem/reenvio.
-        const tipo = sessionStorage.getItem("enaudin_reset_pendente") ? "recovery" : "signup";
-        sessionStorage.removeItem("enaudin_reset_pendente");
-        setLinkExpirado({ email, tipo });
+        setLinkExpirado({ email });
       }
     } else if (params.get("type") === "signup" && params.get("access_token")) {
       // Confirmação de e-mail bem-sucedida — mostra o modal de boas-vindas
@@ -522,7 +508,7 @@ export default function App() {
   const painelElement = authResolving
     ? <CarregandoPainel />
     : !effectiveUser
-    ? <PainelLogin onLogin={handleLogin} instituicoes={instituicoes} showToast={showToast} event={event} eventLoaded={eventLoaded} />
+    ? <PainelLogin onLogin={handleLogin} event={event} eventLoaded={eventLoaded} />
     : effectiveUser.role === "admin"
       ? <PainelAdmin {...adminProps} />
       : <AreaUsuario
@@ -638,14 +624,12 @@ export default function App() {
         <FormLogin
           onLogin={handleLogin}
           onClose={() => setShowLogin(false)}
-          onInscricaoClick={() => { setShowLogin(false); setShowInscricao(true); }}
         />
       </Modal>
 
-      <Modal show={!!linkExpirado} onClose={() => setLinkExpirado(null)} title={linkExpirado?.tipo === "recovery" ? "Link de redefinição expirado" : "Link de confirmação expirado"}>
+      <Modal show={!!linkExpirado} onClose={() => setLinkExpirado(null)} title="Link de confirmação expirado">
         <LinkExpiradoModal
           email={linkExpirado?.email}
-          tipo={linkExpirado?.tipo}
           onClose={() => setLinkExpirado(null)}
           onLogin={() => { setLinkExpirado(null); setShowLogin(true); }}
         />

@@ -1,10 +1,6 @@
 import { FormLogin } from "./auth/FormLogin";
-import { FormInscricao } from "./auth/FormInscricao";
-import { Modal } from "./base/index";
-import { useState } from "react";
 
-export function PainelLogin({ onLogin, instituicoes = [], showToast, event, eventLoaded }) {
-  const [showInscricao, setShowInscricao] = useState(false);
+export function PainelLogin({ onLogin, event, eventLoaded }) {
   const logoUrl = eventLoaded ? event?.logo_url : null;
 
   return (
@@ -20,14 +16,9 @@ export function PainelLogin({ onLogin, instituicoes = [], showToast, event, even
             onLogin={onLogin}
             event={event}
             eventLoaded={eventLoaded}
-            onInscricaoClick={() => setShowInscricao(true)}
           />
         </div>
       </div>
-
-      <Modal show={showInscricao} onClose={() => setShowInscricao(false)} title="Inscrição no Evento">
-        <FormInscricao showToast={showToast} onClose={() => setShowInscricao(false)} instituicoes={instituicoes} />
-      </Modal>
     </div>
   );
 }

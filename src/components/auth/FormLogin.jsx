@@ -57,7 +57,7 @@ const IconSquare = ({ icon }) => (
 
 const LEMBRAR_KEY = "enaudin_lembrar_identificador";
 
-export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
+export function FormLogin({ onLogin, event, eventLoaded }) {
   const [etapa, setEtapa] = useState("login"); // "login" | "codigo"
   const [identificador, setIdentificador] = useState(() => localStorage.getItem(LEMBRAR_KEY) || "");
   const [lembrar, setLembrar] = useState(() => !!localStorage.getItem(LEMBRAR_KEY));
@@ -72,8 +72,6 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [emailNaoConfirmado, setEmailNaoConfirmado] = useState(false);
   const [reenvioOk, setReenvioOk] = useState(false);
-  const [enviandoReset, setEnviandoReset] = useState(false);
-  const [resetEnviado, setResetEnviado] = useState(false);
   const [codigo, setCodigo] = useState(["", "", "", "", "", ""]);
   const digitRefs = useRef([]);
 
@@ -129,25 +127,6 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
     }
     salvarLembranca();
     onLogin(data.user);
-  }
-
-  async function handleEsqueciSenha() {
-    setErro("");
-    setResetEnviado(false);
-    if (!identificadorValido(identificador)) { setErro("Informe seu e-mail ou CPF para recuperar a senha."); return; }
-    setEnviandoReset(true);
-    const { email: emailResolv, error: erroResolucao } = await resolverEmailOuCpf(identificador);
-    if (erroResolucao) { setEnviandoReset(false); setErro(erroResolucao); return; }
-    const { error } = await supabase.auth.resetPasswordForEmail(emailResolv, {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    });
-    setEnviandoReset(false);
-    if (error) { logAuthError("resetPasswordForEmail", error); setErro(traduzirErroAuth(error.message)); return; }
-    // Se o link vier expirado/inválido, o App usa esse flag pra saber que
-    // era um pedido de redefinição de senha (não confirmação de cadastro).
-    sessionStorage.setItem("enaudin_reset_pendente", "1");
-    setEmailResolvido(emailResolv);
-    setResetEnviado(true);
   }
 
   async function reenviarConfirmacao() {
@@ -333,20 +312,6 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
             {enviando ? "Entrando…" : "Entrar"}
           </button>
 
-          <div style={{ textAlign: "center", marginTop: "0.75rem" }}>
-            <button type="button" onClick={handleEsqueciSenha} disabled={enviandoReset}
-              style={{ background: "none", border: "none", padding: 0, color: "var(--text3)", fontSize: "0.82rem", cursor: "pointer", textDecoration: "underline" }}>
-              {enviandoReset ? "Enviando…" : "Esqueci minha senha"}
-            </button>
-          </div>
-
-          {resetEnviado && (
-            <div style={{ background: "var(--success-bg)", border: "1px solid var(--success)", borderRadius: "var(--radius-sm)", padding: "0.85rem 1rem", marginTop: "1rem", color: "var(--success)", fontSize: "0.85rem", lineHeight: 1.6 }}>
-              ✅ Enviamos um link para redefinir sua senha para <strong>{emailResolvido}</strong>.<br />
-              Verifique sua caixa de entrada e a pasta de spam.
-            </div>
-          )}
-
           {/* Divisor "ou" */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1.25rem 0" }}>
             <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
@@ -359,15 +324,6 @@ export function FormLogin({ onLogin, event, eventLoaded, onInscricaoClick }) {
             {enviandoCodigo ? "Enviando…" : "Receber código por e-mail"}
           </button>
 
-          {onInscricaoClick && (
-            <div style={{ textAlign: "center", marginTop: "1.5rem", fontSize: "0.85rem", color: "var(--text3)" }}>
-              Ainda não tem inscrição?{" "}
-              <button type="button" onClick={onInscricaoClick}
-                style={{ background: "none", border: "none", padding: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", fontSize: "inherit" }}>
-                Inscreva-se
-              </button>
-            </div>
-          )}
         </div>
       )}
 

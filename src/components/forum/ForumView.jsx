@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PONTOS, CATEGORIAS_FORUM } from "../../config/gamificacao";
-import { forumAberto, getUserId, calcPontos, getNivel, timeAgo } from "../../utils/helpers";
+import { forumAberto, getUserId, timeAgo } from "../../utils/helpers";
 import { Modal, AvatarMini, RoleBadge, PtsFloat } from "../base/index";
 import {
   criarTopico as dbCriarTopico,
@@ -13,7 +13,7 @@ import {
   normalizeTopicoSingle,
 } from "../../lib/db";
 
-export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes, forumConfig }) {
+export function ForumView({ user, topicos, setTopicos, setPontuacoes, forumConfig }) {
   const [catAtiva, setCatAtiva] = useState("all");
   const [topicoAberto, setTopicoAberto] = useState(null);
   const [novoTopico, setNovoTopico] = useState(false);
@@ -188,9 +188,6 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
     .filter(t => !busca || t.titulo.toLowerCase().includes(busca.toLowerCase()) || t.corpo.toLowerCase().includes(busca.toLowerCase()))
     .sort((a, b) => { if (a.fixado && !b.fixado) return -1; if (!a.fixado && b.fixado) return 1; return new Date(b.created_at) - new Date(a.created_at); });
 
-  const meusPts = uid ? calcPontos(uid, pontuacoes) : 0;
-  const nivel = getNivel(meusPts);
-
   // ── Tópico aberto ──
   if (topicoAberto) {
     const t = topicos.find(tp => tp.id === topicoAberto.id) || topicoAberto;
@@ -253,8 +250,7 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "1.25rem" }}>
             <div style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "0.75rem", fontSize: "0.9rem" }}>💬 Sua resposta</div>
             <textarea className="form-input" rows={3} placeholder="Escreva sua resposta..." value={resposta} onChange={e => setResposta(e.target.value)} style={{ marginBottom: "0.75rem", resize: "vertical" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>+{PONTOS.resposta} pts ao responder</span>
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
               <button className="btn btn-primary" onClick={responderTopico} disabled={!resposta.trim()}>Responder</button>
             </div>
           </div>
@@ -278,15 +274,6 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
             {aberto ? "🟢 Aberto" : "🔴 Fechado"} · {topicosFiltrados.length} tópico{topicosFiltrados.length !== 1 ? "s" : ""}
           </div>
         </div>
-        {uid && (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "1.1rem" }}>{nivel.icon}</span>
-            <div>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: nivel.cor }}>{nivel.label}</div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text3)" }}>{meusPts} pts</div>
-            </div>
-          </div>
-        )}
         {podePostar && <button className="btn btn-primary" onClick={() => setNovoTopico(true)}>+ Novo Tópico</button>}
       </div>
 
@@ -324,15 +311,6 @@ export function ForumView({ user, topicos, setTopicos, pontuacoes, setPontuacoes
                 <span className="forum-cat-dot" style={{ background: c.cor }} /> {c.label.replace(/^\S+\s/, "")}
                 <span style={{ marginLeft: "auto", fontSize: "0.75rem", opacity: 0.7 }}>{topicos.filter(t => !t.removido && t.categoria === c.id).length}</span>
               </button>
-            ))}
-          </div>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "0.75rem", marginTop: "0.75rem" }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.6rem" }}>Como ganhar pontos</div>
-            {Object.entries(PONTOS).map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "0.25rem 0", borderBottom: "1px solid var(--border)", color: "var(--text2)" }}>
-                <span>{k === "presenca" ? "✅ Presença" : k === "topico" ? "💬 Criar tópico" : k === "resposta" ? "↩ Responder" : k === "curtida_recebida" ? "❤️ Curtida" : k === "topico_destaque" ? "⭐ Destaque" : "🎯 Bônus"}</span>
-                <span style={{ fontWeight: 700, color: "var(--navy)" }}>+{v}</span>
-              </div>
             ))}
           </div>
         </div>
