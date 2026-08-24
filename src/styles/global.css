@@ -195,6 +195,17 @@ input,select,textarea{font-family:inherit}
 .prog-titulo{font-weight:600;color:var(--text);margin-bottom:0.25rem}
 .prog-desc{font-size:0.85rem;color:var(--text2);line-height:1.5}
 .prog-palestrante{font-size:0.8rem;color:var(--teal);font-weight:500;margin-top:0.25rem}
+/* Programação — grade com todos os dias visíveis ao mesmo tempo (landing) */
+.prog-dias-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;align-items:stretch}
+.prog-dia-col{background:var(--surface);border-radius:var(--radius);padding:1.5rem}
+.prog-dia-col-titulo{font-weight:700;color:var(--dia-cor,var(--navy));font-size:1rem;text-align:center;padding-bottom:0.75rem;margin-bottom:1rem;border-bottom:2px solid var(--dia-cor,var(--gold-border))}
+/* Coluna estreita — horário e tipo lado a lado, título menor, lista mais
+   discreta (linha fina) em vez de cartão destacado */
+.prog-dia-col .prog-item{display:block;background:none;box-shadow:none;border-left:none;border-radius:0;border-bottom:1px solid var(--border);padding:1rem 0;margin-bottom:0}
+.prog-dia-col .prog-item:last-child{border-bottom:none}
+.prog-dia-col .prog-hora{color:var(--dia-cor,var(--navy));font-size:0.88rem}
+.prog-dia-col .prog-titulo{font-size:0.85rem}
+@media(max-width:900px){.prog-dias-grid{grid-template-columns:1fr}}
 .prog-ch{background:var(--gold-pale);color:var(--warn);padding:0.25rem 0.6rem;border-radius:50px;font-size:0.75rem;font-weight:600;white-space:nowrap}
 .prog-local{font-size:0.75rem;color:var(--text3);margin-top:0.25rem}
 

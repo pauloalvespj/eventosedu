@@ -4,6 +4,9 @@ import { TIPO_COLOR } from "../../utils/helpers";
 import { formatData, formatPeriodo, diaSemana, nomeExibicao } from "../../utils/helpers";
 import { TipoBadge } from "../base/index";
 
+// Um acento de cor por dia na grade de Programação — cicla se houver mais dias
+const CORES_DIA = ["var(--navy)", "var(--teal)", "var(--gold)"];
+
 function inscricoesAbertas(event) {
   const hoje = new Date().toISOString().split("T")[0];
   if (!event.inscricao_inicio && !event.inscricao_fim) return { aberta: true };
@@ -20,7 +23,6 @@ const isLightTheme = (event) =>
   (event?.tema?.preset === "custom" && event?.tema?.mode === "light");
 
 export function LandingPage({ event, eventLoaded = false, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
-  const [diaSelecionado, setDiaAtivo] = useState(null);
   const [faqAberto, setFaqAberto] = useState(null);
   const [palPopup, setPalPopup] = useState(null);
   const inscStatus = inscricoesAbertas(event);
@@ -44,9 +46,47 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
   }, []);
 
   const dias = [...new Set(atividades.map(a => a.dia))].sort();
-  // Derivado: primeiro dia por padrão (funciona mesmo com atividades chegando depois)
-  const diaAtivo = diaSelecionado ?? dias[0] ?? null;
-  const atividadesDia = atividades.filter(a => a.dia === diaAtivo).sort((a,b) => a.horario.localeCompare(b.horario));
+
+  // Renderiza um item da programação — usado em todas as colunas de dia,
+  // já que agora todos os dias aparecem ao mesmo tempo (sem clique).
+  function renderAtividade(a) {
+    const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
+    if (a.tipo === "intervalo") return (
+      <div key={a.id} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.6rem 1rem", margin:"0.4rem 0", background:"var(--surface2)", borderRadius:"var(--radius-sm)" }}>
+        <div style={{ fontSize:"0.82rem", fontWeight:700, color:"var(--text2)", whiteSpace:"nowrap", flexShrink:0 }}>{a.horario} – {a.horario_fim}</div>
+        <span style={{ fontSize:"0.8rem", color:"var(--text2)" }}>☕ Intervalo</span>
+      </div>
+    );
+    return (
+      <div key={a.id} className="prog-item" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+          <div className="prog-hora">{a.horario}</div>
+          <TipoBadge tipo={a.tipo} />
+        </div>
+        <div>
+          <div className="prog-titulo">{a.titulo}</div>
+          {a.descricao && <div className="prog-desc">{a.descricao}</div>}
+          {(pals.length > 0 || (a.convidados && a.convidados.trim())) && (
+            <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3 }}>
+              {pals.map(p => (
+                <div key={p.id} style={{ fontSize:"0.8rem", color:"var(--text2)" }}>
+                  👤{" "}
+                  <span
+                    onClick={() => setPalPopup(p)}
+                    style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 }}
+                  >{nomeExibicao(p)}</span>
+                  {p.instituicao && <span> – {p.instituicao}</span>}
+                </div>
+              ))}
+              {a.convidados && a.convidados.trim() && a.convidados.split("\n").filter(Boolean).map((c,i) => (
+                <div key={i} style={{ fontSize:"0.8rem", color:"var(--text2)" }}>👤 {c}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -168,54 +208,16 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
               <div className="section-header centered">
                 <div style={{ color:"var(--section-label)", fontSize:"0.8rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"0.5rem" }}>Agenda</div>
                 <h2 className="section-title">Programação do Evento</h2>
-                <p className="section-sub">Clique no dia para ver as atividades</p>
+                <p className="section-sub">Confira a agenda completa dos três dias</p>
               </div>
-              <div className="prog-dias">
-                {dias.map(d => (
-                  <button key={d} className={`prog-dia-btn${diaAtivo === d ? " active" : ""}`} onClick={() => setDiaAtivo(d)}>
-                    {diaSemana(d)}, {formatData(d)}
-                  </button>
+              <div className="prog-dias-grid">
+                {dias.map((d, i) => (
+                  <div key={d} className="prog-dia-col" style={{ "--dia-cor": CORES_DIA[i % CORES_DIA.length] }}>
+                    <div className="prog-dia-col-titulo">{diaSemana(d)}, {formatData(d)}</div>
+                    {atividades.filter(a => a.dia === d).sort((a,b) => a.horario.localeCompare(b.horario)).map(renderAtividade)}
+                  </div>
                 ))}
               </div>
-              {atividadesDia.map(a => {
-                const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
-                const isIntervalo = a.tipo === "intervalo";
-                if (isIntervalo) return (
-                  <div key={a.id} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.6rem 1rem", margin:"0.4rem 0", background:"var(--surface2)", borderRadius:"var(--radius-sm)" }}>
-                    <div style={{ fontSize:"0.82rem", fontWeight:700, color:"var(--text2)", whiteSpace:"nowrap", flexShrink:0 }}>{a.horario} – {a.horario_fim}</div>
-                    <span style={{ fontSize:"0.8rem", color:"var(--text2)" }}>☕ Intervalo</span>
-                  </div>
-                );
-                return (
-                  <div key={a.id} className="prog-item" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)", gridTemplateColumns:"130px 1fr" }}>
-                    <div>
-                      <div className="prog-hora">{a.horario}</div>
-                    </div>
-                    <div>
-                      <div style={{ marginBottom:6 }}><TipoBadge tipo={a.tipo} /></div>
-                      <div className="prog-titulo">{a.titulo}</div>
-                      {a.descricao && <div className="prog-desc">{a.descricao}</div>}
-                      {(pals.length > 0 || (a.convidados && a.convidados.trim())) && (
-                        <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3 }}>
-                          {pals.map(p => (
-                            <div key={p.id} style={{ fontSize:"0.8rem", color:"var(--text2)" }}>
-                              👤{" "}
-                              <span
-                                onClick={() => setPalPopup(p)}
-                                style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 }}
-                              >{nomeExibicao(p)}</span>
-                              {p.instituicao && <span> – {p.instituicao}</span>}
-                            </div>
-                          ))}
-                          {a.convidados && a.convidados.trim() && a.convidados.split("\n").filter(Boolean).map((c,i) => (
-                            <div key={i} style={{ fontSize:"0.8rem", color:"var(--text2)" }}>👤 {c}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
             </>
           )}
         </div>
