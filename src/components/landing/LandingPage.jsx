@@ -4,9 +4,6 @@ import { TIPO_COLOR } from "../../utils/helpers";
 import { formatData, formatPeriodo, diaSemana, nomeExibicao } from "../../utils/helpers";
 import { TipoBadge } from "../base/index";
 
-// Um acento de cor por dia na grade de Programação — cicla se houver mais dias
-const CORES_DIA = ["var(--navy)", "var(--teal)", "var(--gold)"];
-
 function inscricoesAbertas(event) {
   const hoje = new Date().toISOString().split("T")[0];
   if (!event.inscricao_inicio && !event.inscricao_fim) return { aberta: true };
@@ -211,8 +208,8 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                 <p className="section-sub">Confira a agenda completa dos três dias</p>
               </div>
               <div className="prog-dias-grid">
-                {dias.map((d, i) => (
-                  <div key={d} className="prog-dia-col" style={{ "--dia-cor": CORES_DIA[i % CORES_DIA.length] }}>
+                {dias.map(d => (
+                  <div key={d} className="prog-dia-col">
                     <div className="prog-dia-col-titulo">{diaSemana(d)}, {formatData(d)}</div>
                     {atividades.filter(a => a.dia === d).sort((a,b) => a.horario.localeCompare(b.horario)).map(renderAtividade)}
                   </div>
