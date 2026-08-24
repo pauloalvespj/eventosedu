@@ -225,6 +225,7 @@ input,select,textarea{font-family:inherit}
 }
 .form-error{font-size:0.78rem;color:var(--danger);margin-top:0.3rem}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;min-width:0}
+.nome-split{display:grid;grid-template-columns:3fr 2fr;gap:1rem;min-width:0}
 .form-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;min-width:0}
 .dash-event-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
 .dash-participant-card{display:grid;grid-template-columns:1fr 1fr;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);margin-bottom:1rem}
@@ -465,6 +466,7 @@ tr:hover td{background:var(--surface2)}
   .ev-main-card{flex-direction:column}
   .ev-inscricoes-block{min-width:0;width:100%;border-top:1px solid var(--border);border-radius:0;border-left:none;border-right:none;border-bottom:none;background:transparent;padding:1rem 0 0}
   .form-grid{grid-template-columns:1fr}
+  .nome-split{grid-template-columns:1fr}
   .form-grid-4{grid-template-columns:1fr}
   .form-grid-4 > *{grid-column:1/-1 !important}
   .dash-event-grid{grid-template-columns:1fr}

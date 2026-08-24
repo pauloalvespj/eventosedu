@@ -356,19 +356,33 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
   return (
     <div>
       <div className="form-grid">
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">Nome Completo *</label>
-          <input className={`form-input${erros.nome ? " error" : ""}`} placeholder="Seu nome completo"
-            value={form.nome} onChange={e => set("nome", e.target.value)} />
-          {erros.nome && <div className="form-error">{erros.nome}</div>}
+        <div className="nome-split" style={{ gridColumn: "1/-1" }}>
+          <div className="form-group">
+            <label className="form-label">Nome Completo *</label>
+            <input className={`form-input${erros.nome ? " error" : ""}`} placeholder="Seu nome completo"
+              value={form.nome} onChange={e => set("nome", e.target.value)} />
+            {erros.nome && <div className="form-error">{erros.nome}</div>}
+          </div>
+          <div className="form-group">
+            <label className="form-label">Nome Crachá *</label>
+            <input className={`form-input${erros.nome_publico ? " error" : ""}`} placeholder="Nome no crachá"
+              value={form.nome_publico} onChange={e => set("nome_publico", e.target.value)} />
+            {erros.nome_publico && <div className="form-error">{erros.nome_publico}</div>}
+          </div>
         </div>
         <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">Nome para Crachá e Divulgação *</label>
-          <input className={`form-input${erros.nome_publico ? " error" : ""}`} placeholder="Como você quer ser chamado(a) no crachá"
-            value={form.nome_publico} onChange={e => set("nome_publico", e.target.value)} />
-          {erros.nome_publico && <div className="form-error">{erros.nome_publico}</div>}
+          <label className="form-label">Instituição *</label>
+          <InstSelect value={form.instituicao} onChange={v => set("instituicao", v)} instituicoes={instituicoes}
+            className={`form-input${erros.instituicao ? " error" : ""}`} />
+          {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
         </div>
         <div className="form-group" style={{ gridColumn: "1/-1" }}>
+          <label className="form-label">Cargo / Função *</label>
+          <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Auditor(a), Analista..."
+            value={form.cargo} onChange={e => set("cargo", e.target.value)} />
+          {erros.cargo && <div className="form-error">{erros.cargo}</div>}
+        </div>
+        <div className="form-group">
           <label className="form-label">CPF *</label>
           <input
             className={`form-input${erros.cpf || cpfCheck.status === "exists" ? " error" : ""}`}
@@ -395,19 +409,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
           )}
           {erros.cpf && <div className="form-error">{erros.cpf}</div>}
         </div>
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">Instituição *</label>
-          <InstSelect value={form.instituicao} onChange={v => set("instituicao", v)} instituicoes={instituicoes}
-            className={`form-input${erros.instituicao ? " error" : ""}`} />
-          {erros.instituicao && <div className="form-error">{erros.instituicao}</div>}
-        </div>
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
-          <label className="form-label">Cargo / Função *</label>
-          <input className={`form-input${erros.cargo ? " error" : ""}`} placeholder="Auditor(a), Analista..."
-            value={form.cargo} onChange={e => set("cargo", e.target.value)} />
-          {erros.cargo && <div className="form-error">{erros.cargo}</div>}
-        </div>
-        <div className="form-group" style={{ gridColumn: "1/-1" }}>
+        <div className="form-group">
           <label className="form-label">E-mail *</label>
           <input
             className={`form-input${erros.email || emailCheck.status === "exists" ? " error" : ""}`}
