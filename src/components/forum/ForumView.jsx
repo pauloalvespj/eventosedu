@@ -222,8 +222,9 @@ export function ForumView({ user, topicos, setTopicos, setPontuacoes, forumConfi
               {isAdmin && <>
                 <button className="btn btn-sm btn-outline" style={{ marginLeft: "auto" }} onClick={() => toggleDestaque(t.id)}>{t.destaque ? "⭐ Remover destaque" : "⭐ Destacar"}</button>
                 <button className="btn btn-sm btn-outline" onClick={() => toggleFixado(t.id)}>{t.fixado ? "📌 Desafixar" : "📌 Fixar"}</button>
-                <button className="btn btn-sm btn-danger" onClick={() => removerTopico(t.id)}>🗑</button>
               </>}
+              {(isAdmin || t.user_id === uid) && t.respostas.length === 0 &&
+                <button className="btn btn-sm btn-danger" style={isAdmin ? {} : { marginLeft: "auto" }} onClick={() => removerTopico(t.id)} title="Excluir tópico (só é possível sem respostas)">🗑</button>}
             </div>
           </div>
         </div>
