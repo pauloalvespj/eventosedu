@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatCPF, validateCPF } from "../../utils/helpers";
+import { formatCPF, validateCPF, validarSenha } from "../../utils/helpers";
 import { supabase } from "../../lib/supabase";
 import { inserirEnrollment } from "../../lib/db";
 import { InstSelect } from "../admin/sections/InstSelect";
@@ -87,7 +87,8 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
     if (!form.instituicao.trim()) e.instituicao = "Instituição obrigatória";
     if (!form.cargo.trim()) e.cargo = "Cargo obrigatório";
     if (!form.email.includes("@")) e.email = "E-mail inválido";
-    if (form.senha.length < 6) e.senha = "Senha mínima de 6 caracteres";
+    const erroSenha = validarSenha(form.senha);
+    if (erroSenha) e.senha = erroSenha;
     if (form.senha !== form.confirmSenha) e.confirmSenha = "Senhas não conferem";
     return e;
   }
@@ -367,38 +368,7 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
             value={form.nome_publico} onChange={e => set("nome_publico", e.target.value)} />
           {erros.nome_publico && <div className="form-error">{erros.nome_publico}</div>}
         </div>
-        <div className="form-group">
-          <label className="form-label">E-mail *</label>
-          <input
-            className={`form-input${erros.email || emailCheck.status === "exists" ? " error" : ""}`}
-            placeholder="seu@email.com"
-            type="email"
-            value={form.email}
-            onChange={e => { set("email", e.target.value); setEmailCheck({ status: "idle", profile: null }); setErros(er => ({ ...er, email: undefined })); }}
-            onBlur={handleEmailBlur}
-          />
-          {emailCheck.status === "checking" && (
-            <div style={{ fontSize: "0.8rem", color: "var(--text3)", marginTop: "0.3rem" }}>
-              Verificando…
-            </div>
-          )}
-          {emailCheck.status === "exists" && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.3rem", background: "var(--danger-bg)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem" }}>
-              <span style={{ fontSize: "0.82rem", color: "var(--danger)", fontWeight: 500 }}>
-                E-mail já cadastrado
-              </span>
-              <button
-                type="button"
-                onClick={() => irParaJaTemCadastro(emailCheck.profile)}
-                style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--navy)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}
-              >
-                Acessar por link →
-              </button>
-            </div>
-          )}
-          {erros.email && <div className="form-error">{erros.email}</div>}
-        </div>
-        <div className="form-group">
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
           <label className="form-label">CPF *</label>
           <input
             className={`form-input${erros.cpf || cpfCheck.status === "exists" ? " error" : ""}`}
@@ -437,11 +407,43 @@ export function FormInscricao({ onClose, showToast, instituicoes = [] }) {
             value={form.cargo} onChange={e => set("cargo", e.target.value)} />
           {erros.cargo && <div className="form-error">{erros.cargo}</div>}
         </div>
+        <div className="form-group" style={{ gridColumn: "1/-1" }}>
+          <label className="form-label">E-mail *</label>
+          <input
+            className={`form-input${erros.email || emailCheck.status === "exists" ? " error" : ""}`}
+            placeholder="seu@email.com"
+            type="email"
+            value={form.email}
+            onChange={e => { set("email", e.target.value); setEmailCheck({ status: "idle", profile: null }); setErros(er => ({ ...er, email: undefined })); }}
+            onBlur={handleEmailBlur}
+          />
+          {emailCheck.status === "checking" && (
+            <div style={{ fontSize: "0.8rem", color: "var(--text3)", marginTop: "0.3rem" }}>
+              Verificando…
+            </div>
+          )}
+          {emailCheck.status === "exists" && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.3rem", background: "var(--danger-bg)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem" }}>
+              <span style={{ fontSize: "0.82rem", color: "var(--danger)", fontWeight: 500 }}>
+                E-mail já cadastrado
+              </span>
+              <button
+                type="button"
+                onClick={() => irParaJaTemCadastro(emailCheck.profile)}
+                style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--navy)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", whiteSpace: "nowrap" }}
+              >
+                Acessar por link →
+              </button>
+            </div>
+          )}
+          {erros.email && <div className="form-error">{erros.email}</div>}
+        </div>
         <div className="form-group">
           <label className="form-label">Senha *</label>
           <input className={`form-input${erros.senha ? " error" : ""}`} type="password" placeholder="Mín. 6 caracteres"
             value={form.senha} onChange={e => set("senha", e.target.value)} />
           {erros.senha && <div className="form-error">{erros.senha}</div>}
+          <div style={{ fontSize: "0.72rem", color: "var(--text3)", marginTop: "0.3rem" }}>* Use letras e números.</div>
         </div>
         <div className="form-group">
           <label className="form-label">Confirmar Senha *</label>
