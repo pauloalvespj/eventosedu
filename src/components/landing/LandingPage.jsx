@@ -1,5 +1,4 @@
-import { useState } from "react";
-import enaudinMapa from "../../assets/enaudin-mapa.png";
+import { useState, useEffect } from "react";
 import { FAQ_ITEMS } from "../../data/initial";
 import { TIPO_COLOR } from "../../utils/helpers";
 import { formatData, formatPeriodo, diaSemana, nomeExibicao } from "../../utils/helpers";
@@ -25,6 +24,24 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
   const [faqAberto, setFaqAberto] = useState(null);
   const [palPopup, setPalPopup] = useState(null);
   const inscStatus = inscricoesAbertas(event);
+
+  // Vídeo de fundo só em telas >= 768px e sem prefers-reduced-motion —
+  // em mobile/redução de movimento usa só a imagem estática (poster).
+  const [usarVideo, setUsarVideo] = useState(() =>
+    window.matchMedia("(min-width: 768px)").matches
+    && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  useEffect(() => {
+    const mqLargura = window.matchMedia("(min-width: 768px)");
+    const mqMovimento = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const atualizar = () => setUsarVideo(mqLargura.matches && !mqMovimento.matches);
+    mqLargura.addEventListener("change", atualizar);
+    mqMovimento.addEventListener("change", atualizar);
+    return () => {
+      mqLargura.removeEventListener("change", atualizar);
+      mqMovimento.removeEventListener("change", atualizar);
+    };
+  }, []);
 
   const dias = [...new Set(atividades.map(a => a.dia))].sort();
   // Derivado: primeiro dia por padrão (funciona mesmo com atividades chegando depois)
@@ -88,7 +105,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
               <div className="hero-anim hero-anim-2" style={{ background:"var(--hero-quote-bg)", border:"1px solid var(--hero-quote-border)", color:"var(--hero-quote-color)", padding:"0.65rem 1.4rem", borderRadius:"var(--radius-sm)", fontSize:"clamp(0.88rem,2vw,1rem)", fontStyle:"italic", marginBottom:"1.75rem", lineHeight:1.6, maxWidth:640, margin:"0 auto 1.75rem" }}>
                 {event.subtitulo}
               </div>
-              <div className="hero-anim hero-anim-3 hero-date-glow" style={{ fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
+              <div className="hero-anim hero-anim-3" style={{ fontSize:"clamp(1.4rem,5vw,3rem)", color:"var(--color-primary)", fontWeight:700, marginBottom:"0.75rem", lineHeight:1.2, textTransform:"uppercase", letterSpacing:"0.04em" }}>
                 {formatPeriodo(event.data_inicio, event.data_fim)}{event.data_fim ? ` · ${event.data_fim.split("-")[0]}` : event.data_inicio ? ` · ${event.data_inicio.split("-")[0]}` : ""}
               </div>
               <div className="hero-meta hero-anim hero-anim-4" style={{ marginBottom:"2.5rem" }}>
@@ -107,20 +124,20 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
       </section>
 
       {/* SOBRE */}
-      <section className="section" data-section="accent" id="sobre">
-        <div className="container">
-          <div className="sobre-grid">
-            <div>
-              <div style={{ color: "var(--sec3-text-soft)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Sobre o Evento</div>
-              <p style={{ color: "var(--sec3-text-soft)", lineHeight: 1.85, marginBottom: "1.25rem", whiteSpace: "pre-wrap", textAlign: "justify" }}>{event.descricao}</p>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <img
-                src={enaudinMapa}
-                alt="Mapa do evento"
-                style={{ width:"100%", maxWidth:480, objectFit:"contain", alignSelf:"stretch" }}
-              />
-            </div>
+      <section className="sobre-hero-section" id="sobre">
+        {usarVideo
+          ? <video className="sobre-hero-bg" autoPlay muted loop playsInline poster="/video1.jpg" src="/video1.mp4" />
+          : <div className="sobre-hero-bg-static" style={{ backgroundImage: "url(/video1.jpg)" }} />
+        }
+        <div className="sobre-hero-overlay" />
+        <div className="sobre-hero-content">
+          <div className="sobre-hero-text">
+            <div className="sobre-line" />
+            <div className="sobre-eyebrow">Sobre o Evento</div>
+            <h2 className="sobre-hero-title">Auditoria Interna como Instrumento de Governança Pública</h2>
+            {(event.descricao || "").split(/\n{2,}/).filter(Boolean).map((paragrafo, i) => (
+              <p key={i}>{paragrafo}</p>
+            ))}
           </div>
         </div>
       </section>

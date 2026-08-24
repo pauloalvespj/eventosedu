@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&family=DM+Sans:wght@400;500&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Poppins',sans-serif;background:var(--bg);color:#1a1a2e;scroll-behavior:smooth}
@@ -34,6 +34,7 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:#1a1a2e;scroll-
   --shadow-lg:0 8px 40px rgba(15,52,96,0.13);
 
   /* ── Variáveis geradas pelo tema (sobrescritas via JS) ── */
+  --color-primary:#1a6b6b;--color-primary-rgb:26,107,107;
   --nav-bg:rgba(13,31,60,0.97);
   --hero-gradient:linear-gradient(135deg,#091728 0%,#0d1f3c 50%,#142a4e 100%);
   --hero-dark:#091728;
@@ -126,7 +127,6 @@ input,select,textarea{font-family:inherit}
 @keyframes heroFadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 @keyframes heroPulse{0%,100%{opacity:.5}50%{opacity:1}}
 @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-@keyframes heroGlow{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 28px rgba(201,168,76,.45),0 0 8px rgba(201,168,76,.25)}}
 
 .hero-anim{animation:heroFadeUp .75s cubic-bezier(.22,.68,0,1.2) both}
 .hero-anim-1{animation-delay:.05s}
@@ -135,8 +135,7 @@ input,select,textarea{font-family:inherit}
 .hero-anim-4{animation-delay:.52s}
 .hero-anim-5{animation-delay:.66s}
 .hero-logo-float{animation:heroFloat 5s ease-in-out 1.2s infinite}
-.hero-date-glow{animation:heroGlow 3.5s ease-in-out 1.8s infinite}
-@media(prefers-reduced-motion:reduce){.hero-anim,.hero-logo-float,.hero-date-glow{animation:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.hero-anim,.hero-logo-float{animation:none;opacity:1}}
 
 /* SECTIONS */
 .section{padding:5rem 2rem;background:var(--sec1-bg,#ffffff)}
@@ -160,8 +159,29 @@ input,select,textarea{font-family:inherit}
 [data-section="accent"] .section-sub{color:var(--sec3-text-soft)}
 
 /* CARDS SOBRE */
-.sobre-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center}
 .sobre-stats{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+
+/* SOBRE — hero com vídeo de fundo */
+.sobre-hero-section{position:relative;overflow:hidden;min-height:60vh}
+.sobre-hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.sobre-hero-bg-static{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center}
+.sobre-hero-overlay{
+  position:absolute;inset:0;z-index:1;
+  background:
+    linear-gradient(100deg, rgba(var(--color-primary-rgb),0.96) 0%, rgba(var(--color-primary-rgb),0.9) 45%, rgba(var(--color-primary-rgb),0.55) 100%),
+    linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15));
+}
+.sobre-hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:5rem 1.5rem;min-height:60vh;display:flex;align-items:center}
+.sobre-hero-text{width:100%;max-width:70ch}
+.sobre-line{width:40px;height:2px;background:rgba(255,255,255,0.6);margin-bottom:1rem}
+.sobre-eyebrow{text-transform:uppercase;letter-spacing:0.15em;font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:0.75rem}
+.sobre-hero-title{font-family:'Poppins',sans-serif;font-weight:600;font-size:clamp(1.75rem,3.2vw,2.75rem);line-height:1.2;color:#fff;margin-bottom:1.5rem}
+.sobre-hero-text p{font-family:'DM Sans',sans-serif;font-size:1rem;line-height:1.75;color:#fff;opacity:0.9;text-align:left;margin-bottom:1.25rem}
+@media(min-width:768px){
+  .sobre-hero-section{min-height:70vh}
+  .sobre-hero-content{min-height:70vh;padding:7rem 1.5rem}
+  .sobre-hero-text{width:90%}
+}
 .stat-card{background:var(--navy);color:#fff;padding:1.5rem;border-radius:var(--radius);text-align:center}
 .stat-card .num{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold-light);font-weight:700}
 .stat-card .lbl{font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.06em}
@@ -462,7 +482,7 @@ tr:hover td{background:var(--surface2)}
 /* RESPONSIVE */
 @media(max-width:768px){
   /* Landing / geral */
-  .sobre-grid,.local-card,.ev-view-grid{grid-template-columns:1fr}
+  .local-card,.ev-view-grid{grid-template-columns:1fr}
   .ev-main-card{flex-direction:column}
   .ev-inscricoes-block{min-width:0;width:100%;border-top:1px solid var(--border);border-radius:0;border-left:none;border-right:none;border-bottom:none;background:transparent;padding:1rem 0 0}
   .form-grid{grid-template-columns:1fr}
