@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload, faTriangleExclamation, faIdBadge } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
@@ -10,7 +10,7 @@ import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
-
+  { value: "palestrante",  label: "Palestrante" },
   { value: "credenciador", label: "Credenciador" },
   { value: "admin",        label: "Administrador" },
 ];
@@ -35,6 +35,23 @@ export function AbaInscritos() {
 
   function estaIncompleto(p) {
     return !p.cpf || !p.instituicao || !p.cargo || !p.nome_publico || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2;
+  }
+
+  function corAvatarBorda(p) {
+    if (p.role === "admin") return "var(--gold, #c9a84c)";
+    if (p.is_credenciador) return "#22c55e";
+    if (p.is_palestrante) return "#ef4444";
+    return null;
+  }
+
+  function camposFaltando(p) {
+    const faltando = [];
+    if ((p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2) faltando.push("Nome completo");
+    if (!p.nome_publico) faltando.push("Nome para crachá");
+    if (!p.cpf) faltando.push("CPF");
+    if (!p.instituicao) faltando.push("Instituição");
+    if (!p.cargo) faltando.push("Cargo");
+    return faltando;
   }
 
   const totPendentes = participantes.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
@@ -327,21 +344,28 @@ export function AbaInscritos() {
           <tbody>
             {ordenados.map(p => {
               const cancelado = p.ativo === false;
+              const corBorda = corAvatarBorda(p);
               return (
                 <tr key={p.id} style={{ ...(cancelado ? { opacity: 0.55 } : {}), ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {p.foto_url
-                        ? <img src={p.foto_url} alt={p.nome} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: `2px solid ${p.role === "admin" ? "var(--gold, #c9a84c)" : p.is_credenciador ? "#22c55e" : "transparent"}`, flexShrink: 0 }} />
-                        : <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0, outline: p.role === "admin" ? "2px solid var(--gold, #c9a84c)" : p.is_credenciador ? "2px solid #22c55e" : "none", outlineOffset: 1 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
+                        ? <img src={p.foto_url} alt={p.nome} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", outline: corBorda ? `2px solid ${corBorda}` : "none", outlineOffset: 3, flexShrink: 0 }} />
+                        : <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, flexShrink: 0, outline: corBorda ? `2px solid ${corBorda}` : "none", outlineOffset: 3 }}>{p.nome?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || p.foto_iniciais || "?"}</div>
                       }
                       <div style={{ display: "flex", flexDirection: "column", gap: 0, lineHeight: 1.2 }}>
-                        <span style={{ fontWeight: 500 }}>{p.nome}</span>
-                        {p.nome_publico && p.nome_publico.trim() !== p.nome?.trim() && (
-                          <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)" }}>Crachá: {p.nome_publico}</span>
-                        )}
-                        {p.is_palestrante && (
-                          <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)", fontWeight: 500 }}>Palestrante</span>
+                        <span style={{ fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          {p.nome}
+                          {!cancelado && estaIncompleto(p) && (
+                            <span title={`Cadastro incompleto: ${camposFaltando(p).join(", ")}`} style={{ display: "inline-flex" }}>
+                              <FontAwesomeIcon icon={faTriangleExclamation} style={{ color: "#f59e0b", fontSize: "0.68rem" }} />
+                            </span>
+                          )}
+                        </span>
+                        {p.nome_publico && (
+                          <span style={{ fontSize: "0.7rem", color: "var(--text3, #aaa)", display: "inline-flex", alignItems: "center", gap: 4 }} title="Nome público">
+                            <FontAwesomeIcon icon={faIdBadge} />{p.nome_publico}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -397,12 +421,16 @@ export function AbaInscritos() {
         </table>
         <div style={{ padding: "0.6rem 1rem", display: "flex", gap: "1.25rem", fontSize: "0.75rem", color: "var(--text3)", borderTop: "1px solid var(--border)" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid var(--gold, #c9a84c)", outlineOffset: 1, display: "inline-block" }} />
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid var(--gold, #c9a84c)", outlineOffset: 3, display: "inline-block" }} />
             Administrador
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #22c55e", outlineOffset: 1, display: "inline-block" }} />
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #22c55e", outlineOffset: 3, display: "inline-block" }} />
             Credenciador
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #ef4444", outlineOffset: 3, display: "inline-block" }} />
+            Palestrante
           </span>
         </div>
       </div>
