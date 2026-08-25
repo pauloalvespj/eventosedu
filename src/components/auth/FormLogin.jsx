@@ -237,8 +237,6 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
   }
 
   const logoUrl = eventLoaded ? event?.logo_url : null;
-  const minutos = Math.floor(countdown / 60);
-  const segundos = String(countdown % 60).padStart(2, "0");
 
   return (
     <div>
@@ -366,15 +364,13 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
 
           {erroCodigo && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem", textAlign: "center" }}>{erroCodigo}</div>}
 
-          <div style={{ textAlign: "center", marginBottom: "1.25rem", fontSize: "0.82rem", color: "var(--text3)" }}>
-            {countdown > 0 ? (
-              <>Reenviar código em <strong style={{ color: "var(--text2)" }}>{minutos}:{segundos}</strong></>
-            ) : (
-              <button type="button" onClick={handleReenviarCodigo} disabled={enviandoCodigo}
-                style={{ background: "none", border: "none", padding: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", fontSize: "inherit" }}>
-                {enviandoCodigo ? "Reenviando…" : "Reenviar código"}
-              </button>
-            )}
+          <div style={{ textAlign: "center", marginBottom: "1.25rem", fontSize: "0.82rem" }}>
+            <button type="button" onClick={handleReenviarCodigo} disabled={countdown > 0 || enviandoCodigo}
+              style={{ background: "none", border: "none", padding: 0, fontWeight: 600, fontSize: "inherit",
+                color: countdown > 0 ? "var(--text3)" : "var(--color-primary)",
+                cursor: countdown > 0 ? "default" : "pointer" }}>
+              {enviandoCodigo ? "Reenviando…" : "Reenviar código"}
+            </button>
           </div>
 
           <button className="btn btn-primary btn-block" onClick={handleConfirmarCodigo} disabled={confirmando}>
