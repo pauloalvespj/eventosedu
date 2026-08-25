@@ -8,6 +8,7 @@ const ACAO_LABEL = {
   "participante.excluir":   "Excluiu participante",
   "usuario.criar":          "Criou usuário",
   "usuario.editar_role":    "Editou papel de usuário",
+  "usuario.redefinir_senha": "Redefiniu senha de usuário",
   "participante.inscrever_se":        "Se inscreveu",
   "participante.atualizar_cadastro":  "Atualizou o próprio cadastro",
   "participante.credenciar":              "Credenciou participante",

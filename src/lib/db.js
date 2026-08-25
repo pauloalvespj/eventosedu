@@ -757,6 +757,17 @@ export async function atualizarEmailAuth(userId, email) {
   return { data, error };
 }
 
+// Admin redefine a senha de outro usuário (Admin API — requer a Edge
+// Function "update-auth-password" deployada no Supabase).
+export async function atualizarSenhaAuth(userId, senha) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke("update-auth-password", {
+    body: { user_id: userId, password: senha },
+    headers: { Authorization: `Bearer ${session?.access_token}` },
+  });
+  return { data, error };
+}
+
 
 export async function uploadCertificado(participanteId, file) {
   const ext = file.name.split(".").pop();

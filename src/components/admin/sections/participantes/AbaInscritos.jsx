@@ -4,8 +4,8 @@ import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, f
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
-import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, registrarLog } from "../../../../lib/db";
-import { baixarCSV, erroFuncaoEdge } from "../../../../utils/helpers";
+import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, atualizarSenhaAuth, registrarLog } from "../../../../lib/db";
+import { baixarCSV, erroFuncaoEdge, validarSenha } from "../../../../utils/helpers";
 import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
@@ -157,13 +157,29 @@ export function AbaInscritos() {
         }
         await atualizarProfile(formPart.id, { email: emailNovo });
       }
+      if (formPart.senha && formPart.senha.trim()) {
+        const erroSenha = validarSenha(formPart.senha);
+        if (erroSenha) {
+          setSalvando(false);
+          showToast(erroSenha, "error");
+          return;
+        }
+        const { error: senhaErr } = await atualizarSenhaAuth(formPart.id, formPart.senha);
+        if (senhaErr) {
+          setSalvando(false);
+          showToast("Erro ao atualizar senha: " + (senhaErr.message || JSON.stringify(senhaErr)), "error");
+          return;
+        }
+        registrarLog("usuario.redefinir_senha", "participante", formPart.id, formPart.nome);
+      }
       const { error: updErr } = await atualizarProfile(formPart.id, { nome: formPart.nome, nome_publico: formPart.nome_publico, cpf: formPart.cpf, instituicao: formPart.instituicao, cargo: formPart.cargo, role, is_palestrante, is_credenciador });
       setSalvando(false);
       if (updErr) {
         showToast("Erro ao salvar inscrito: " + (updErr.message || JSON.stringify(updErr)), "error");
         return;
       }
-      setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPart, role, is_palestrante, is_credenciador } : x));
+      const { senha: _senha, ...formPartSemSenha } = formPart;
+      setParticipantes(participantes.map(x => x.id === formPart.id ? { ...x, ...formPartSemSenha, role, is_palestrante, is_credenciador } : x));
       if (original && (original.role !== role || !!original.is_credenciador !== is_credenciador)) {
         registrarLog("usuario.editar_role", "participante", formPart.id, formPart.nome, { role_antes: original.role, role_depois: role, credenciador_antes: !!original.is_credenciador, credenciador_depois: is_credenciador });
       }
@@ -526,11 +542,10 @@ export function AbaInscritos() {
           </div>
           <div className="form-group">
             <label className="form-label">
-              Senha{modalPart === "new" && <span style={{ fontWeight: 400, color: "var(--text3)", marginLeft: 4 }}>(opcional)</span>}
+              Senha <span style={{ fontWeight: 400, color: "var(--text3)", marginLeft: 4 }}>{modalPart === "new" ? "(opcional)" : "(deixe em branco pra manter a atual)"}</span>
             </label>
             <input className="form-input" type="password" placeholder="Mín. 6 caracteres"
-              value={formPart.senha || ""} onChange={e => setFormPart(f => ({ ...f, senha: e.target.value }))}
-              disabled={modalPart !== "new"} />
+              value={formPart.senha || ""} onChange={e => setFormPart(f => ({ ...f, senha: e.target.value }))} />
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>

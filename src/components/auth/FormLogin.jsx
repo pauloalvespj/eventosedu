@@ -56,6 +56,10 @@ const IconSquare = ({ icon }) => (
 );
 
 const LEMBRAR_KEY = "enaudin_lembrar_identificador";
+// O envio de e-mail pode demorar alguns minutos (fila do provedor SMTP) —
+// cooldown maior evita que a pessoa peça um código novo (o que invalida o
+// anterior) antes do e-mail atrasado sequer chegar.
+const COOLDOWN_REENVIO = 180;
 
 export function FormLogin({ onLogin, event, eventLoaded }) {
   const [etapa, setEtapa] = useState("login"); // "login" | "codigo"
@@ -158,7 +162,7 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
     setCodigo(["", "", "", "", "", ""]);
     setErroCodigo("");
     setEtapa("codigo");
-    setCountdown(60);
+    setCountdown(COOLDOWN_REENVIO);
     setTimeout(() => digitRefs.current[0]?.focus(), 0);
   }
 
@@ -170,7 +174,7 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
     setEnviandoCodigo(false);
     if (error) { setErroCodigo(traduzirErroAuth(error.message)); return; }
     setCodigo(["", "", "", "", "", ""]);
-    setCountdown(60);
+    setCountdown(COOLDOWN_REENVIO);
     digitRefs.current[0]?.focus();
   }
 
