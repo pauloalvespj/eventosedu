@@ -500,6 +500,7 @@ export function Programacao() {
             <option value="painel">Painel</option>
             <option value="solenidade">Solenidade</option>
             <option value="encerramento">Encerramento</option>
+            <option value="credenciamento">Credenciamento</option>
             <option value="intervalo">Intervalo</option>
           </select>
         </div>

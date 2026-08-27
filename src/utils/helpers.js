@@ -1,10 +1,10 @@
 import { CERT_PRINT_CSS, NIVEL_LABELS } from "../config/gamificacao";
 
 // ── Tipo de atividade ─────────────────────────────────────────
-export const TIPO_LABEL = { palestra: "Palestra", mesa_redonda: "Mesa Redonda", solenidade: "Solenidade", intervalo: "Intervalo", painel: "Painel", encerramento: "Encerramento" };
-export const TIPO_COLOR = { palestra: "var(--navy)", mesa_redonda: "var(--teal)", solenidade: "var(--gold)", intervalo: "var(--border2)", painel: "#6a4a9a", encerramento: "#1a5a3a" };
-export const TIPO_BG    = { palestra: "#e8f0fb", mesa_redonda: "#e1f3f3", solenidade: "var(--gold-pale)", intervalo: "var(--surface2)", painel: "#f0eafb", encerramento: "var(--success-bg)" };
-export const TIPO_ICON  = { palestra: "🎤", mesa_redonda: "🗣️", solenidade: "🏛", intervalo: "☕", painel: "🗣️", encerramento: "🎓" };
+export const TIPO_LABEL = { palestra: "Palestra", mesa_redonda: "Mesa Redonda", solenidade: "Solenidade", intervalo: "Intervalo", painel: "Painel", encerramento: "Encerramento", credenciamento: "Credenciamento" };
+export const TIPO_COLOR = { palestra: "var(--navy)", mesa_redonda: "var(--teal)", solenidade: "var(--gold)", intervalo: "var(--border2)", painel: "#6a4a9a", encerramento: "#1a5a3a", credenciamento: "#8a5a1a" };
+export const TIPO_BG    = { palestra: "#e8f0fb", mesa_redonda: "#e1f3f3", solenidade: "var(--gold-pale)", intervalo: "var(--surface2)", painel: "#f0eafb", encerramento: "var(--success-bg)", credenciamento: "#fbf0e1" };
+export const TIPO_ICON  = { palestra: "🎤", mesa_redonda: "🗣️", solenidade: "🏛", intervalo: "☕", painel: "🗣️", encerramento: "🎓", credenciamento: "🪪" };
 
 // ── Role labels ───────────────────────────────────────────────
 export const ROLE_LABEL = { admin: "Administrador", credenciador: "Credenciador", palestrante: "Palestrante", participante: "Participante" };
