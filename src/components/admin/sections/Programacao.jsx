@@ -127,7 +127,9 @@ export function Programacao() {
     showToast("Atividade excluída", "info");
   }
 
-  const filtradas = atividades.filter(a => a.titulo.toLowerCase().includes(busca.toLowerCase()));
+  const filtradas = atividades
+    .filter(a => a.titulo.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => (a.dia || "").localeCompare(b.dia || "") || (a.horario || "").localeCompare(b.horario || ""));
   const visivel = event?.programacao_visivel !== false;
 
   async function toggleVisibilidade() {
