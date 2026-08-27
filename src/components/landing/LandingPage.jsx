@@ -22,6 +22,12 @@ const isLightTheme = (event) =>
 export function LandingPage({ event, eventLoaded = false, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
   const [faqAberto, setFaqAberto] = useState(null);
   const [palPopup, setPalPopup] = useState(null);
+
+  const instLabel = (sigla) => {
+    if (!sigla) return "";
+    const inst = (instituicoes || []).find(i => i.sigla === sigla);
+    return inst ? `${inst.sigla} – ${inst.nome}` : sigla;
+  };
   const inscStatus = inscricoesAbertas(event);
 
   // Vídeo de fundo só em telas >= 768px e sem prefers-reduced-motion —
@@ -49,9 +55,8 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
   function renderAtividade(a) {
     const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
     if (a.tipo === "intervalo") return (
-      <div key={a.id} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.6rem 1rem", margin:"0.4rem 0", background:"var(--surface2)", borderRadius:"var(--radius-sm)" }}>
-        <div style={{ fontSize:"0.82rem", fontWeight:700, color:"var(--text2)", whiteSpace:"nowrap", flexShrink:0 }}>{a.horario} – {a.horario_fim}</div>
-        <span style={{ fontSize:"0.8rem", color:"var(--text2)" }}>☕ Intervalo</span>
+      <div key={a.id} className="prog-intervalo">
+        {a.titulo || "Intervalo"} · {a.horario}{a.horario_fim ? ` – ${a.horario_fim}` : ""}
       </div>
     );
     return (
@@ -70,7 +75,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   👤{" "}
                   <span
                     onClick={() => setPalPopup(p)}
-                    style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer", textDecoration:"underline", textUnderlineOffset:2 }}
+                    style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer" }}
                   >{nomeExibicao(p)}</span>
                   {p.instituicao && <span> – {p.instituicao}</span>}
                 </div>
@@ -271,42 +276,6 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                 </div>
               ))}
             </div>
-
-            {palPopup && (
-              <div
-                onClick={() => setPalPopup(null)}
-                style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
-              >
-                <div
-                  onClick={e => e.stopPropagation()}
-                  style={{ background:"var(--surface)", borderRadius:"var(--radius)", padding:"2rem", maxWidth:480, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.3)", position:"relative" }}
-                >
-                  <button
-                    onClick={() => setPalPopup(null)}
-                    style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text2)", lineHeight:1 }}
-                  >✕</button>
-                  <div style={{ display:"flex", alignItems:"center", gap:"1rem", marginBottom:"1rem" }}>
-                    {palPopup.foto_url
-                      ? <img src={palPopup.foto_url} alt={palPopup.nome} style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover" }} />
-                      : <div style={{ width:56, height:56, borderRadius:"50%", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1rem" }}>{palPopup.foto_iniciais}</div>
-                    }
-                    <div>
-                      <div style={{ fontWeight:700, color:"var(--text)", fontSize:"1rem" }}>{nomeExibicao(palPopup)}</div>
-                      {palPopup.cargo && <div style={{ fontSize:"0.8rem", color:"var(--text2)" }}>{palPopup.cargo}</div>}
-                      {palPopup.instituicao && (() => {
-                        const inst = (instituicoes || []).find(i => i.sigla === palPopup.instituicao);
-                        return (
-                          <div style={{ fontSize:"0.78rem", color:"var(--text3)" }}>
-                            {inst ? `${inst.sigla} – ${inst.nome}` : palPopup.instituicao}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <p style={{ fontSize:"0.88rem", color:"var(--text2)", lineHeight:1.7, margin:0 }}>{palPopup.mini_bio}</p>
-                </div>
-              </div>
-            )}
             </>
           )}
         </div>
@@ -447,6 +416,36 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
           }
         </div>
       </section>
+
+      {/* POPUP PALESTRANTE — sempre disponível, aberto pela programação ou pelos cards */}
+      {palPopup && (
+        <div
+          onClick={() => setPalPopup(null)}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background:"var(--surface)", borderRadius:"var(--radius)", padding:"2rem", maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,0.3)", position:"relative" }}
+          >
+            <button
+              onClick={() => setPalPopup(null)}
+              style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text2)", lineHeight:1 }}
+            >✕</button>
+            <div style={{ display:"flex", alignItems:"center", gap:"1rem", marginBottom:"1rem" }}>
+              {palPopup.foto_url
+                ? <img src={palPopup.foto_url} alt={palPopup.nome} style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />
+                : <div style={{ width:64, height:64, borderRadius:"50%", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.1rem", flexShrink:0 }}>{palPopup.foto_iniciais}</div>
+              }
+              <div>
+                <div style={{ fontWeight:700, color:"var(--text)", fontSize:"1.05rem", lineHeight:1.3 }}>{palPopup.nome || nomeExibicao(palPopup)}</div>
+                {palPopup.cargo && <div style={{ fontSize:"0.85rem", color:"var(--text2)", marginTop:2 }}>{palPopup.cargo}</div>}
+                {palPopup.instituicao && <div style={{ fontSize:"0.8rem", color:"var(--text3)", marginTop:2 }}>{instLabel(palPopup.instituicao)}</div>}
+              </div>
+            </div>
+            {palPopup.mini_bio && <p style={{ fontSize:"0.9rem", color:"var(--text2)", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap" }}>{palPopup.mini_bio}</p>}
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer style={{ background: "var(--navy-dark)", color: "rgba(255,255,255,0.5)", padding: "2rem", textAlign: "center", fontSize: "0.82rem" }}>

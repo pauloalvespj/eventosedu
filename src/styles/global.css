@@ -197,12 +197,15 @@ input,select,textarea{font-family:inherit}
 .prog-palestrante{font-size:0.8rem;color:var(--teal);font-weight:500;margin-top:0.25rem}
 /* Programação — grade com todos os dias visíveis ao mesmo tempo (landing) */
 .prog-dias-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;align-items:stretch}
-.prog-dia-col{background:var(--surface);border-radius:var(--radius);padding:1.5rem}
-.prog-dia-col-titulo{font-weight:700;color:var(--navy);font-size:1rem;text-align:center;padding-bottom:0.75rem;margin-bottom:1rem;border-bottom:2px solid var(--gold-border)}
+.prog-dia-col{background:var(--surface);border-radius:var(--radius);padding:1.5rem;overflow:hidden}
+.prog-dia-col-titulo{font-weight:700;color:#fff;font-size:1rem;text-align:center;background:var(--navy);padding:0.85rem 1rem;margin:-1.5rem -1.5rem 1.25rem}
 /* Coluna estreita — horário e tipo lado a lado, título menor, lista mais
    discreta (linha fina) em vez de cartão destacado */
 .prog-dia-col .prog-item{display:block;background:none;box-shadow:none;border-left:none;border-radius:0;border-bottom:1px solid var(--border);padding:1rem 0;margin-bottom:0}
 .prog-dia-col .prog-item:last-child{border-bottom:none}
+/* Intervalo — linha discreta, sem destaque */
+.prog-dia-col .prog-intervalo{padding:0.85rem 0;border-bottom:1px solid var(--border);color:var(--warn);font-size:0.95rem;font-weight:700;text-align:center;letter-spacing:0.03em}
+.prog-dia-col .prog-intervalo:last-child{border-bottom:none}
 .prog-dia-col .prog-hora{color:var(--navy);font-size:0.88rem}
 .prog-dia-col .prog-titulo{font-size:0.85rem}
 @media(max-width:900px){.prog-dias-grid{grid-template-columns:1fr}}
