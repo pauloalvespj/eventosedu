@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faBuilding, faKey,
+  faBuilding, faKey, faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
@@ -26,6 +26,7 @@ import { ForumAdmin }     from "./sections/ForumAdmin";
 import { Gamificacao }    from "./sections/Gamificacao";
 import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
+import { LivePerguntas }  from "./sections/LivePerguntas";
 
 const MENU = [
   { path: "",               icon: faChartBar,    label: "Home",            roles: ["admin"] },
@@ -37,6 +38,7 @@ const MENU = [
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
   { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
+  { path: "live-perguntas", icon: faBolt,         label: "Perguntas ao Vivo", roles: ["admin"] },
   { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
   { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
@@ -205,6 +207,7 @@ function AdminRoutes() {
     { path: "relatorios",        element: <Relatorios /> },
     { path: "avaliacoes",        element: <Avaliacoes /> },
     { path: "forum",             element: <ForumAdmin /> },
+    { path: "live-perguntas",    element: <LivePerguntas /> },
     { path: "gamificacao",       element: <Gamificacao /> },
     { path: "instituicoes",      element: <Instituicoes /> },
     { path: "administracao",     element: <Administracao /> },

@@ -409,6 +409,98 @@ export async function salvarRespostaPesquisa({ pergunta_id, participante_id, res
   return { data, error };
 }
 
+// ── PERGUNTAS AO VIVO ─────────────────────────────────────────
+
+export async function fetchLivePerguntas(eventId) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("criado_em", { ascending: false });
+  return { data: data ?? [], error };
+}
+
+function gerarCodigoLive() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// Código de 4 dígitos é único por evento — em caso raro de colisão, gera
+// outro e tenta de novo (até 5x).
+export async function criarLivePergunta({ event_id, texto, opcoes }) {
+  for (let tentativa = 0; tentativa < 5; tentativa++) {
+    const { data, error } = await supabase
+      .from("live_perguntas")
+      .insert({ event_id, texto, opcoes, codigo: gerarCodigoLive() })
+      .select()
+      .single();
+    if (!error) return { data, error: null };
+    if (error.code !== "23505") return { data: null, error };
+  }
+  return { data: null, error: { message: "Não foi possível gerar um código único. Tente novamente." } };
+}
+
+export async function fetchLivePerguntaPorCodigo(eventId, codigo) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .select("*")
+    .eq("event_id", eventId)
+    .eq("codigo", codigo)
+    .eq("status", "aberta")
+    .maybeSingle();
+  return { data, error };
+}
+
+export async function atualizarLivePergunta(id, { texto, opcoes }) {
+  const { error } = await supabase
+    .from("live_perguntas")
+    .update({ texto, opcoes })
+    .eq("id", id);
+  return { error };
+}
+
+export async function atualizarStatusLivePergunta(id, status) {
+  const { error } = await supabase
+    .from("live_perguntas")
+    .update({ status })
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarLivePergunta(id) {
+  const { error } = await supabase
+    .from("live_perguntas")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+export async function fetchLiveRespostas(perguntaId) {
+  const { data, error } = await supabase
+    .from("live_respostas")
+    .select("*")
+    .eq("pergunta_id", perguntaId);
+  return { data: data ?? [], error };
+}
+
+export async function fetchMinhaLiveResposta(perguntaId, participanteId) {
+  const { data, error } = await supabase
+    .from("live_respostas")
+    .select("*")
+    .eq("pergunta_id", perguntaId)
+    .eq("participante_id", participanteId)
+    .maybeSingle();
+  return { data, error };
+}
+
+export async function responderLivePergunta({ pergunta_id, participante_id, opcao }) {
+  const { data, error } = await supabase
+    .from("live_respostas")
+    .insert({ pergunta_id, participante_id, opcao })
+    .select()
+    .single();
+  return { data, error };
+}
+
 // ── PONTUAÇÕES ────────────────────────────────────────────────
 // Pontos são concedidos por triggers no banco (presença, tópico,
 // resposta, curtida, avaliação, seguir) — o cliente não insere mais.
