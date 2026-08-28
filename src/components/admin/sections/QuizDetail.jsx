@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faPlay, faStop, faTrash, faPlus, faXmark, faDisplay, faChartSimple, faArrowLeft, faPenToSquare, faEye } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, QRCodeCanvas } from "../../base/index";
 import { supabase } from "../../../lib/supabase";
 import {
-  fetchLivePerguntas, criarLivePergunta, atualizarLivePergunta, atualizarStatusLivePergunta,
-  deletarLivePergunta, fetchLiveRespostas,
+  fetchQuiz, fetchPerguntasDoQuiz, criarLivePergunta, atualizarLivePergunta,
+  atualizarStatusLivePergunta, deletarLivePergunta, deletarQuiz, fetchLiveRespostas,
 } from "../../../lib/db";
+import { formatData } from "../../../utils/helpers";
 
 const STATUS_LABEL = { rascunho: "Rascunho", aberta: "Aberta", encerrada: "Encerrada" };
 const STATUS_BADGE = { rascunho: "badge-navy", aberta: "badge-success", encerrada: "badge-warn" };
@@ -17,8 +19,11 @@ function novaOpcoesForm() {
   return ["", ""];
 }
 
-export function LivePerguntas() {
+export function QuizDetail() {
   const { event, showToast } = useAdmin();
+  const navigate = useNavigate();
+  const { quizId } = useParams();
+  const [quiz, setQuiz] = useState(null);
   const [perguntas, setPerguntas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [modal, setModal] = useState(false);
@@ -30,9 +35,9 @@ export function LivePerguntas() {
   const [resultadosId, setResultadosId] = useState(null);
 
   useEffect(() => {
-    if (!event?.id) return;
-    fetchLivePerguntas(event.id).then(({ data }) => { setPerguntas(data); setCarregando(false); });
-  }, [event?.id]);
+    fetchQuiz(quizId).then(({ data }) => setQuiz(data));
+    fetchPerguntasDoQuiz(quizId).then(({ data }) => { setPerguntas(data); setCarregando(false); });
+  }, [quizId]);
 
   function abrirNova() {
     setEditandoId(null);
@@ -79,7 +84,7 @@ export function LivePerguntas() {
       showToast("Pergunta atualizada!", "success");
       return;
     }
-    const { data, error } = await criarLivePergunta({ event_id: event.id, texto: textoOk, opcoes: opcoesOk });
+    const { data, error } = await criarLivePergunta({ quiz_id: quizId, texto: textoOk, opcoes: opcoesOk });
     setSalvando(false);
     if (error) { showToast("Erro ao criar: " + error.message, "error"); return; }
     setPerguntas(prev => [data, ...prev]);
@@ -87,8 +92,9 @@ export function LivePerguntas() {
     showToast("Pergunta criada!", "success");
   }
 
-  // Só uma pergunta fica "aberta" por vez — o participante sempre cai na
-  // mesma URL/QR code, então dar play numa nova encerra a anterior sozinho.
+  // Só uma pergunta fica "aberta" por vez dentro do quiz — o participante
+  // sempre cai na mesma URL/código, então dar play numa nova encerra a
+  // anterior sozinho.
   async function mudarStatus(pergunta, status) {
     const outrasAbertas = status === "aberta" ? perguntas.filter(p => p.status === "aberta" && p.id !== pergunta.id) : [];
     setPerguntas(prev => prev.map(p => {
@@ -109,6 +115,13 @@ export function LivePerguntas() {
     showToast("Pergunta removida", "info");
   }
 
+  async function removerQuiz() {
+    if (!confirm(`Excluir o quiz "${quiz?.titulo}"? Todas as perguntas e respostas dele também serão apagadas.`)) return;
+    await deletarQuiz(quizId);
+    showToast("Quiz removido", "info");
+    navigate("/painel/quiz");
+  }
+
   function apresentar(p) {
     setApresentacao({ perguntaId: p.id, fase: p.status === "aberta" ? "lobby" : "resultados" });
   }
@@ -118,8 +131,18 @@ export function LivePerguntas() {
 
   return (
     <div>
+      <button className="btn btn-sm btn-outline" style={{ marginBottom: "1rem" }} onClick={() => navigate("/painel/quiz")}>
+        <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />Voltar aos Quizzes
+      </button>
+
       <div className="admin-topbar">
-        <div><h1>Perguntas ao Vivo</h1><p>Enquetes de múltipla escolha respondidas em tempo real, estilo Wooclap</p></div>
+        <div>
+          <h1>{quiz?.titulo || "Quiz"}</h1>
+          <p>
+            Código <strong style={{ fontFamily: "monospace", letterSpacing: "0.1em" }}>{quiz?.codigo}</strong>
+            {quiz?.data_inicio && <> · válido {formatData(quiz.data_inicio)}{quiz.data_fim && quiz.data_fim !== quiz.data_inicio ? ` a ${formatData(quiz.data_fim)}` : ""}</>}
+          </p>
+        </div>
         <button className="btn btn-primary" onClick={abrirNova}>
           <FontAwesomeIcon icon={faBolt} style={{ marginRight: 6 }} />+ Nova Pergunta
         </button>
@@ -132,7 +155,6 @@ export function LivePerguntas() {
             <tr>
               <th>Pergunta</th>
               <th>Opções</th>
-              <th>Código</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -142,7 +164,6 @@ export function LivePerguntas() {
               <tr key={p.id}>
                 <td style={{ fontWeight: 600, maxWidth: 320 }}>{p.texto}</td>
                 <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{(p.opcoes || []).join(" · ")}</td>
-                <td style={{ fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em" }}>{p.codigo}</td>
                 <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
@@ -172,10 +193,18 @@ export function LivePerguntas() {
               </tr>
             ))}
             {!carregando && perguntas.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhuma pergunta criada ainda.</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhuma pergunta criada ainda.</td></tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Zona de perigo — excluir o quiz inteiro ── */}
+      <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px dashed var(--border2)" }}>
+        <button style={{ background: "transparent", border: "none", color: "var(--text3)", fontSize: "0.78rem", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+          onClick={removerQuiz}>
+          Excluir este quiz
+        </button>
       </div>
 
       {/* ── Modal: nova pergunta / editar pergunta ── */}
@@ -214,9 +243,10 @@ export function LivePerguntas() {
       )}
 
       {/* ── APRESENTAÇÃO — tela cheia: lobby com QR code, depois resultados ao vivo ── */}
-      {perguntaApresentada && (
+      {perguntaApresentada && quiz && (
         <Apresentacao
           pergunta={perguntaApresentada}
+          quizCodigo={quiz.codigo}
           event={event}
           faseInicial={apresentacao.fase}
           onClose={() => setApresentacao(null)}
@@ -279,13 +309,15 @@ function ResultadosModal({ pergunta, onClose }) {
 // 1) Lobby — logo + pergunta grande + QR code grande pra quem ainda vai entrar
 // 2) Resultados — gráfico de barras animado, atualizado via Realtime, com o
 //    QR code menor no canto pra quem chegar atrasado
-function Apresentacao({ pergunta, event, faseInicial, onClose }) {
+function Apresentacao({ pergunta, quizCodigo, event, faseInicial, onClose }) {
   const [fase, setFase] = useState(faseInicial);
   const [contagens, setContagens] = useState({});
   const [pulso, setPulso] = useState({});
   const [pops, setPops] = useState([]);
   const total = Object.values(contagens).reduce((s, n) => s + n, 0);
-  const urlResposta = `${window.location.origin}/quiz`;
+  // QR já leva o código do quiz embutido — quem escaneia entra direto, sem
+  // digitar nada; quem digita a URL à mão continua precisando do código.
+  const urlResposta = `${window.location.origin}/quiz?c=${quizCodigo}`;
 
   useEffect(() => {
     let ativo = true;
@@ -334,11 +366,11 @@ function Apresentacao({ pergunta, event, faseInicial, onClose }) {
 
       {fase === "lobby" ? (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "4rem", padding: "2rem 4rem", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 380px", maxWidth: 560 }}>
-            <div style={{ color: "var(--text3)", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1rem" }}>
-              <FontAwesomeIcon icon={faBolt} style={{ marginRight: 8, color: "var(--gold, #c9a84c)" }} />Pergunta ao vivo
+          <div style={{ flex: "1 1 380px", maxWidth: 560, alignSelf: "flex-start", marginTop: "3rem" }}>
+            <div style={{ color: "var(--text3)", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+              <FontAwesomeIcon icon={faBolt} style={{ marginRight: 8, color: "var(--gold, #c9a84c)" }} />É hora de participar!
             </div>
-            <h1 style={{ fontFamily: "'Playfair Display',serif", color: "var(--navy)", fontSize: "clamp(2rem,4.5vw,3.4rem)", margin: 0, lineHeight: 1.25 }}>{pergunta.texto}</h1>
+            <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(2rem,4.5vw,3.4rem)", margin: 0, lineHeight: 1.25 }}>{pergunta.texto}</h1>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "2rem" }}>
               {(pergunta.opcoes || []).map((opcao, i) => (
@@ -362,10 +394,11 @@ function Apresentacao({ pergunta, event, faseInicial, onClose }) {
             <div style={{ color: "var(--text2)", fontSize: "1rem", marginTop: "1rem" }}>
               Aponte a câmera do celular pra responder
             </div>
-            {pergunta.codigo && (
+            {quizCodigo && (
               <>
-                <div style={{ color: "var(--text3)", fontSize: "0.8rem", marginTop: "1.1rem" }}>ou digite o código em "Perguntas ao Vivo"</div>
-                <div style={{ color: "var(--navy)", fontSize: "2.2rem", fontWeight: 800, letterSpacing: "0.35em", fontFamily: "monospace", marginTop: "0.35rem" }}>{pergunta.codigo}</div>
+                <div style={{ color: "var(--text3)", fontSize: "0.9rem", marginTop: "1.25rem" }}>ou acesse o link abaixo e digite o seguinte código:</div>
+                <div style={{ color: "var(--text2)", fontSize: "1.2rem", fontWeight: 600, marginTop: "0.3rem" }}>{window.location.host}/quiz</div>
+                <div style={{ display: "inline-block", background: "#fff", color: "var(--navy)", fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, letterSpacing: "0.3em", fontFamily: "monospace", lineHeight: 1, marginTop: "0.5rem", padding: "0.5rem 1.25rem", border: "1px solid var(--border)", borderRadius: 16 }}>{quizCodigo}</div>
               </>
             )}
           </div>
@@ -377,17 +410,18 @@ function Apresentacao({ pergunta, event, faseInicial, onClose }) {
             <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />Voltar pro QR code
           </button>
 
+          <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(1.5rem,2.6vw,2.1rem)", margin: "0.5rem 3rem 0", textAlign: "center", lineHeight: 1.3 }}>{pergunta.texto}</h1>
+
           <div style={{ flex: 1, display: "flex", padding: "1.5rem 3rem 2.5rem", gap: "3rem", flexWrap: "wrap" }}>
-            {/* ── Coluna esquerda (~1/3) — pergunta + QR code ── */}
+            {/* ── Coluna esquerda (~1/3) — QR code ── */}
             <div style={{ flex: "1 1 300px", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", justifyContent: "center", gap: "1.5rem" }}>
-              <h1 style={{ fontFamily: "'Playfair Display',serif", color: "var(--navy)", fontSize: "clamp(1.5rem,2.6vw,2.1rem)", margin: 0, lineHeight: 1.3 }}>{pergunta.texto}</h1>
               <div style={{ background: "#fff", borderRadius: 16, padding: "1rem", display: "inline-block", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
                 <QRCodeCanvas value={urlResposta} size={200} />
               </div>
-              {pergunta.codigo && (
+              {quizCodigo && (
                 <div>
                   <div style={{ color: "var(--text3)", fontSize: "0.78rem" }}>ou digite o código</div>
-                  <div style={{ color: "var(--navy)", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.3em", fontFamily: "monospace" }}>{pergunta.codigo}</div>
+                  <div style={{ color: "var(--navy)", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.3em", fontFamily: "monospace" }}>{quizCodigo}</div>
                 </div>
               )}
               <div style={{ color: "var(--text2)", fontSize: "0.9rem", lineHeight: 1.4 }}>

@@ -409,28 +409,37 @@ export async function salvarRespostaPesquisa({ pergunta_id, participante_id, res
   return { data, error };
 }
 
-// ── PERGUNTAS AO VIVO ─────────────────────────────────────────
+// ── QUIZ (grupo de perguntas ao vivo, com código e validade) ───
 
-export async function fetchLivePerguntas(eventId) {
+function gerarCodigoLive() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+export async function fetchQuizzes(eventId) {
   const { data, error } = await supabase
-    .from("live_perguntas")
+    .from("live_quiz")
     .select("*")
     .eq("event_id", eventId)
     .order("criado_em", { ascending: false });
   return { data: data ?? [], error };
 }
 
-function gerarCodigoLive() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+export async function fetchQuiz(id) {
+  const { data, error } = await supabase
+    .from("live_quiz")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return { data, error };
 }
 
-// Código de 4 dígitos é único por evento — em caso raro de colisão, gera
-// outro e tenta de novo (até 5x).
-export async function criarLivePergunta({ event_id, texto, opcoes }) {
+// Código de 4 dígitos é único — em caso raro de colisão, gera outro e tenta
+// de novo (até 5x).
+export async function criarQuiz({ event_id, titulo, data_inicio, data_fim }) {
   for (let tentativa = 0; tentativa < 5; tentativa++) {
     const { data, error } = await supabase
-      .from("live_perguntas")
-      .insert({ event_id, texto, opcoes, codigo: gerarCodigoLive() })
+      .from("live_quiz")
+      .insert({ event_id, titulo, data_inicio, data_fim, codigo: gerarCodigoLive() })
       .select()
       .single();
     if (!error) return { data, error: null };
@@ -439,14 +448,60 @@ export async function criarLivePergunta({ event_id, texto, opcoes }) {
   return { data: null, error: { message: "Não foi possível gerar um código único. Tente novamente." } };
 }
 
-export async function fetchLivePerguntaPorCodigo(eventId, codigo) {
+export async function atualizarQuiz(id, updates) {
+  const { error } = await supabase
+    .from("live_quiz")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarQuiz(id) {
+  const { error } = await supabase
+    .from("live_quiz")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
+export async function fetchQuizPorCodigo(eventId, codigo) {
   const { data, error } = await supabase
-    .from("live_perguntas")
+    .from("live_quiz")
     .select("*")
     .eq("event_id", eventId)
     .eq("codigo", codigo)
+    .eq("ativo", true)
+    .maybeSingle();
+  return { data, error };
+}
+
+// ── PERGUNTAS AO VIVO (pertencem a um quiz) ────────────────────
+
+export async function fetchPerguntasDoQuiz(quizId) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .select("*")
+    .eq("quiz_id", quizId)
+    .order("criado_em", { ascending: false });
+  return { data: data ?? [], error };
+}
+
+export async function fetchPerguntaAbertaDoQuiz(quizId) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .select("*")
+    .eq("quiz_id", quizId)
     .eq("status", "aberta")
     .maybeSingle();
+  return { data, error };
+}
+
+export async function criarLivePergunta({ quiz_id, texto, opcoes }) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .insert({ quiz_id, texto, opcoes })
+    .select()
+    .single();
   return { data, error };
 }
 

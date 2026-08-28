@@ -26,7 +26,8 @@ import { ForumAdmin }     from "./sections/ForumAdmin";
 import { Gamificacao }    from "./sections/Gamificacao";
 import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
-import { LivePerguntas }  from "./sections/LivePerguntas";
+import { QuizList }   from "./sections/QuizList";
+import { QuizDetail } from "./sections/QuizDetail";
 
 const MENU = [
   { path: "",               icon: faChartBar,    label: "Home",            roles: ["admin"] },
@@ -38,7 +39,7 @@ const MENU = [
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
   { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
-  { path: "live-perguntas", icon: faBolt,         label: "Perguntas ao Vivo", roles: ["admin"] },
+  { path: "quiz",           icon: faBolt,         label: "Quiz / Perguntas", roles: ["admin"] },
   { path: "gamificacao",    icon: faMedal,        label: "Gamificação",     roles: ["admin"] },
   { path: "instituicoes",   icon: faBuilding,     label: "Instituições",    roles: ["admin"] },
   { path: "avaliacoes",     icon: faStar,         label: "Avaliações",      roles: ["admin"] },
@@ -207,7 +208,8 @@ function AdminRoutes() {
     { path: "relatorios",        element: <Relatorios /> },
     { path: "avaliacoes",        element: <Avaliacoes /> },
     { path: "forum",             element: <ForumAdmin /> },
-    { path: "live-perguntas",    element: <LivePerguntas /> },
+    { path: "quiz",              element: <QuizList /> },
+    { path: "quiz/:quizId",      element: <QuizDetail /> },
     { path: "gamificacao",       element: <Gamificacao /> },
     { path: "instituicoes",      element: <Instituicoes /> },
     { path: "administracao",     element: <Administracao /> },
