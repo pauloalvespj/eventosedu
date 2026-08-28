@@ -274,6 +274,7 @@ export function AreaUsuario(props) {
           wrapClassName="part-sidebar"
           background={headerBgV}
           user={user}
+          eventSigla={event.nome}
           roleLabel={isPalestrante ? "Palestrante" : "Participante"}
           meusDadosPath="/painel/dados"
           onSwitchRole={onSwitchRole}

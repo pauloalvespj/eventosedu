@@ -249,6 +249,7 @@ export function PainelAdmin(props) {
           wrapClassName="admin-sidebar"
           open={navAberta}
           user={user}
+          eventSigla={event.nome}
           roleLabel={user?.instituicao || ROLE_LABEL[user?.role] || user?.role}
           meusDadosPath="/painel/meus-dados"
           onSwitchRole={onSwitchRole}

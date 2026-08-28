@@ -321,6 +321,9 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
             <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
           </div>
 
+          <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--text3)", marginBottom: "0.6rem" }}>
+            Não lembra sua senha? Entre com um código enviado por e-mail.
+          </p>
           <button className="btn btn-outline btn-block" onClick={handleReceberCodigo} disabled={enviandoCodigo || !identificadorValido(identificador)}>
             <FontAwesomeIcon icon={faEnvelope} style={{ marginRight: 8 }} />
             {enviandoCodigo ? "Enviando…" : "Receber código por e-mail"}

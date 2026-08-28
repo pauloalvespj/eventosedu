@@ -250,29 +250,14 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
               </div>
             <div className="palestrantes-grid">
               {palestrantes.filter(p => p.destaque).map(p => (
-                <div key={p.id} className="palestrante-card">
+                <div key={p.id} className="palestrante-card" onClick={() => setPalPopup(p)} style={{ cursor:"pointer" }}>
                   {p.foto_url
                     ? <img src={p.foto_url} alt={p.nome} className="palestrante-avatar" style={{ objectFit:"cover", fontSize:0 }} />
                     : <div className="palestrante-avatar">{p.foto_iniciais}</div>
                   }
-                  <div className="palestrante-nome">{nomeExibicao(p)}</div>
+                  <div className="palestrante-nome">{p.nome}</div>
                   <div className="palestrante-titulo">{p.cargo}</div>
-                  {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginBottom:"0.4rem" }}>{p.instituicao}</div>}
-                  {p.mini_bio && (
-                    <p style={{ fontSize:"0.78rem", color:"var(--text2)", marginTop:"0.6rem", lineHeight:1.5 }}>
-                      {p.mini_bio.length > 120 ? (
-                        <>
-                          {p.mini_bio.slice(0, 120).trimEnd()}…{" "}
-                          <span
-                            onClick={() => setPalPopup(p)}
-                            style={{ color:"var(--teal)", fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
-                          >
-                            ver mais
-                          </span>
-                        </>
-                      ) : p.mini_bio}
-                    </p>
-                  )}
+                  {p.instituicao && <div style={{ fontSize:"0.78rem", color:"var(--text3)" }}>{instLabel(p.instituicao)}</div>}
                 </div>
               ))}
             </div>
@@ -431,10 +416,10 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
               onClick={() => setPalPopup(null)}
               style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text2)", lineHeight:1 }}
             >✕</button>
-            <div style={{ display:"flex", alignItems:"center", gap:"1rem", marginBottom:"1rem" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:"1.1rem", marginBottom:"1.1rem" }}>
               {palPopup.foto_url
-                ? <img src={palPopup.foto_url} alt={palPopup.nome} style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />
-                : <div style={{ width:64, height:64, borderRadius:"50%", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.1rem", flexShrink:0 }}>{palPopup.foto_iniciais}</div>
+                ? <img src={palPopup.foto_url} alt={palPopup.nome} style={{ width:130, height:170, borderRadius:"var(--radius-sm)", objectFit:"cover", flexShrink:0 }} />
+                : <div style={{ width:130, height:170, borderRadius:"var(--radius-sm)", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.8rem", flexShrink:0 }}>{palPopup.foto_iniciais}</div>
               }
               <div>
                 <div style={{ fontWeight:700, color:"var(--text)", fontSize:"1.05rem", lineHeight:1.3 }}>{palPopup.nome || nomeExibicao(palPopup)}</div>

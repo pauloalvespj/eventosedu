@@ -1,6 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleHalfStroke, faArrowRightFromBracket, faCircleUser } from "@fortawesome/free-solid-svg-icons";
+import { faCircleHalfStroke, faArrowRightFromBracket, faCircleUser, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { AvatarUpload } from "./AvatarUpload";
 import { nomeExibicao } from "../../utils/helpers";
 
@@ -10,6 +10,7 @@ import { nomeExibicao } from "../../utils/helpers";
 export function Sidebar({
   wrapClassName, background, open,
   user, roleLabel, meusDadosPath, onSwitchRole,
+  eventSigla,
   extraTop,
   navWrapClassName, navItems,
   altoContraste, onToggleAltoContraste,
@@ -17,6 +18,12 @@ export function Sidebar({
 }) {
   return (
     <div className={`${wrapClassName}${open ? " open" : ""}`} style={background ? { background } : undefined}>
+      {eventSigla && (
+        <Link to="/" style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.18)", color: "var(--white-hi)", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem" }}>
+          <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: "0.75rem", color: "var(--white-low)" }} />
+          {eventSigla}
+        </Link>
+      )}
       <div style={{ padding: "0.85rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <AvatarUpload
