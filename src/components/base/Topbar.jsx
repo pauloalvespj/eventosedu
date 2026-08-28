@@ -36,11 +36,6 @@ export function Topbar({
       )}
       <Link to="/" className="topbar-title">{title}</Link>
 
-      <button className="topbar-icon-btn" onClick={onToggleAltoContraste} aria-pressed={altoContraste}
-        title="Alternar alto contraste (acessibilidade)">
-        <FontAwesomeIcon icon={faCircleHalfStroke} />
-      </button>
-
       <div className="topbar-user" ref={wrapRef}>
         <button className="topbar-avatar-btn" onClick={() => setAberto(v => !v)} aria-expanded={aberto}>
           <AvatarUpload
@@ -67,6 +62,9 @@ export function Topbar({
                 ⇄ Trocar perfil
               </button>
             )}
+            <button type="button" className="topbar-dropdown-item" onClick={onToggleAltoContraste} aria-pressed={altoContraste}>
+              <FontAwesomeIcon icon={faCircleHalfStroke} fixedWidth />Alto contraste
+            </button>
             <button type="button" className="topbar-dropdown-item danger" onClick={onLogout}>
               <FontAwesomeIcon icon={faArrowRightFromBracket} fixedWidth />Sair
             </button>
