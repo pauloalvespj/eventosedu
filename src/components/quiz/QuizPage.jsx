@@ -1,26 +1,41 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
-import { supabase } from "../../../lib/supabase";
-import { fetchLivePerguntas, fetchLivePerguntaPorCodigo, fetchMinhaLiveResposta, responderLivePergunta } from "../../../lib/db";
-import { useUsuario } from "../UsuarioContext";
+import { supabase } from "../../lib/supabase";
+import {
+  fetchLivePerguntas, fetchLivePerguntaPorCodigo,
+  fetchMinhaLiveRespostaAnonima, responderLivePerguntaAnonimo,
+} from "../../lib/db";
 
-export function LivePerguntas() {
-  const { event, user, showToast } = useUsuario();
+const ANON_ID_KEY = "enaudin_quiz_anon_id";
+
+function getAnonId() {
+  let id = localStorage.getItem(ANON_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(ANON_ID_KEY, id);
+  }
+  return id;
+}
+
+// Página pública (sem login) pra responder Perguntas ao Vivo — é pra onde o
+// QR code/código do telão apontam. Voto é amarrado a um id anônimo salvo no
+// navegador, só pra evitar duplicidade óbvia no mesmo aparelho.
+export function QuizPage({ event, eventLoaded }) {
+  const [anonId] = useState(getAnonId);
   const [perguntas, setPerguntas] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [minhaResposta, setMinhaResposta] = useState({}); // { [perguntaId]: opcao }
+  const [minhaResposta, setMinhaResposta] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [perguntaViaCodigo, setPerguntaViaCodigo] = useState(null);
   const [codigo, setCodigo] = useState("");
   const [enviandoCodigo, setEnviandoCodigo] = useState(false);
+  const [erroCodigo, setErroCodigo] = useState("");
 
   async function carregar() {
     const { data } = await fetchLivePerguntas(event.id);
     setPerguntas(data);
     setCarregando(false);
-    // Se a pergunta que veio por código foi encerrada/removida, solta ela —
-    // volta a cair no fluxo automático (ou no estado de espera).
     setPerguntaViaCodigo(prev => {
       if (!prev) return prev;
       const atual = data.find(p => p.id === prev.id);
@@ -33,7 +48,7 @@ export function LivePerguntas() {
     carregar();
 
     const channel = supabase
-      .channel(`live-perguntas-${event.id}`)
+      .channel(`quiz-live-perguntas-${event.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "live_perguntas", filter: `event_id=eq.${event.id}` }, () => carregar())
       .subscribe();
 
@@ -44,7 +59,7 @@ export function LivePerguntas() {
 
   useEffect(() => {
     if (!perguntaAberta || minhaResposta?.[perguntaAberta.id] !== undefined) return;
-    fetchMinhaLiveResposta(perguntaAberta.id, user.id).then(({ data }) => {
+    fetchMinhaLiveRespostaAnonima(perguntaAberta.id, anonId).then(({ data }) => {
       setMinhaResposta(prev => ({ ...prev, [perguntaAberta.id]: data?.opcao ?? null }));
     });
   }, [perguntaAberta?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -52,23 +67,26 @@ export function LivePerguntas() {
   async function responder(opcao) {
     if (enviando) return;
     setEnviando(true);
-    const { error } = await responderLivePergunta({ pergunta_id: perguntaAberta.id, participante_id: user.id, opcao });
-    setEnviando(false);
-    if (error) {
-      showToast(error.code === "23505" ? "Você já respondeu essa pergunta." : "Erro ao enviar resposta: " + error.message, "error");
-      setMinhaResposta(prev => ({ ...prev, [perguntaAberta.id]: opcao }));
+    const { error } = await responderLivePerguntaAnonimo({ pergunta_id: perguntaAberta.id, anon_id: anonId, opcao });
+    if (error?.code === "23505") {
+      const { data } = await fetchMinhaLiveRespostaAnonima(perguntaAberta.id, anonId);
+      setMinhaResposta(prev => ({ ...prev, [perguntaAberta.id]: data?.opcao ?? opcao }));
+      setEnviando(false);
       return;
     }
+    setEnviando(false);
+    if (error) return;
     setMinhaResposta(prev => ({ ...prev, [perguntaAberta.id]: opcao }));
   }
 
   async function entrarComCodigo() {
     const cod = codigo.trim();
-    if (cod.length !== 4) { showToast("Digite os 4 dígitos do código", "error"); return; }
+    if (cod.length !== 4) { setErroCodigo("Digite os 4 dígitos do código"); return; }
+    setErroCodigo("");
     setEnviandoCodigo(true);
     const { data, error } = await fetchLivePerguntaPorCodigo(event.id, cod);
     setEnviandoCodigo(false);
-    if (error || !data) { showToast("Código inválido ou a pergunta já foi encerrada.", "error"); return; }
+    if (error || !data) { setErroCodigo("Código inválido ou a pergunta já foi encerrada."); return; }
     setPerguntaViaCodigo(data);
     setCodigo("");
   }
@@ -76,12 +94,12 @@ export function LivePerguntas() {
   const respondida = perguntaAberta && minhaResposta[perguntaAberta.id];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", minHeight: "65vh", justifyContent: "center", padding: "1rem" }}>
-      {event.logo_url && (
-        <img src={event.logo_url} alt={event.nome} style={{ maxHeight: 64, maxWidth: 200, objectFit: "contain", marginBottom: "2rem" }} />
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "1.5rem" }}>
+      {eventLoaded && event?.logo_url && (
+        <img src={event.logo_url} alt={event.nome} style={{ maxHeight: 72, maxWidth: 220, objectFit: "contain", marginBottom: "2.5rem" }} />
       )}
 
-      {carregando ? null : !perguntaAberta ? (
+      {!eventLoaded || carregando ? null : !perguntaAberta ? (
         <div style={{ maxWidth: 380, width: "100%" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>⚡</div>
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontWeight: 700, color: "var(--navy)", fontSize: "1.25rem", marginBottom: "0.5rem" }}>Nenhuma pergunta aberta agora</h2>
@@ -92,12 +110,13 @@ export function LivePerguntas() {
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
               <input className="form-input" inputMode="numeric" maxLength={4} placeholder="0000"
                 style={{ maxWidth: 110, textAlign: "center", fontFamily: "monospace", fontSize: "1.2rem", letterSpacing: "0.2em" }}
-                value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                value={codigo} onChange={e => { setCodigo(e.target.value.replace(/\D/g, "").slice(0, 4)); setErroCodigo(""); }}
                 onKeyDown={e => e.key === "Enter" && !enviandoCodigo && entrarComCodigo()} />
               <button className="btn btn-primary" onClick={entrarComCodigo} disabled={enviandoCodigo || codigo.length !== 4}>
                 {enviandoCodigo ? "…" : "Entrar"}
               </button>
             </div>
+            {erroCodigo && <div style={{ color: "var(--danger)", fontSize: "0.8rem", marginTop: "0.6rem" }}>{erroCodigo}</div>}
           </div>
         </div>
       ) : respondida ? (

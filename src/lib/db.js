@@ -482,20 +482,22 @@ export async function fetchLiveRespostas(perguntaId) {
   return { data: data ?? [], error };
 }
 
-export async function fetchMinhaLiveResposta(perguntaId, participanteId) {
+// ── Perguntas ao vivo — respondendo sem login (página pública /quiz) ──
+
+export async function fetchMinhaLiveRespostaAnonima(perguntaId, anonId) {
   const { data, error } = await supabase
     .from("live_respostas")
     .select("*")
     .eq("pergunta_id", perguntaId)
-    .eq("participante_id", participanteId)
+    .eq("anon_id", anonId)
     .maybeSingle();
   return { data, error };
 }
 
-export async function responderLivePergunta({ pergunta_id, participante_id, opcao }) {
+export async function responderLivePerguntaAnonimo({ pergunta_id, anon_id, opcao }) {
   const { data, error } = await supabase
     .from("live_respostas")
-    .insert({ pergunta_id, participante_id, opcao })
+    .insert({ pergunta_id, anon_id, opcao })
     .select()
     .single();
   return { data, error };

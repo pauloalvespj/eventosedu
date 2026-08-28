@@ -23,6 +23,7 @@ import { Toast, Modal } from "./components/base/index";
 import { FormInscricao } from "./components/auth/FormInscricao";
 import { FormLogin } from "./components/auth/FormLogin";
 import { LandingPage } from "./components/landing/LandingPage";
+import { QuizPage } from "./components/quiz/QuizPage";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
 import { PaginaPresencaTurno } from "./components/presenca/PaginaPresencaTurno";
@@ -562,6 +563,9 @@ export default function App() {
 
         {/* Validação pública de certificado — sem autenticação */}
         <Route path="/validar" element={<ValidarCertificado />} />
+
+        {/* Perguntas ao Vivo — responder é público, sem login (QR/código do telão) */}
+        <Route path="/quiz" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
 
         {/* /admin e /admin/* redirecionam para /painel */}
         <Route path="/admin"   element={<Navigate to="/painel" replace />} />

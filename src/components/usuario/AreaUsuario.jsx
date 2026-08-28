@@ -3,7 +3,7 @@ import { useRoutes, Navigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
-  faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge, faBolt,
+  faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge,
 } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, nomeExibicao } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
@@ -23,7 +23,6 @@ import { Presencas } from "./sections/Presencas";
 import { Certificado } from "./sections/Certificado";
 import { CredencialQR } from "./sections/CredencialQR";
 import { MeusDados } from "./sections/MeusDados";
-import { LivePerguntas } from "./sections/LivePerguntas";
 import { Credenciamento } from "../admin/sections/Credenciamento";
 
 // ── Pequenos adaptadores — encaixam os componentes de view genéricos
@@ -107,7 +106,6 @@ function AreaUsuarioRoutes() {
     { path: "ranking",     element: event.gamificacao_ativa !== false ? <RankingTab /> : <Navigate to="/painel" replace /> },
     { path: "rede",        element: event.rede_visivel !== false ? <RedeTab /> : <Navigate to="/painel" replace /> },
     { path: "pesquisa",    element: (event.pesquisa_ativa && podeResponderPesquisa) ? <PesquisaTab /> : <Navigate to="/painel" replace /> },
-    { path: "live-perguntas", element: <LivePerguntas /> },
     { path: "dados",         element: <MeusDados /> },
     { path: "dados/editar",  element: <MeusDados /> },
     { path: "senha",         element: <AlterarSenhaTab /> },
@@ -229,7 +227,6 @@ export function AreaUsuario(props) {
     ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
     ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa de Satisfação"]] : []),
-    ["live-perguntas", faBolt, "Perguntas ao Vivo"],
   ];
   const MENU_CREDENCIADOR_EXTRA = isCredenciador
     ? [["credenciamento", faIdBadge, "Credenciar"]]

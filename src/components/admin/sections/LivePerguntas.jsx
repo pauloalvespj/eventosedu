@@ -146,6 +146,9 @@ export function LivePerguntas() {
                 <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                    <button className="btn btn-sm btn-outline" title="Apresentar (tela cheia)" onClick={() => apresentar(p)}>
+                      <FontAwesomeIcon icon={faDisplay} />
+                    </button>
                     {p.status !== "aberta" ? (
                       <button className="btn btn-sm btn-outline" title="Abrir para respostas" onClick={() => mudarStatus(p, "aberta")}>
                         <FontAwesomeIcon icon={faPlay} />
@@ -157,9 +160,6 @@ export function LivePerguntas() {
                     )}
                     <button className="btn btn-sm btn-outline" title="Editar pergunta" onClick={() => abrirEdicao(p)}>
                       <FontAwesomeIcon icon={faPenToSquare} />
-                    </button>
-                    <button className="btn btn-sm btn-outline" title="Apresentar (tela cheia)" onClick={() => apresentar(p)}>
-                      <FontAwesomeIcon icon={faDisplay} />
                     </button>
                     <button className="btn btn-sm btn-outline" title="Ver respostas" onClick={() => setResultadosId(p.id)}>
                       <FontAwesomeIcon icon={faEye} />
@@ -285,7 +285,7 @@ function Apresentacao({ pergunta, event, faseInicial, onClose }) {
   const [pulso, setPulso] = useState({});
   const [pops, setPops] = useState([]);
   const total = Object.values(contagens).reduce((s, n) => s + n, 0);
-  const urlResposta = `${window.location.origin}/painel/live-perguntas`;
+  const urlResposta = `${window.location.origin}/quiz`;
 
   useEffect(() => {
     let ativo = true;
