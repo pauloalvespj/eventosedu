@@ -181,15 +181,25 @@ export function Programacao() {
     doc.setFillColor(...GOLD);
     doc.rect(0, 29, pageW, 3, "F");
 
+    // Logo do evento no canto superior esquerdo
+    if (logoDataUrl) {
+      try {
+        const { width: pxW, height: pxH } = doc.getImageProperties(logoDataUrl);
+        const logoH = 18;
+        const logoW = Math.min(logoH * (pxW / pxH), 50);
+        doc.addImage(logoDataUrl, "PNG", 14, 7, logoW, logoH, undefined, "FAST");
+      } catch { /* segue sem logo no cabeçalho */ }
+    }
+
     doc.setTextColor(...WHITE);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
-    doc.text(event.nome || "Evento", 14, 12);
+    doc.text(event.nome || "Evento", pageW - 14, 12, { align: "right" });
 
     if (event.nome_completo) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.text(event.nome_completo, 14, 20);
+      doc.text(event.nome_completo, pageW - 14, 20, { align: "right" });
     }
 
     const ano = event.data_inicio ? event.data_inicio.split("-")[0] : "";
@@ -201,7 +211,7 @@ export function Programacao() {
     if (infoLinha) {
       doc.setFontSize(7.5);
       doc.setTextColor(180, 200, 230);
-      doc.text(infoLinha, 14, 27);
+      doc.text(infoLinha, pageW - 14, 27, { align: "right" });
     }
 
     // Dias
