@@ -62,7 +62,7 @@ const LEMBRAR_KEY = "enaudin_lembrar_identificador";
 const COOLDOWN_REENVIO = 180;
 
 export function FormLogin({ onLogin, event, eventLoaded }) {
-  const [etapa, setEtapa] = useState("login"); // "login" | "codigo"
+  const [etapa, setEtapa] = useState("identificador"); // "identificador" | "acesso" | "codigo"
   const [identificador, setIdentificador] = useState(() => localStorage.getItem(LEMBRAR_KEY) || "");
   const [lembrar, setLembrar] = useState(() => !!localStorage.getItem(LEMBRAR_KEY));
   const [senha, setSenha] = useState("");
@@ -178,8 +178,21 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
     digitRefs.current[0]?.focus();
   }
 
+  function avancarParaAcesso() {
+    if (!identificadorValido(identificador)) return;
+    setErro("");
+    setEtapa("acesso");
+  }
+
+  function trocarIdentificador() {
+    setEtapa("identificador");
+    setSenha("");
+    setErro("");
+    setEmailNaoConfirmado(false);
+  }
+
   function voltarParaLogin() {
-    setEtapa("login");
+    setEtapa("acesso");
     setErroCodigo("");
     setCodigo(["", "", "", "", "", ""]);
   }
@@ -240,8 +253,8 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
 
   return (
     <div>
-      {/* ── ETAPA LOGIN (senha + código) ── */}
-      {etapa === "login" && (
+      {/* ── ETAPA IDENTIFICADOR (só e-mail/CPF) ── */}
+      {etapa === "identificador" && (
         <div>
           {/* Cabeçalho — a logo do evento (quando existe) já aparece fora do card, em PainelLogin */}
           <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
@@ -260,21 +273,7 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
             <label className="form-label">E-mail ou CPF</label>
             <input className="form-input" type="text" autoComplete="username" placeholder="seu@email.com ou CPF" value={identificador}
               onChange={e => handleIdentificadorChange(e.target.value)} autoFocus
-              onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Senha</label>
-            <div style={{ position: "relative" }}>
-              <input className="form-input" type={mostrarSenha ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={senha}
-                style={{ paddingRight: "2.5rem" }}
-                onChange={e => { setSenha(e.target.value); setErro(""); }}
-                onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
-              <button type="button" onClick={() => setMostrarSenha(v => !v)}
-                title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
-                <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
-              </button>
-            </div>
+              onKeyDown={e => e.key === "Enter" && avancarParaAcesso()} />
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem" }}>
@@ -284,6 +283,42 @@ export function FormLogin({ onLogin, event, eventLoaded }) {
             <label htmlFor="lembrar-identificador" style={{ fontSize: "0.82rem", color: "var(--text3)", cursor: "pointer" }}>
               Lembrar e-mail/CPF
             </label>
+          </div>
+
+          {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
+
+          <button className="btn btn-primary btn-block" onClick={avancarParaAcesso} disabled={!identificadorValido(identificador)}>
+            Continuar
+          </button>
+        </div>
+      )}
+
+      {/* ── ETAPA ACESSO (senha ou código) ── */}
+      {etapa === "acesso" && (
+        <div>
+          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+            <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text)", marginBottom: "0.3rem" }}>
+              {identificador}
+            </p>
+            <button type="button" onClick={trocarIdentificador}
+              style={{ background: "none", border: "none", padding: 0, fontSize: "0.78rem", color: "var(--text3)", cursor: "pointer" }}>
+              ← trocar
+            </button>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Senha</label>
+            <div style={{ position: "relative" }}>
+              <input className="form-input" type={mostrarSenha ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={senha}
+                style={{ paddingRight: "2.5rem" }}
+                onChange={e => { setSenha(e.target.value); setErro(""); }} autoFocus
+                onKeyDown={e => e.key === "Enter" && !enviando && handleLoginSenha()} />
+              <button type="button" onClick={() => setMostrarSenha(v => !v)}
+                title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text3)", cursor: "pointer", padding: 0, display: "flex" }}>
+                <FontAwesomeIcon icon={mostrarSenha ? faEyeSlash : faEye} />
+              </button>
+            </div>
           </div>
 
           {erro && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "0.65rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "1rem" }}>{erro}</div>}
