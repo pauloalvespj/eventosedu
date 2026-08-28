@@ -340,8 +340,9 @@ input,select,textarea{font-family:inherit}
 .admin-layout .btn-gold:hover{background:var(--admin-sb-accent-lg);border-color:var(--admin-sb-accent-lg)}
 
 /* ADMIN */
-.admin-layout{display:flex;min-height:100vh;background:#F0F2F5}
-.admin-sidebar{width:240px;flex-shrink:0;background:var(--admin-sb-bg);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:100}
+.admin-layout{display:flex;flex-direction:column;min-height:100vh;background:#F0F2F5}
+.admin-body{display:flex;flex:1;min-height:0}
+.admin-sidebar{width:240px;flex-shrink:0;background:var(--admin-sb-bg);color:#fff;display:flex;flex-direction:column;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto;z-index:100}
 .admin-sidebar-logo{padding:1.5rem;border-bottom:1px solid rgba(255,255,255,0.08)}
 .admin-sidebar-logo h2{font-family:'Playfair Display',serif;font-size:1rem;color:var(--admin-sb-accent-lg)}
 .admin-sidebar-logo p{font-size:0.72rem;color:#B8D2F4;margin-top:0.25rem}
@@ -385,8 +386,9 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--surface2)}
 
 /* PARTICIPANTE AREA */
-.part-layout{display:flex;min-height:100vh;background:#F0F2F5}
-.part-sidebar{width:220px;flex-shrink:0;background:var(--admin-sb-bg);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.part-layout{display:flex;flex-direction:column;min-height:100vh;background:#F0F2F5}
+.part-body{display:flex;flex:1;min-height:0}
+.part-sidebar{width:220px;flex-shrink:0;background:var(--admin-sb-bg);color:#fff;display:flex;flex-direction:column;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto}
 .part-sidebar-header{padding:1.25rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08)}
 .part-sidebar-title{font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--admin-sb-accent-lg);margin-bottom:0.15rem}
 .part-sidebar-sub{font-size:0.7rem;color:#B8D2F4}
@@ -478,12 +480,22 @@ tr:hover td{background:var(--surface2)}
 .qr-card{background:var(--surface);border-radius:var(--radius-lg);padding:2.5rem;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
 .qr-card h2{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy);margin-bottom:0.5rem}
 
-/* MOBILE NAV — overlay e hamburger */
+/* TOPBAR — mobile e desktop, admin e participante */
 .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199}
-.mobile-header{display:none;align-items:center;justify-content:space-between;padding:0 1rem;height:54px;background:var(--admin-sb-bg);color:#fff;position:sticky;top:0;z-index:150;flex-shrink:0;gap:0.75rem}
-.mobile-header-title{font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--admin-sb-accent-lg);flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0.4rem;display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.topbar{display:flex;align-items:center;padding:0 1rem;height:54px;background:var(--admin-sb-bg);color:#fff;position:sticky;top:0;z-index:150;flex-shrink:0;gap:0.75rem;box-shadow:0 2px 10px rgba(0,0,0,0.18)}
+.topbar-title{font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--admin-sb-accent-lg);flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none}
+.hamburger{display:none;background:transparent;border:none;color:#fff;cursor:pointer;padding:0.4rem;flex-direction:column;gap:5px;flex-shrink:0}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all 0.25s}
+.topbar-icon-btn{background:rgba(255,255,255,0.12);border:none;border-radius:var(--radius-sm);color:#fff;font-size:0.85rem;padding:0.4rem 0.55rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center}
+.topbar-user{position:relative;flex-shrink:0}
+.topbar-avatar-btn{display:flex;align-items:center;gap:0.4rem;background:transparent;border:none;cursor:pointer;padding:0.2rem;color:#fff}
+.topbar-dropdown{position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);overflow:hidden;z-index:250}
+.topbar-dropdown-header{padding:0.85rem 1rem;border-bottom:1px solid var(--border)}
+.topbar-dropdown-nome{font-size:0.85rem;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-dropdown-role{font-size:0.72rem;color:var(--text3);margin-top:2px}
+.topbar-dropdown-item{display:flex;align-items:center;gap:0.65rem;width:100%;padding:0.7rem 1rem;font-size:0.85rem;font-weight:500;color:var(--text);background:none;border:none;text-align:left;cursor:pointer;text-decoration:none}
+.topbar-dropdown-item:hover{background:var(--surface2)}
+.topbar-dropdown-item.danger{color:var(--danger)}
 
 /* Bottom nav (mobile) — participante/palestrante */
 .bottom-nav{display:none}
@@ -523,10 +535,9 @@ tr:hover td{background:var(--surface2)}
   .dash-grid{grid-template-columns:repeat(2,1fr)}
 
   /* Mobile: navegação é 100% pelo header + bottom nav + Minha Área — sidebar de desktop some */
-  .part-layout{flex-direction:column}
-  .mobile-header{display:flex;position:fixed;top:0;left:0;right:0}
+  .hamburger{display:flex}
   .part-sidebar{display:none}
-  .part-content{padding:1rem;width:100%;padding-top:calc(0.5rem + 54px);padding-bottom:calc(4.75rem + env(safe-area-inset-bottom))}
+  .part-content{padding:1rem;width:100%;padding-bottom:calc(4.75rem + env(safe-area-inset-bottom))}
 
   /* Bottom nav — navegação principal no mobile, estilo iFood (ícone + label) */
   .bottom-nav{
@@ -541,10 +552,9 @@ tr:hover td{background:var(--surface2)}
   .bottom-nav-item.active svg{color:var(--gold-on-dark,#e8c96a)}
 
   /* Admin sidebar — off-canvas */
-  .admin-layout{flex-direction:column}
   .admin-sidebar{position:fixed;top:0;left:0;bottom:0;width:260px;height:100vh;z-index:200;transform:translateX(-100%);transition:transform 0.25s ease}
   .admin-sidebar.open{transform:translateX(0)}
-  .admin-content{padding:1rem;width:100%;padding-top:calc(0.5rem + 54px)}
+  .admin-content{padding:1rem;width:100%}
 
   /* Admin topbar dentro das seções */
   .admin-topbar{flex-wrap:wrap;gap:0.75rem}

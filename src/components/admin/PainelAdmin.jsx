@@ -8,7 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
-import { AvatarUpload, Sidebar, AlterarSenha } from "../base/index";
+import { AvatarUpload, Sidebar, Topbar, AlterarSenha } from "../base/index";
 import { atualizarProfile } from "../../lib/db";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
 
@@ -28,7 +28,7 @@ import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
 
 const MENU = [
-  { path: "",               icon: faChartBar,    label: "Dashboard",       roles: ["admin"] },
+  { path: "",               icon: faChartBar,    label: "Home",            roles: ["admin"] },
   { path: "evento",         icon: faGear,         label: "Dados do Evento", roles: ["admin"] },
   { path: "programacao",    icon: faCalendarDays, label: "Programação",     roles: ["admin"] },
   { path: "participantes",  icon: faUsers,        label: "Participantes",   roles: ["admin"] },
@@ -230,47 +230,44 @@ export function PainelAdmin(props) {
   return (
     <AdminContext.Provider value={props}>
       <div className="admin-layout">
-        {/* MOBILE HEADER */}
-        <div className="mobile-header">
-          <button className="hamburger" onClick={() => setNavAberta(v => !v)} aria-label="Menu">
-            <span/><span/><span/>
-          </button>
-          <span className="mobile-header-title">{event.nome} — Admin</span>
-          <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(201,168,76,0.2)", border:"1.5px solid var(--gold)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.72rem", fontWeight:700, color:"var(--gold-light)", flexShrink:0 }}>
-            {user?.nome?.split(" ").map(n=>n[0]).slice(0,2).join("").toUpperCase() || user?.foto_iniciais || "?"}
-          </div>
-        </div>
-
-        {/* OVERLAY */}
-        {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
-
-        {/* SIDEBAR */}
-        <Sidebar
-          wrapClassName="admin-sidebar"
-          open={navAberta}
+        {/* TOPBAR (mobile + desktop) */}
+        <Topbar
+          title={`${event.nome} — Admin`}
+          showHamburger
+          onHamburgerClick={() => setNavAberta(v => !v)}
           user={user}
-          eventSigla={event.nome}
           roleLabel={user?.instituicao || ROLE_LABEL[user?.role] || user?.role}
           meusDadosPath="/painel/meus-dados"
           onSwitchRole={onSwitchRole}
-          navWrapClassName="admin-nav"
-          navItems={menu.map(m => ({
-            key: m.path || "dashboard",
-            to: m.path ? `/painel/${m.path}` : "/painel",
-            end: !m.path,
-            icon: m.icon,
-            label: m.label,
-            itemClassName: "admin-nav-item",
-            onClick: () => setNavAberta(false),
-          }))}
           altoContraste={altoContraste}
           onToggleAltoContraste={() => setAltoContraste(toggleHighContrast())}
           onLogout={onLogout}
         />
 
-        {/* CONTEÚDO — roteado por AdminRoutes */}
-        <div className="admin-content">
-          <AdminRoutes />
+        {/* OVERLAY */}
+        {navAberta && <div className="sidebar-overlay" onClick={() => setNavAberta(false)} />}
+
+        <div className="admin-body">
+          {/* SIDEBAR */}
+          <Sidebar
+            wrapClassName="admin-sidebar"
+            open={navAberta}
+            navWrapClassName="admin-nav"
+            navItems={menu.map(m => ({
+              key: m.path || "dashboard",
+              to: m.path ? `/painel/${m.path}` : "/painel",
+              end: !m.path,
+              icon: m.icon,
+              label: m.label,
+              itemClassName: "admin-nav-item",
+              onClick: () => setNavAberta(false),
+            }))}
+          />
+
+          {/* CONTEÚDO — roteado por AdminRoutes */}
+          <div className="admin-content">
+            <AdminRoutes />
+          </div>
         </div>
       </div>
     </AdminContext.Provider>

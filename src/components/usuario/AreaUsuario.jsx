@@ -3,11 +3,11 @@ import { useRoutes, Navigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
-  faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge, faCircleHalfStroke,
+  faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge,
 } from "@fortawesome/free-solid-svg-icons";
 import { calcPresenca, calcPontos, getNivel, getUserId, nomeExibicao } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
-import { AvatarUpload, Sidebar, AlterarSenha } from "../base/index";
+import { AvatarUpload, Sidebar, Topbar, AlterarSenha } from "../base/index";
 import { ForumView } from "../forum/ForumView";
 import { RankingView } from "../forum/RankingView";
 import { RedeView } from "./RedeView";
@@ -260,48 +260,46 @@ export function AreaUsuario(props) {
   return (
     <UsuarioContext.Provider value={contextValue}>
       <div className="part-layout">
-        {/* ── HEADER (mobile) — nome do evento + alto contraste ── */}
-        <div className="mobile-header" style={{ background: headerBgH }}>
-          <span className="mobile-header-title">{event.nome}</span>
-          <button onClick={() => setAltoContraste(toggleHighContrast())} title="Alternar alto contraste (acessibilidade)" aria-pressed={altoContraste}
-            style={{ background:"rgba(255,255,255,0.12)", border:"none", borderRadius:"var(--radius-sm)", color:"#fff", fontSize:"0.85rem", padding:"0.4rem 0.55rem", cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center" }}>
-            <FontAwesomeIcon icon={faCircleHalfStroke} />
-          </button>
-        </div>
-
-        {/* ── SIDEBAR (desktop) ── */}
-        <Sidebar
-          wrapClassName="part-sidebar"
-          background={headerBgV}
+        {/* ── TOPBAR (mobile + desktop) ── */}
+        <Topbar
+          background={headerBgH}
+          title={event.nome}
           user={user}
-          eventSigla={event.nome}
           roleLabel={isPalestrante ? "Palestrante" : "Participante"}
           meusDadosPath="/painel/dados"
           onSwitchRole={onSwitchRole}
-          extraTop={event.gamificacao_ativa !== false && (
-            <div style={{ padding:"0 1rem 0.85rem", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
-              <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
-                <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
-                <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
-              </div>
-            </div>
-          )}
-          navWrapClassName="part-nav"
-          navItems={ABAS.map(([k, icon, l]) => ({
-            key: k || "inicio",
-            to: k ? `/painel/${k}` : "/painel",
-            end: !k,
-            icon, label: l,
-            itemClassName: "part-nav-item",
-          }))}
           altoContraste={altoContraste}
           onToggleAltoContraste={() => setAltoContraste(toggleHighContrast())}
           onLogout={onLogout}
         />
 
-        {/* ── CONTEÚDO ── */}
-        <div className="part-content">
-          <AreaUsuarioRoutes />
+        <div className="part-body">
+          {/* ── SIDEBAR (desktop) ── */}
+          <Sidebar
+            wrapClassName="part-sidebar"
+            background={headerBgV}
+            extraTop={event.gamificacao_ativa !== false && (
+              <div style={{ padding:"0.85rem 1rem", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:"var(--radius-sm)", padding:"0.5rem 0.75rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                  <span style={{ fontSize:"1rem" }}>{nivel.icon}</span>
+                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"var(--gold-light)" }}>{meusPts} pts</div>
+                </div>
+              </div>
+            )}
+            navWrapClassName="part-nav"
+            navItems={ABAS.map(([k, icon, l]) => ({
+              key: k || "inicio",
+              to: k ? `/painel/${k}` : "/painel",
+              end: !k,
+              icon, label: l,
+              itemClassName: "part-nav-item",
+            }))}
+          />
+
+          {/* ── CONTEÚDO ── */}
+          <div className="part-content">
+            <AreaUsuarioRoutes />
+          </div>
         </div>
 
         {/* ── BOTTOM NAV (mobile) — ícone + label, estilo apps de delivery ── */}
