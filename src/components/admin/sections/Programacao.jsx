@@ -347,7 +347,7 @@ export function Programacao() {
                       <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:3, fontSize:"0.65rem" }} />
                       {getPalestrantes(a).map((p, i, arr) => (
                         <span key={p.id}>
-                          {p.nome.split(" ").slice(0,2).join(" ")}
+                          {p.nome}
                           {arr[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}
                           {(p.instituicao || p.cargo) && (
                             <span style={{ display:"block", fontSize:"0.68rem", color:"var(--text2)", fontWeight:400, marginTop:1, paddingLeft:14 }}>
@@ -536,7 +536,7 @@ export function Programacao() {
                     setFormAtv(f => ({ ...f, palestrantes_ids: next }));
                   }} style={{ padding:"0.25rem 0.65rem", borderRadius:50, border:`1.5px solid ${sel?"var(--teal)":"var(--border)"}`, background:sel?"var(--teal)":"var(--surface2)", color:sel?"#fff":"var(--text)", fontSize:"0.8rem", cursor:"pointer", fontWeight:sel?600:400, display:"inline-flex", alignItems:"center", gap:5 }}>
                     {sel && <FontAwesomeIcon icon={faCheck} style={{ fontSize:"0.65rem" }} />}
-                    {p.nome.split(" ").slice(0,2).join(" ")}
+                    {p.nome}
                   </button>
                 );
               })}

@@ -76,7 +76,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   <span
                     onClick={() => setPalPopup(p)}
                     style={{ fontWeight:600, color:"var(--teal)", cursor:"pointer" }}
-                  >{nomeExibicao(p)}</span>
+                  >{p.nome}</span>
                   {p.instituicao && <span> – {p.instituicao}</span>}
                 </div>
               ))}

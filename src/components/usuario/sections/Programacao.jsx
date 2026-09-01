@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMicrophone, faDownload } from "@fortawesome/free-solid-svg-icons";
-import { TIPO_COLOR, nomeExibicao, formatData, diaSemana } from "../../../utils/helpers";
+import { TIPO_COLOR, formatData, diaSemana } from "../../../utils/helpers";
 import { TipoBadge } from "../../base/index";
 import { useUsuario } from "../UsuarioContext";
 
@@ -24,7 +24,7 @@ export function Programacao() {
                 : <div style={{ width:130, height:170, borderRadius:"var(--radius-sm)", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.8rem", flexShrink:0 }}>{palBio.foto_iniciais}</div>
               }
               <div>
-                <div style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--navy)", marginBottom:"0.25rem" }}>{nomeExibicao(palBio)}</div>
+                <div style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--navy)", marginBottom:"0.25rem" }}>{palBio.nome}</div>
                 {(palBio.instituicao || palBio.cargo) && (
                   <div style={{ fontSize:"0.8rem", color:"var(--text2)" }}>
                     {[palBio.instituicao, palBio.cargo].filter(Boolean).join(" · ")}
@@ -86,9 +86,9 @@ export function Programacao() {
                           <span key={p.id}>
                             {p.mini_bio ? (
                               <button onClick={() => setPalBio(p)} title="Ver mini biografia" style={{ background:"none", border:"none", padding:0, cursor:"pointer", color:"inherit", font:"inherit", fontWeight:"inherit", textDecoration:"underline dotted", textUnderlineOffset:2 }}>
-                                {nomeExibicao(p)}
+                                {p.nome}
                               </button>
-                            ) : nomeExibicao(p)}
+                            ) : p.nome}
                             {p.instituicao && <span style={{ color:"var(--text3)", fontWeight:400 }}> — {p.instituicao}</span>}
                             {pals[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}
                           </span>
