@@ -21,6 +21,7 @@ const isLightTheme = (event) =>
 
 export function LandingPage({ event, eventLoaded = false, atividades, palestrantes, instituicoes, onInscricaoClick, onLoginClick, user }) {
   const [faqAberto, setFaqAberto] = useState(null);
+  const FAQ_VISIVEL = false; // seção "Perguntas Frequentes" oculta a pedido — trocar para true para reativar
   const [palPopup, setPalPopup] = useState(null);
 
   const instLabel = (sigla) => {
@@ -101,8 +102,9 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
           <a href="#sobre" className="navbar-link">Sobre</a>
           <a href="#programacao" className="navbar-link">Programação</a>
           <a href="#palestrantes" className="navbar-link">Palestrantes</a>
-          <a href="#realizacao" className="navbar-link">Realização</a>
           <a href="#local" className="navbar-link">Local</a>
+          <a href="#realizacao" className="navbar-link">Realização</a>
+          <a href="#apoio" className="navbar-link">Apoio</a>
           {inscStatus.aberta && (
             <button className="btn-inscricao" onClick={onInscricaoClick}>Inscreva-se</button>
           )}
@@ -266,59 +268,11 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
         </div>
       </section>
 
-      {/* REALIZAÇÃO */}
-      {(() => {
-        const realizadoras = [...(instituicoes || [])]
-          .filter(i => i.realizadora && i.ativo)
-          .sort((a, b) => (a.ordem ?? 9999) - (b.ordem ?? 9999));
-        const items = realizadoras.length > 0
-          ? realizadoras
-          : (event.realizacao || "").split(",").filter(Boolean).map((r, i) => ({ _text: r, id: i }));
-        if (!items.length) return null;
-        return (
-          <section className="section" id="realizacao">
-            <div className="container">
-              <div className="section-header centered">
-                <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Instituições</div>
-                <h2 className="section-title">Realização</h2>
-              </div>
-              <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
-                {items.map((item) => {
-                  if (item._text) {
-                    const r = item._text;
-                    return (
-                      <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240 }}>
-                        <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🏛</div>
-                        <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{r.trim().split("(")[0].trim()}</div>
-                        {r.includes("(") && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.25rem" }}>({r.split("(")[1].replace(")","").trim()})</div>}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"0.5rem" }}>
-                      {item.logo_url ? (
-                        <img src={item.logo_url} alt={item.sigla} style={{ height:80, maxWidth:"100%", objectFit:"contain" }} />
-                      ) : (
-                        <>
-                          <div style={{ fontSize:"2rem" }}>🏛</div>
-                          <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{item.sigla}</div>
-                          <div style={{ fontSize:"0.78rem", color:"var(--text3)", lineHeight:1.4 }}>{item.nome}</div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        );
-      })()}
-
       {/* LOCAL */}
-      <section className="section" data-section="accent" id="local">
+      <section className="section section-alt" id="local">
         <div className="container">
           <div className="section-header centered">
-            <div style={{ color: "var(--sec3-text-soft)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Onde será</div>
+            <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Onde será</div>
             <h2 className="section-title">Local do Evento</h2>
           </div>
           <div className="local-card">
@@ -348,7 +302,22 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* CTA — faixa escura, largura cheia */}
+      <section style={{ background: "var(--navy)", padding: "4rem 2rem", textAlign: "center" }}>
+        <div className="container">
+          <h2 className="section-title" style={{ marginBottom: "0.75rem", color: "#fff" }}>Garanta sua inscrição</h2>
+          <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "2rem", fontSize: "1rem" }}>
+            Evento gratuito · {formatData(event.data_inicio)} a {formatData(event.data_fim)} · {event.local}
+          </p>
+          {inscStatus.aberta
+            ? <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Realizar Inscrição</button>
+            : <div style={{ display: "inline-block", background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.30)", color: "rgba(255,255,255,0.70)", padding: "0.9rem 2.5rem", borderRadius: 50, fontSize: "1rem", fontWeight: 600 }}>{inscStatus.msg}</div>
+          }
+        </div>
+      </section>
+
+      {/* FAQ — oculto a pedido; manter o bloco para futura reativação (FAQ_VISIVEL) */}
+      {FAQ_VISIVEL && (
       <section className="section section-alt" id="faq">
         <div className="container" style={{ maxWidth: 740 }}>
           <div className="section-header centered">
@@ -385,22 +354,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
           )}
         </div>
       </section>
-
-      {/* CTA */}
-      <section style={{ background: "var(--navy)", padding: "4rem 2rem", textAlign: "center" }}>
-        <div className="container">
-          <h2 style={{ fontSize: "clamp(1.5rem,3vw,2rem)", fontWeight: 700, color: "#fff", marginBottom: "0.75rem" }}>
-            Garanta sua inscrição
-          </h2>
-          <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "2rem", fontSize: "1rem" }}>
-            Evento gratuito · {formatData(event.data_inicio)} a {formatData(event.data_fim)} · {event.local}
-          </p>
-          {inscStatus.aberta
-            ? <button className="btn btn-gold btn-lg" onClick={onInscricaoClick}>Realizar Inscrição</button>
-            : <div style={{ display:"inline-block", background:"rgba(255,255,255,0.12)", border:"1.5px solid rgba(255,255,255,0.30)", color:"rgba(255,255,255,0.70)", padding:"0.9rem 2.5rem", borderRadius:50, fontSize:"1rem", fontWeight:600 }}>{inscStatus.msg}</div>
-          }
-        </div>
-      </section>
+      )}
 
       {/* POPUP PALESTRANTE — sempre disponível, aberto pela programação ou pelos cards */}
       {palPopup && (
@@ -431,6 +385,75 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
           </div>
         </div>
       )}
+
+      {/* REALIZAÇÃO + APOIO — mesma seção, mesmo fundo */}
+      {(() => {
+        const realizadoras = [...(instituicoes || [])]
+          .filter(i => i.realizadora && i.ativo)
+          .sort((a, b) => (a.ordem ?? 9999) - (b.ordem ?? 9999));
+        const items = realizadoras.length > 0
+          ? realizadoras
+          : (event.realizacao || "").split(",").filter(Boolean).map((r, i) => ({ _text: r, id: i }));
+        return (
+          <section className="section" id="realizacao">
+            <div className="container">
+              {items.length > 0 && (<>
+              <div className="section-header centered">
+                <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Instituições</div>
+                <h2 className="section-title">Realização</h2>
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"1rem", maxWidth:900, margin:"0 auto" }}>
+                {items.map((item) => {
+                  if (item._text) {
+                    const r = item._text;
+                    return (
+                      <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240 }}>
+                        <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🏛</div>
+                        <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{r.trim().split("(")[0].trim()}</div>
+                        {r.includes("(") && <div style={{ fontSize:"0.78rem", color:"var(--text3)", marginTop:"0.25rem" }}>({r.split("(")[1].replace(")","").trim()})</div>}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={item.id} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"1.5rem", textAlign:"center", boxShadow:"var(--shadow)", flex:"1 1 180px", maxWidth:240, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"0.5rem" }}>
+                      {item.logo_url ? (
+                        <img src={item.logo_url} alt={item.sigla} style={{ height:120, maxWidth:"100%", objectFit:"contain" }} />
+                      ) : (
+                        <>
+                          <div style={{ fontSize:"2rem" }}>🏛</div>
+                          <div style={{ fontWeight:700, color:"var(--navy)", fontSize:"0.95rem" }}>{item.sigla}</div>
+                          <div style={{ fontSize:"0.78rem", color:"var(--text3)", lineHeight:1.4 }}>{item.nome}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              </>)}
+
+              {/* APOIO — mesma seção da Realização */}
+              <div id="apoio" style={{
+                marginTop: items.length > 0 ? "3.5rem" : 0,
+                paddingTop: items.length > 0 ? "3rem" : 0,
+                borderTop: items.length > 0 ? "1px solid var(--border)" : "none",
+              }}>
+                <div className="section-header centered" style={{ marginBottom: "2rem" }}>
+                  <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Apoio institucional</div>
+                  <h2 className="section-title">Apoio</h2>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "2.5rem" }}>
+                  <a href="https://fonai.org.br/" target="_blank" rel="noopener noreferrer" title="FONAI" style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", textDecoration: "none" }}>
+                    <img src="/images/fonai.png" alt="FONAI" style={{ height: 32, maxWidth: "100%", objectFit: "contain" }} />
+                    <span style={{ fontSize: "0.72rem", color: "var(--text3)", textAlign: "center", maxWidth: 260, lineHeight: 1.4 }}>
+                      Associação Nacional dos Servidores Integrantes das Auditorias Internas
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* FOOTER */}
       <footer style={{ background: "var(--navy-dark)", color: "rgba(255,255,255,0.5)", padding: "2rem", textAlign: "center", fontSize: "0.82rem" }}>
