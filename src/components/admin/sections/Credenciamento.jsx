@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import { atualizarCredenciamento, registrarLog } from "../../../lib/db";
+import { atualizarCredenciamento, atualizarProfile, registrarLog } from "../../../lib/db";
 import { Modal } from "../../base/index";
+import { formatCPF, validateCPF } from "../../../utils/helpers";
 
 export function Credenciamento({ participantes, setParticipantes, showToast }) {
   const [busca, setBusca] = useState("");
   const [confirmRemover, setConfirmRemover] = useState(null);
+  const [pendencia, setPendencia] = useState(null);
 
-  async function credenciar(id, val) {
+  async function credenciar(id, val, extraUpdates = {}) {
     const credenciado_em = val ? new Date().toISOString() : null;
-    setParticipantes(participantes.map(p => p.id === id ? { ...p, credenciado: val, credenciado_em } : p));
+    const updates = { ...extraUpdates, credenciado: val, credenciado_em };
+    setParticipantes(participantes.map(p => p.id === id ? { ...p, ...updates } : p));
     atualizarCredenciamento(id, val);
     const alvo = participantes.find(p => p.id === id);
     registrarLog(val ? "participante.credenciar" : "participante.remover_credenciamento", "participante", id, alvo?.nome);
@@ -20,6 +23,37 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
   function confirmarRemocao() {
     if (confirmRemover) credenciar(confirmRemover.id, false);
     setConfirmRemover(null);
+  }
+
+  function iniciarCredenciamento(p) {
+    const faltaCpf = !p.cpf;
+    const faltaNomePublico = !p.nome_publico;
+    if (!faltaCpf && !faltaNomePublico) { credenciar(p.id, true); return; }
+    setPendencia({ participante: p, faltaCpf, faltaNomePublico, cpf: p.cpf || "", nomePublico: p.nome_publico || "", erro: "", salvando: false });
+  }
+
+  async function salvarPendenciaECredenciar() {
+    const { participante, faltaCpf, faltaNomePublico, cpf, nomePublico } = pendencia;
+    if (faltaNomePublico && !nomePublico.trim()) {
+      setPendencia(pd => ({ ...pd, erro: "Informe o nome para o crachá." }));
+      return;
+    }
+    if (faltaCpf && !validateCPF(cpf)) {
+      setPendencia(pd => ({ ...pd, erro: "CPF inválido." }));
+      return;
+    }
+    setPendencia(pd => ({ ...pd, salvando: true, erro: "" }));
+    const updates = {};
+    if (faltaCpf) updates.cpf = cpf;
+    if (faltaNomePublico) updates.nome_publico = nomePublico.trim();
+    const { error } = await atualizarProfile(participante.id, updates);
+    if (error) {
+      setPendencia(pd => ({ ...pd, salvando: false, erro: "Erro ao salvar dados. Tente novamente." }));
+      return;
+    }
+    registrarLog("participante.completar_dados", "participante", participante.id, participante.nome);
+    setPendencia(null);
+    credenciar(participante.id, true, updates);
   }
 
   const filtrados = participantes.filter(p => {
@@ -60,7 +94,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
                 <td>
                   {p.credenciado
                     ? <button className="btn btn-sm btn-outline" onClick={() => setConfirmRemover(p)}>Remover</button>
-                    : <button className="btn btn-sm btn-success" onClick={() => credenciar(p.id, true)}><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Credenciar</button>}
+                    : <button className="btn btn-sm btn-success" onClick={() => iniciarCredenciamento(p)}><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Credenciar</button>}
                 </td>
               </tr>
             );})}
@@ -94,7 +128,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
               <div className="credenc-card-actions">
                 {p.credenciado
                   ? <button className="btn btn-sm btn-outline" onClick={() => setConfirmRemover(p)}>Remover credenciamento</button>
-                  : <button className="btn btn-sm btn-success" onClick={() => credenciar(p.id, true)}><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Credenciar</button>}
+                  : <button className="btn btn-sm btn-success" onClick={() => iniciarCredenciamento(p)}><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Credenciar</button>}
               </div>
             </div>
           );
@@ -109,6 +143,33 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
           <button className="btn btn-outline" onClick={() => setConfirmRemover(null)}>Cancelar</button>
           <button className="btn btn-danger" onClick={confirmarRemocao}>Remover</button>
         </div>
+      </Modal>
+
+      <Modal show={!!pendencia} onClose={() => setPendencia(null)} title="Completar cadastro">
+        <div style={{ fontSize: "0.8rem", color: "var(--text3)", marginTop: "-0.75rem", marginBottom: "1.25rem" }}>{pendencia?.participante.nome}</div>
+        <p style={{ color: "var(--text2)", fontSize: "0.88rem", marginBottom: "1rem" }}>
+          Para credenciar, complete o(s) dado(s) abaixo:
+        </p>
+        <div className="form-grid">
+          {pendencia?.faltaNomePublico && (
+            <div className="form-group" style={{ gridColumn: "1/-1" }}>
+              <label className="form-label">Nome para Crachá e Divulgação *</label>
+              <input className="form-input" placeholder="Como quer ser chamado(a) no crachá"
+                value={pendencia.nomePublico} onChange={e => setPendencia(pd => ({ ...pd, nomePublico: e.target.value }))} />
+            </div>
+          )}
+          {pendencia?.faltaCpf && (
+            <div className="form-group" style={{ gridColumn: "1/-1" }}>
+              <label className="form-label">CPF *</label>
+              <input className="form-input" placeholder="000.000.000-00" maxLength={14}
+                value={pendencia.cpf} onChange={e => setPendencia(pd => ({ ...pd, cpf: formatCPF(e.target.value) }))} />
+            </div>
+          )}
+        </div>
+        {pendencia?.erro && <div className="form-error" style={{ marginBottom: "0.75rem" }}>{pendencia.erro}</div>}
+        <button className="btn btn-primary btn-block" style={{ marginTop: "0.5rem" }} onClick={salvarPendenciaECredenciar} disabled={pendencia?.salvando}>
+          {pendencia?.salvando ? "Salvando..." : "Salvar e credenciar"}
+        </button>
       </Modal>
     </div>
   );
