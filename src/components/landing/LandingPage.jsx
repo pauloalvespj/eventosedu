@@ -438,8 +438,7 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                 borderTop: items.length > 0 ? "1px solid var(--border)" : "none",
               }}>
                 <div className="section-header centered" style={{ marginBottom: "2rem" }}>
-                  <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Apoio institucional</div>
-                  <h2 className="section-title">Apoio</h2>
+                  <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Apoio</div>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "2.5rem" }}>
                   <a href="https://fonai.org.br/" target="_blank" rel="noopener noreferrer" title="FONAI" style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", textDecoration: "none" }}>
