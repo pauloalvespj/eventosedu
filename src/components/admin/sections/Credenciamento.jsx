@@ -56,9 +56,12 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
     credenciar(participante.id, true, updates);
   }
 
+  const fmtNumero = (n) => (n == null ? "—" : String(n).padStart(3, "0"));
+
   const filtrados = participantes.filter(p => {
     const q = busca.toLowerCase();
-    return !q || p.nome.toLowerCase().includes(q) || p.cpf.includes(q) || p.email.toLowerCase().includes(q);
+    return !q || p.nome.toLowerCase().includes(q) || p.cpf.includes(q) || p.email.toLowerCase().includes(q)
+      || fmtNumero(p.numero_participante).includes(q);
   });
 
   return (
@@ -67,7 +70,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
 
       <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
         <h3 style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "1rem" }}>Busca Rápida</h3>
-        <input className="form-input" placeholder="Buscar por nome, CPF ou e-mail..."
+        <input className="form-input" placeholder="Buscar por nome, número, CPF ou e-mail..."
           value={busca} onChange={e => setBusca(e.target.value)} />
       </div>
 
@@ -76,13 +79,14 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
           <span className="table-title">{participantes.filter(p => p.credenciado).length}/{participantes.length} credenciados</span>
         </div>
         <table>
-          <thead><tr><th>Participante</th><th>CPF</th><th>Instituição</th><th>Status</th><th>Data/Hora</th><th>Ação</th></tr></thead>
+          <thead><tr><th style={{ width: 52 }}>Nº</th><th>Participante</th><th>CPF</th><th>Instituição</th><th>Status</th><th>Data/Hora</th><th>Ação</th></tr></thead>
           <tbody>
             {filtrados.map(p => {
               const dt = p.credenciado_em ? new Date(p.credenciado_em) : null;
               const dataHora = dt ? dt.toLocaleDateString("pt-BR") + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "–";
               return (
               <tr key={p.id}>
+                <td style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--text2)", textAlign: "center" }}>{fmtNumero(p.numero_participante)}</td>
                 <td><div>
                   <div style={{ fontWeight: 600 }}>{p.nome}</div>
                   <div style={{ fontSize: "0.8rem", color: "var(--text3)" }}>{p.email}</div>
@@ -113,7 +117,10 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
             <div className="credenc-card" key={p.id}>
               <div className="credenc-card-top">
                 <div>
-                  <div className="credenc-card-nome">{p.nome}</div>
+                  <div className="credenc-card-nome">
+                    <span style={{ fontFamily: "monospace", color: "var(--text3)", marginRight: 6 }}>{fmtNumero(p.numero_participante)}</span>
+                    {p.nome}
+                  </div>
                   <div className="credenc-card-sub">{p.email}</div>
                 </div>
                 <span className={`badge badge-${p.credenciado ? "success" : "warn"}`} style={{ flexShrink: 0 }}>

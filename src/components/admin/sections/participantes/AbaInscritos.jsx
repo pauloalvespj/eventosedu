@@ -62,7 +62,7 @@ export function AbaInscritos() {
     const q = busca.toLowerCase();
     const ok = !q || p.nome?.toLowerCase().includes(q) || p.cpf?.includes(q)
       || p.instituicao?.toLowerCase().includes(q) || p.cargo?.toLowerCase().includes(q)
-      || p.email?.toLowerCase().includes(q);
+      || p.email?.toLowerCase().includes(q) || fmtNumero(p.numero_participante).includes(q);
     const cancelado = p.ativo === false;
     const pendenteAprovacao = p.status_inscricao === "pendente" && !cancelado;
     const incompleto = !cancelado && estaIncompleto(p);
