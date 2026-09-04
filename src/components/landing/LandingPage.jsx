@@ -441,6 +441,10 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
                   <div style={{ color: "var(--section-label)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Apoio</div>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "2.5rem" }}>
+                  <a href="https://3rcapacita.com.br/" target="_blank" rel="noopener noreferrer" title="3R Capacita" style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                    <img src="/images/3r-capacita.png" alt="3R Capacita" style={{ height: 90, maxWidth: "100%", objectFit: "contain" }} />
+                    <span style={{ fontSize: "0.72rem", color: "var(--text3)", textAlign: "center", maxWidth: 260, lineHeight: 1.4 }}>3R CAPACITA</span>
+                  </a>
                   <a href="https://fonai.org.br/" target="_blank" rel="noopener noreferrer" title="FONAI" style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "0.4rem", textDecoration: "none" }}>
                     <img src="/images/fonai.png" alt="FONAI" style={{ height: 32, maxWidth: "100%", objectFit: "contain" }} />
                     <span style={{ fontSize: "0.72rem", color: "var(--text3)", textAlign: "center", maxWidth: 260, lineHeight: 1.4 }}>
