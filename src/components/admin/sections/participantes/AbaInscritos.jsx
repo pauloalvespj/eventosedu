@@ -33,6 +33,8 @@ export function AbaInscritos() {
   const [aprovando, setAprovando]       = useState(null);
   const [ordenacao, setOrdenacao]       = useState({ campo: null, dir: "asc" });
 
+  const fmtNumero = (n) => (n == null ? "—" : String(n).padStart(3, "0"));
+
   function estaIncompleto(p) {
     return !p.cpf || !p.instituicao || !p.cargo || !p.nome_publico || (p.nome || "").trim().split(/\s+/).filter(Boolean).length < 2;
   }
@@ -69,10 +71,10 @@ export function AbaInscritos() {
       || (filtroRole === "admin" && p.role === "admin")
       || (filtroRole === "credenciador" && p.is_credenciador)
       || (filtroRole === "palestrante" && p.is_palestrante);
-    if (mostrarCancelados)   return ok && roleMatch && cancelado;
+    if (mostrarCancelados)   return ok && cancelado;
     if (mostrarPendentes)    return ok && pendenteAprovacao;
     if (mostrarIncompletos)  return ok && incompleto;
-    if (mostrarCompletos)    return ok && roleMatch && !cancelado && !pendenteAprovacao && !incompleto;
+    if (mostrarCompletos)    return ok && !cancelado && !pendenteAprovacao && !incompleto;
     return ok && roleMatch && !cancelado && !pendenteAprovacao;
   });
 
@@ -99,7 +101,12 @@ export function AbaInscritos() {
 
   const ordenados = ordenacao.campo
     ? [...filtrados].sort((a, b) => {
-        const cmp = (a[ordenacao.campo] || "").toString().localeCompare((b[ordenacao.campo] || "").toString(), "pt-BR", { sensitivity: "base" });
+        let cmp;
+        if (ordenacao.campo === "numero_participante") {
+          cmp = (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity);
+        } else {
+          cmp = (a[ordenacao.campo] || "").toString().localeCompare((b[ordenacao.campo] || "").toString(), "pt-BR", { sensitivity: "base" });
+        }
         return ordenacao.dir === "asc" ? cmp : -cmp;
       })
     : filtrados;
@@ -271,8 +278,11 @@ export function AbaInscritos() {
   }
 
   function exportarCSV() {
-    const header = "Nome,Instituição,Cargo\n";
-    const rows = participantes.map(p => `"${p.nome || ""}","${p.instituicao || ""}","${p.cargo || ""}"`).join("\n");
+    const header = "Número,Nome,Instituição,Cargo\n";
+    const rows = [...participantes]
+      .sort((a, b) => (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity))
+      .map(p => `"${fmtNumero(p.numero_participante)}","${p.nome || ""}","${p.instituicao || ""}","${p.cargo || ""}"`)
+      .join("\n");
     baixarCSV("participantes.csv", header + rows);
     showToast("Lista exportada!", "success");
   }
@@ -351,6 +361,7 @@ export function AbaInscritos() {
         <table style={{ width: "100%", fontSize: "0.83rem" }}>
           <thead>
             <tr>
+              <th style={{ cursor: "pointer", userSelect: "none", width: 52 }} onClick={() => alternarOrdenacao("numero_participante")} title="Número do participante (ordem de inscrição) — usado nos sorteios">Nº{setaOrdenacao("numero_participante")}</th>
               <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("nome")}>Nome{setaOrdenacao("nome")}</th>
               <th>CPF</th>
               <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => alternarOrdenacao("instituicao")}>Instituição / Cargo{setaOrdenacao("instituicao")}</th>
@@ -363,6 +374,7 @@ export function AbaInscritos() {
               const corBorda = corAvatarBorda(p);
               return (
                 <tr key={p.id} style={{ ...(cancelado ? { opacity: 0.55 } : {}), ...(p.role === "admin" ? { background: "#eff6ff" } : {}) }}>
+                  <td style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--text2)", textAlign: "center" }}>{fmtNumero(p.numero_participante)}</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {p.foto_url

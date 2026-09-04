@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     const iniciais = nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
 
-    const { error: profileError } = await adminClient.from("profiles").upsert({
+    const { data: profileRow, error: profileError } = await adminClient.from("profiles").upsert({
       id: created.user.id,
       nome,
       email: emailNorm,
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       ...(destaque !== undefined && { destaque }),
       is_palestrante: !!is_palestrante,
       is_credenciador: !!is_credenciador,
-    });
+    }).select("numero_participante").single();
 
     if (profileError) {
       // Reverte o usuário criado se o profile falhar
@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
         credenciado: false,
         ativo: true,
         foto_iniciais: iniciais,
+        numero_participante: profileRow?.numero_participante ?? null,
         titulo: titulo || "",
         area: area || "",
         mini_bio: mini_bio || "",
