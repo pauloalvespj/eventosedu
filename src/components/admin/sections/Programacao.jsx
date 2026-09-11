@@ -154,6 +154,9 @@ export function Programacao() {
     const DAY_BG  = [224, 232, 248];
     const INT_BG  = [242, 244, 248];
     const INT_TEXT = [130, 140, 160];
+    const HEADER_BG   = [246, 248, 252];
+    const HEADER_TEXT = NAVY;
+    const HEADER_SUB  = [90, 105, 130];
 
     // Logo para assinatura no rodapé
     let logoDataUrl = null;
@@ -176,7 +179,7 @@ export function Programacao() {
     }
 
     // Cabeçalho
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(...HEADER_BG);
     doc.rect(0, 0, pageW, 32, "F");
     doc.setFillColor(...GOLD);
     doc.rect(0, 29, pageW, 3, "F");
@@ -191,7 +194,7 @@ export function Programacao() {
       } catch { /* segue sem logo no cabeçalho */ }
     }
 
-    doc.setTextColor(...WHITE);
+    doc.setTextColor(...HEADER_TEXT);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.text(event.nome || "Evento", pageW - 14, 12, { align: "right" });
@@ -210,7 +213,7 @@ export function Programacao() {
     const infoLinha = [periodo, localStr].filter(Boolean).join("  ·  ");
     if (infoLinha) {
       doc.setFontSize(7.5);
-      doc.setTextColor(180, 200, 230);
+      doc.setTextColor(...HEADER_SUB);
       doc.text(infoLinha, pageW - 14, 27, { align: "right" });
     }
 
