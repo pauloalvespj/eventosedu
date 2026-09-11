@@ -8,6 +8,7 @@ import {
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
 import { formatData, formatPeriodo, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, qrPresencaTurnoValue, diaSemana } from "../../../utils/helpers";
+import { gerarProgramacaoPDF } from "../../../utils/gerarProgramacaoPDF";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
   uploadMaterial, deletarMaterial, atualizarEvento,
@@ -140,150 +141,7 @@ export function Programacao() {
   }
 
   async function gerarPDF() {
-    // Carregadas sob demanda — jspdf/autotable ficam fora do bundle inicial
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable"),
-    ]);
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const NAVY    = [15, 52, 96];
-    const WHITE   = [255, 255, 255];
-    const GOLD    = [201, 168, 76];
-    const DAY_BG  = [224, 232, 248];
-    const INT_BG  = [242, 244, 248];
-    const INT_TEXT = [130, 140, 160];
-    const HEADER_BG   = [246, 248, 252];
-    const HEADER_TEXT = NAVY;
-    const HEADER_SUB  = [90, 105, 130];
-
-    // Logo para assinatura no rodapé
-    let logoDataUrl = null;
-    if (event.logo_url) {
-      try {
-        logoDataUrl = await new Promise(resolve => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            canvas.getContext("2d").drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/png"));
-          };
-          img.onerror = () => resolve(null);
-          img.src = event.logo_url;
-        });
-      } catch { logoDataUrl = null; }
-    }
-
-    // Cabeçalho
-    doc.setFillColor(...HEADER_BG);
-    doc.rect(0, 0, pageW, 32, "F");
-    doc.setFillColor(...GOLD);
-    doc.rect(0, 29, pageW, 3, "F");
-
-    // Logo do evento no canto superior esquerdo
-    if (logoDataUrl) {
-      try {
-        const { width: pxW, height: pxH } = doc.getImageProperties(logoDataUrl);
-        const logoH = 18;
-        const logoW = Math.min(logoH * (pxW / pxH), 50);
-        doc.addImage(logoDataUrl, "PNG", 14, 7, logoW, logoH, undefined, "FAST");
-      } catch { /* segue sem logo no cabeçalho */ }
-    }
-
-    doc.setTextColor(...HEADER_TEXT);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text(event.nome || "Evento", pageW - 14, 12, { align: "right" });
-
-    if (event.nome_completo) {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text(event.nome_completo, pageW - 14, 20, { align: "right" });
-    }
-
-    const ano = event.data_inicio ? event.data_inicio.split("-")[0] : "";
-    const periodo = event.data_inicio
-      ? `${formatPeriodo(event.data_inicio, event.data_fim)}${ano ? ` de ${ano}` : ""}`
-      : "";
-    const localStr = event.local || "";
-    const infoLinha = [periodo, localStr].filter(Boolean).join("  ·  ");
-    if (infoLinha) {
-      doc.setFontSize(7.5);
-      doc.setTextColor(...HEADER_SUB);
-      doc.text(infoLinha, pageW - 14, 27, { align: "right" });
-    }
-
-    // Dias
-    const dias = [...new Set(atividades.map(a => a.dia))].sort();
-    let curY = 36;
-
-    dias.forEach((dia, idx) => {
-      if (idx > 0) curY += 3;
-      const atvsNoDia = atividades
-        .filter(a => a.dia === dia && a.tipo !== "intervalo")
-        .sort((a, b) => a.horario.localeCompare(b.horario));
-
-      autoTable(doc, {
-        startY: curY,
-        head: [[{
-          content: `${diaSemana(dia)}, ${formatData(dia)}`,
-          colSpan: 3,
-          styles: { fillColor: NAVY, textColor: WHITE, fontStyle: "bold", fontSize: 9, halign: "left", cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
-        }]],
-        body: atvsNoDia.map(a => {
-          const pals = getPalestrantes(a);
-          const palNomes = pals.map(p => p.nome + (p.instituicao ? ` – ${p.instituicao}` : "")).join("\n");
-          const convs = (a.convidados || "").split("\n").filter(Boolean).join("\n");
-          const pessoas = [palNomes, convs].filter(Boolean).join("\n");
-          const horario = a.horario + (a.horario_fim ? ` – ${a.horario_fim}` : "");
-          const conteudo = a.titulo + (pessoas ? "\n" + pessoas : "");
-          return [horario, TIPO_LABEL[a.tipo] || a.tipo || "", conteudo];
-        }),
-        theme: "grid",
-        styles: { fontSize: 7.5, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, overflow: "linebreak", minCellHeight: 7 },
-        columnStyles: {
-          0: { cellWidth: 24, halign: "center", fontStyle: "bold" },
-          1: { cellWidth: 28 },
-          2: { cellWidth: "auto" },
-        },
-        didParseCell: (data) => {
-          if (data.section !== "body") return;
-          const a = atvsNoDia[data.row.index];
-          if (!a) return;
-          if (a.tipo === "intervalo") {
-            data.cell.styles.fillColor = INT_BG;
-            data.cell.styles.textColor = INT_TEXT;
-          }
-        },
-        margin: { left: 14, right: 14 },
-      });
-
-      curY = doc.lastAutoTable.finalY;
-    });
-
-    // Rodapé
-    const total = doc.getNumberOfPages();
-    const logoFootH = logoDataUrl ? 16 : 0;
-    const logoFootW = logoFootH * 3;
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i);
-      doc.setDrawColor(220, 224, 230);
-      doc.line(14, pageH - 14, pageW - 14, pageH - 14);
-      doc.setFontSize(6.5);
-      doc.setTextColor(170, 175, 185);
-      doc.text(`${event.nome || "Evento"} — Programação Completa`, 14, pageH - 10);
-      doc.text(`${i} / ${total}`, pageW - 14, pageH - 10, { align: "right" });
-      if (logoDataUrl) {
-        doc.addImage(logoDataUrl, "PNG", (pageW - logoFootW) / 2, pageH - 34, logoFootW, logoFootH, undefined, "FAST");
-      }
-    }
-
-    const slug = (event.nome || "programacao").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    doc.save(`${slug}-programacao.pdf`);
+    await gerarProgramacaoPDF(event, atividades, palestrantes);
   }
 
   return (

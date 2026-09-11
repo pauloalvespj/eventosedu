@@ -57,7 +57,8 @@ export function LandingPage({ event, eventLoaded = false, atividades, palestrant
     const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
     if (a.tipo === "intervalo") return (
       <div key={a.id} className="prog-intervalo">
-        {a.titulo || "Intervalo"} · {a.horario}{a.horario_fim ? ` – ${a.horario_fim}` : ""}
+        <div className="prog-hora">{a.horario}</div>
+        <div>☕ {a.titulo || "Intervalo"}</div>
       </div>
     );
     return (
