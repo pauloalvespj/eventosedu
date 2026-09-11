@@ -278,10 +278,10 @@ export function AbaInscritos() {
   }
 
   function exportarCSV() {
-    const header = "Número,Nome,Instituição,Cargo\n";
+    const header = "Número,Nome,Instituição\n";
     const rows = [...participantes]
       .sort((a, b) => (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity))
-      .map(p => `"${fmtNumero(p.numero_participante)}","${p.nome || ""}","${p.instituicao || ""}","${p.cargo || ""}"`)
+      .map(p => `"${fmtNumero(p.numero_participante)}","${p.nome || ""}","${p.instituicao || ""}"`)
       .join("\n");
     baixarCSV("participantes.csv", header + rows);
     showToast("Lista exportada!", "success");
