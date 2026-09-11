@@ -173,17 +173,30 @@ export function Dashboard() {
             <div className="presenca-card" style={{ color:"var(--text3)", textAlign:"center", padding:"1.5rem" }}>Nenhuma atividade programada.</div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:"0.5rem" }}>
-              {proximasAtividades.map(a => (
-                <div key={a.id} className="pgrid-card" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)" }}>
-                  <div className="pgrid-top">
-                    <span>📅 {a.dia.split("-").slice(1).reverse().join("/")} · ⏱ {a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</span>
-                    <TipoBadge tipo={a.tipo}/>
+              {proximasAtividades.map(a => {
+                const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
+                return (
+                  <div key={a.id} className="pgrid-card" style={{ borderLeftColor: TIPO_COLOR[a.tipo] || "var(--navy)" }}>
+                    <div className="pgrid-top">
+                      <span>📅 {a.dia.split("-").slice(1).reverse().join("/")} · ⏱ {a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</span>
+                      <TipoBadge tipo={a.tipo}/>
+                    </div>
+                    <div className="pgrid-titulo-row">
+                      <span className="pgrid-titulo">{a.titulo}</span>
+                    </div>
+                    {pals.length > 0 && (
+                      <div className="pgrid-palestrante">
+                        🎙 {pals.map((p, i) => (
+                          <span key={p.id}>
+                            {p.nome}{p.instituicao && <span style={{ color:"var(--text3)", fontWeight:400 }}> — {p.instituicao}</span>}
+                            {pals[i+1] ? <span style={{ color:"var(--border2)" }}> · </span> : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="pgrid-titulo-row">
-                    <span className="pgrid-titulo">{a.titulo}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
