@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload, faTriangleExclamation, faIdBadge } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload, faTriangleExclamation, faIdBadge, faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
@@ -287,6 +287,22 @@ export function AbaInscritos() {
     showToast("Lista exportada!", "success");
   }
 
+  async function exportarXLS() {
+    const XLSX = await import("xlsx");
+    const rows = [...participantes]
+      .sort((a, b) => (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity))
+      .map(p => ({
+        "Nº de Inscrição": fmtNumero(p.numero_participante),
+        "Nome": p.nome_publico || p.nome || "",
+        "Órgão": p.instituicao || "",
+      }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Participantes");
+    XLSX.writeFile(wb, "participantes.xlsx");
+    showToast("Planilha exportada!", "success");
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -302,6 +318,9 @@ export function AbaInscritos() {
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button className="btn btn-outline" onClick={exportarCSV}>
           <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
+        </button>
+        <button className="btn btn-outline" onClick={exportarXLS}>
+          <FontAwesomeIcon icon={faFileExcel} style={{ marginRight: 6 }} />Exportar XLS
         </button>
         <button className="btn btn-primary" onClick={() => {
           setFormPart({ nome: "", cpf: "", email: "", instituicao: "", cargo: "", _palestrante: false, _admin: false, _credenciador: false });
