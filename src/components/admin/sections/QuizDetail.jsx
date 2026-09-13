@@ -8,6 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import {
   fetchQuiz, fetchPerguntasDoQuiz, criarLivePergunta, atualizarLivePergunta,
   atualizarStatusLivePergunta, deletarLivePergunta, deletarQuiz, fetchLiveRespostas,
+  limparLiveRespostas,
 } from "../../../lib/db";
 import { formatData } from "../../../utils/helpers";
 
@@ -239,7 +240,7 @@ export function QuizDetail() {
 
       {/* ── Modal: ver respostas (consulta, sem precisar do telão) ── */}
       {perguntaResultados && (
-        <ResultadosModal pergunta={perguntaResultados} onClose={() => setResultadosId(null)} />
+        <ResultadosModal pergunta={perguntaResultados} onClose={() => setResultadosId(null)} showToast={showToast} />
       )}
 
       {/* ── APRESENTAÇÃO — tela cheia: lobby com QR code, depois resultados ao vivo ── */}
@@ -258,8 +259,9 @@ export function QuizDetail() {
 
 // Consulta simples (não precisa abrir o telão) — busca as respostas uma vez
 // e mostra a distribuição por opção. Útil pra revisar depois do evento.
-function ResultadosModal({ pergunta, onClose }) {
+function ResultadosModal({ pergunta, onClose, showToast }) {
   const [contagens, setContagens] = useState(null);
+  const [limpando, setLimpando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -273,6 +275,16 @@ function ResultadosModal({ pergunta, onClose }) {
   }, [pergunta.id]);
 
   const total = contagens ? Object.values(contagens).reduce((s, n) => s + n, 0) : 0;
+
+  async function limparRespostas() {
+    if (!confirm("Apagar todas as respostas desta pergunta? Essa ação não pode ser desfeita.")) return;
+    setLimpando(true);
+    const { error } = await limparLiveRespostas(pergunta.id);
+    setLimpando(false);
+    if (error) { showToast("Erro ao limpar respostas: " + error.message, "error"); return; }
+    setContagens({});
+    showToast("Respostas apagadas!", "success");
+  }
 
   return (
     <Modal show onClose={onClose} title="Respostas">
@@ -299,6 +311,12 @@ function ResultadosModal({ pergunta, onClose }) {
           <div style={{ fontSize: "0.82rem", color: "var(--text3)", marginTop: "0.25rem" }}>
             {total} {total === 1 ? "resposta recebida" : "respostas recebidas"} no total
           </div>
+          {total > 0 && (
+            <button className="btn btn-sm btn-danger" style={{ alignSelf: "flex-start" }} onClick={limparRespostas} disabled={limpando}>
+              <FontAwesomeIcon icon={faTrash} style={{ marginRight: 6 }} />
+              {limpando ? "Limpando…" : "Limpar respostas"}
+            </button>
+          )}
         </div>
       )}
     </Modal>

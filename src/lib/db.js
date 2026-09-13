@@ -537,6 +537,14 @@ export async function fetchLiveRespostas(perguntaId) {
   return { data: data ?? [], error };
 }
 
+export async function limparLiveRespostas(perguntaId) {
+  const { error } = await supabase
+    .from("live_respostas")
+    .delete()
+    .eq("pergunta_id", perguntaId);
+  return { error };
+}
+
 // ── Perguntas ao vivo — respondendo sem login (página pública /quiz) ──
 
 export async function fetchMinhaLiveRespostaAnonima(perguntaId, anonId) {
