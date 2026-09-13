@@ -164,7 +164,9 @@ export function QuizDetail() {
             {perguntas.map(p => (
               <tr key={p.id}>
                 <td style={{ fontWeight: 600, maxWidth: 320 }}>{p.texto}</td>
-                <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>{(p.opcoes || []).join(" · ")}</td>
+                <td style={{ fontSize: "0.82rem", color: "var(--text2)" }}>
+                  {(p.opcoes || []).map(o => <div key={o}>{o}</div>)}
+                </td>
                 <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
@@ -383,58 +385,56 @@ function Apresentacao({ pergunta, quizCodigo, event, faseInicial, onClose }) {
       )}
 
       {fase === "lobby" ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "4rem", padding: "2rem 4rem", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 380px", maxWidth: 560, alignSelf: "flex-start", marginTop: "3rem" }}>
-            <div style={{ color: "var(--text3)", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-              <FontAwesomeIcon icon={faBolt} style={{ marginRight: 8, color: "var(--gold, #c9a84c)" }} />É hora de participar!
-            </div>
-            <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(2rem,4.5vw,3.4rem)", margin: 0, lineHeight: 1.25 }}>{pergunta.texto}</h1>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <button className="btn btn-sm btn-outline" style={{ alignSelf: "flex-end", margin: "0 3rem 0 0" }}
+            onClick={() => setFase("resultados")}>
+            <FontAwesomeIcon icon={faChartSimple} style={{ marginRight: 6 }} />Ver respostas
+          </button>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "2rem" }}>
+          <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(1.5rem,2.6vw,2.1rem)", margin: "0.5rem auto 0", maxWidth: 1700, width: "100%", padding: "0 3rem", boxSizing: "border-box", textAlign: "center", lineHeight: 1.3 }}>{pergunta.texto}</h1>
+
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-start", padding: "84px 3rem 2rem", gap: "3rem", flexWrap: "wrap", maxWidth: 1700, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+            {/* ── Coluna esquerda (2/5) — QR code ── */}
+            <div style={{ flex: "2 1 300px", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", justifyContent: "center", gap: "1.5rem" }}>
+              <div style={{ background: "#fff", borderRadius: 16, padding: "1rem", display: "inline-block", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
+                <QRCodeCanvas value={urlResposta} size={260} />
+              </div>
+              {quizCodigo && (
+                <div>
+                  <div style={{ color: "var(--text3)", fontSize: "0.78rem" }}>ou digite o código</div>
+                  <div style={{ color: "var(--navy)", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "0.3em", fontFamily: "monospace" }}>{quizCodigo}</div>
+                </div>
+              )}
+              <div style={{ color: "var(--text2)", fontSize: "0.9rem", lineHeight: 1.4 }}>
+                Aponte a câmera do celular pra responder
+              </div>
+            </div>
+
+            {/* ── Coluna direita (3/5) — opções ── */}
+            <div style={{ flex: "3 1 480px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.7rem" }}>
               {(pergunta.opcoes || []).map((opcao, i) => (
-                <div key={opcao} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: "0.65rem 1rem", boxShadow: "var(--shadow)" }}>
+                <div key={opcao} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: "0.65rem 1.25rem", boxShadow: "var(--shadow)" }}>
                   <span style={{ width: 10, height: 10, borderRadius: "50%", background: BAR_COLORS[i % BAR_COLORS.length], flexShrink: 0 }} />
-                  <span style={{ color: "var(--text)", fontSize: "1.05rem", fontWeight: 500 }}>{opcao}</span>
+                  <span style={{ color: "var(--text)", fontSize: "1.25rem", fontWeight: 500 }}>{opcao}</span>
                 </div>
               ))}
             </div>
-
-            <button className="btn btn-lg" style={{ marginTop: "2rem", background: "var(--navy)", borderColor: "var(--navy)", color: "#fff", fontWeight: 700 }}
-              onClick={() => setFase("resultados")}>
-              <FontAwesomeIcon icon={faChartSimple} style={{ marginRight: 8 }} />Ver respostas
-            </button>
-          </div>
-
-          <div style={{ flex: "0 0 auto", textAlign: "center" }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: "1.25rem", display: "inline-block", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
-              <QRCodeCanvas value={urlResposta} size={280} />
-            </div>
-            <div style={{ color: "var(--text2)", fontSize: "1rem", marginTop: "1rem" }}>
-              Aponte a câmera do celular pra responder
-            </div>
-            {quizCodigo && (
-              <>
-                <div style={{ color: "var(--text3)", fontSize: "0.9rem", marginTop: "1.25rem" }}>ou acesse o link abaixo e digite o seguinte código:</div>
-                <div style={{ color: "var(--text2)", fontSize: "1.2rem", fontWeight: 600, marginTop: "0.3rem" }}>{window.location.host}/quiz</div>
-                <div style={{ display: "inline-block", background: "#fff", color: "var(--navy)", fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, letterSpacing: "0.3em", fontFamily: "monospace", lineHeight: 1, marginTop: "0.5rem", padding: "0.5rem 1.25rem", border: "1px solid var(--border)", borderRadius: 16 }}>{quizCodigo}</div>
-              </>
-            )}
           </div>
         </div>
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <button className="btn btn-sm btn-outline" style={{ alignSelf: "flex-start", margin: "0 0 0 3rem" }}
+          <button className="btn btn-sm btn-outline" style={{ alignSelf: "flex-end", margin: "0 3rem 0 0" }}
             onClick={() => setFase("lobby")}>
             <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />Voltar pro QR code
           </button>
 
-          <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(1.5rem,2.6vw,2.1rem)", margin: "0.5rem 3rem 0", textAlign: "center", lineHeight: 1.3 }}>{pergunta.texto}</h1>
+          <h1 style={{ fontFamily: "'Poppins',sans-serif", fontWeight: 700, color: "var(--navy)", fontSize: "clamp(1.5rem,2.6vw,2.1rem)", margin: "0.5rem auto 0", maxWidth: 1700, width: "100%", padding: "0 3rem", boxSizing: "border-box", textAlign: "center", lineHeight: 1.3 }}>{pergunta.texto}</h1>
 
-          <div style={{ flex: 1, display: "flex", padding: "1.5rem 3rem 2.5rem", gap: "3rem", flexWrap: "wrap" }}>
-            {/* ── Coluna esquerda (~1/3) — QR code ── */}
-            <div style={{ flex: "1 1 300px", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", justifyContent: "center", gap: "1.5rem" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "flex-start", padding: "84px 3rem 2rem", gap: "3rem", flexWrap: "wrap", maxWidth: 1700, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+            {/* ── Coluna esquerda (2/5) — QR code ── */}
+            <div style={{ flex: "2 1 300px", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", justifyContent: "center", gap: "1.5rem" }}>
               <div style={{ background: "#fff", borderRadius: 16, padding: "1rem", display: "inline-block", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}>
-                <QRCodeCanvas value={urlResposta} size={200} />
+                <QRCodeCanvas value={urlResposta} size={260} />
               </div>
               {quizCodigo && (
                 <div>
@@ -450,10 +450,12 @@ function Apresentacao({ pergunta, quizCodigo, event, faseInicial, onClose }) {
               </div>
             </div>
 
-          {/* ── Coluna direita (~2/3) — resultados ao vivo ── */}
-          <div style={{ flex: "2 1 480px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "1.4rem" }}>
-            {(pergunta.opcoes || []).map((opcao, i) => {
-              const n = contagens[opcao] || 0;
+          {/* ── Coluna direita (3/5) — resultados ao vivo, ordenados por votos ── */}
+          <div style={{ flex: "3 1 480px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "1.4rem", maxHeight: "100%", overflowY: "auto", paddingRight: "0.5rem" }}>
+            {(pergunta.opcoes || [])
+              .map((opcao, i) => ({ opcao, i, n: contagens[opcao] || 0 }))
+              .sort((a, b) => b.n - a.n)
+              .map(({ opcao, i, n }) => {
               const pct = total > 0 ? Math.round((n / total) * 100) : 0;
               return (
                 <div key={opcao} style={{ position: "relative" }}>
