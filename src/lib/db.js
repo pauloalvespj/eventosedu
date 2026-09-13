@@ -482,8 +482,25 @@ export async function fetchPerguntasDoQuiz(quizId) {
     .from("live_perguntas")
     .select("*")
     .eq("quiz_id", quizId)
-    .order("criado_em", { ascending: false });
+    .order("ordem", { ascending: true });
   return { data: data ?? [], error };
+}
+
+export async function atualizarOrdemLivePergunta(id, ordem) {
+  const { error } = await supabase
+    .from("live_perguntas")
+    .update({ ordem })
+    .eq("id", id);
+  return { error };
+}
+
+export async function fetchLivePerguntaPorId(id) {
+  const { data, error } = await supabase
+    .from("live_perguntas")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
 }
 
 export async function fetchPerguntaAbertaDoQuiz(quizId) {

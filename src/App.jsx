@@ -24,6 +24,7 @@ import { FormInscricao } from "./components/auth/FormInscricao";
 import { FormLogin } from "./components/auth/FormLogin";
 import { LandingPage } from "./components/landing/LandingPage";
 import { QuizPage } from "./components/quiz/QuizPage";
+import { ApresentacaoQuizPage } from "./components/quiz/ApresentacaoQuizPage";
 import { PainelLogin } from "./components/PainelLogin";
 import { PaginaPresenca } from "./components/presenca/PaginaPresenca";
 import { PaginaPresencaTurno } from "./components/presenca/PaginaPresencaTurno";
@@ -568,6 +569,11 @@ export default function App() {
             Aceita tanto /quiz (digitando o código na tela) quanto /quiz/CODIGO direto na URL. */}
         <Route path="/quiz" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
         <Route path="/quiz/:codigo" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
+
+        {/* Telão de apresentação de uma pergunta — aberto em nova janela pelo
+            botão "Apresentar" no admin do quiz, pra arrastar pro projetor
+            sem precisar espelhar a tela do admin. */}
+        <Route path="/quiz-telao/:perguntaId" element={<ApresentacaoQuizPage />} />
 
         {/* /admin e /admin/* redirecionam para /painel */}
         <Route path="/admin"   element={<Navigate to="/painel" replace />} />
