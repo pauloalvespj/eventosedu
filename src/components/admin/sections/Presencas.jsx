@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPlus, faTrash, faQrcode, faPenToSquare, faDownload, faExpand, faXmark, faFilePdf,
+  faTrash, faQrcode, faPenToSquare, faDownload, faExpand, faXmark, faFilePdf, faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, QRCodeCanvas, DatePickerInput } from "../../base/index";
 import { calcPresenca, formatData, qrPresencaTurnoValue } from "../../../utils/helpers";
 import { gerarQRCodesTurnosPDF } from "../../../utils/gerarQRCodesTurnosPDF";
+import { gerarListaAssinaturasPDF } from "../../../utils/gerarListaAssinaturasPDF";
 import {
   inserirPresenca, deletarPresenca, inserirPresencaTurno, deletarPresencaTurno,
   inserirTurno, atualizarTurno, deletarTurno, fetchQrTokenTurno, registrarLog,
@@ -30,26 +31,47 @@ export function Presencas() {
     participantes, atividades, turnos, setTurnos, showToast,
   } = useAdmin();
   const [busca, setBusca] = useState("");
-  const [filtroOrgao, setFiltroOrgao] = useState("");
   const [filtroFreq, setFiltroFreq] = useState(""); // id do turno ou da atividade selecionada
   const porTurno = event.modo_frequencia === "turno";
   const registros = porTurno ? presencasTurno : presencas;
   const credenciados = participantes.filter(p => p.credenciado);
-  const [abaPresenca, setAbaPresenca] = useState("registros"); // "registros" | "turnos"
 
-  const orgaos = [...new Set(participantes.map(p => p.instituicao).filter(Boolean))].sort();
   const opcoesFreq = porTurno
     ? [...turnos].sort((a, b) => (a.dia + (a.horario_inicio||"")).localeCompare(b.dia + (b.horario_inicio||"")))
     : atividades.filter(a => a.tipo !== "intervalo").sort((a, b) => (a.dia + a.horario).localeCompare(b.dia + b.horario));
+
+  // ── Seleção de turno (quadros no topo: GERAL + um por turno) ───
+  const [turnoSelecionadoId, setTurnoSelecionadoId] = useState(null); // null = GERAL
+  const turnoAtivo = porTurno && turnoSelecionadoId != null ? turnos.find(t => t.id === turnoSelecionadoId) : null;
+
+  const presentesTurnoAtivo = !turnoAtivo ? [] : presencasTurno
+    .filter(pt => pt.turno_id === turnoAtivo.id)
+    .map(pt => ({ registro: pt, participante: participantes.find(p => p.id === pt.participante_id) }))
+    .filter(x => x.participante)
+    .filter(x => {
+      if (busca.trim()) {
+        const termo = busca.trim().toLowerCase();
+        const cpfLimpo = (x.participante.cpf || "").replace(/\D/g, "");
+        const buscaCpf = busca.trim().replace(/\D/g, "");
+        const bateu = x.participante.nome.toLowerCase().includes(termo)
+          || (x.participante.instituicao || "").toLowerCase().includes(termo)
+          || (buscaCpf && cpfLimpo.includes(buscaCpf));
+        if (!bateu) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a.participante.nome.localeCompare(b.participante.nome, "pt-BR"));
 
   const participantesFiltrados = participantes.filter(p => {
     if (busca.trim()) {
       const termo = busca.trim().toLowerCase();
       const cpfLimpo = (p.cpf || "").replace(/\D/g, "");
       const buscaCpf = busca.trim().replace(/\D/g, "");
-      if (!p.nome.toLowerCase().includes(termo) && !(buscaCpf && cpfLimpo.includes(buscaCpf))) return false;
+      const bateu = p.nome.toLowerCase().includes(termo)
+        || (p.instituicao || "").toLowerCase().includes(termo)
+        || (buscaCpf && cpfLimpo.includes(buscaCpf));
+      if (!bateu) return false;
     }
-    if (filtroOrgao && p.instituicao !== filtroOrgao) return false;
     if (filtroFreq) {
       const bateu = porTurno
         ? presencasTurno.some(pt => pt.turno_id === Number(filtroFreq) && pt.participante_id === p.id)
@@ -59,42 +81,44 @@ export function Presencas() {
     return true;
   });
 
-  // ── Inserir/cancelar presença manual ──────────────────────────
-  const [modalManual, setModalManual] = useState(false);
-  const [freqManual, setFreqManual] = useState("");
-  const [buscaManual, setBuscaManual] = useState("");
+  // ── Ordenação da tabela ─────────────────────────────────────────
+  const [ordenacao, setOrdenacao] = useState({ campo: "nome", dir: "asc" });
 
-  function abrirModalManual() {
-    setFreqManual(filtroFreq || "");
-    setBuscaManual("");
-    setModalManual(true);
+  function toggleOrdenacao(campo) {
+    setOrdenacao(prev => prev.campo === campo ? { campo, dir: prev.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" });
   }
 
-  const itemManual = freqManual ? opcoesFreq.find(o => String(o.id) === String(freqManual)) : null;
-  const presencasDoItem = !itemManual ? [] : porTurno
-    ? presencasTurno.filter(p => p.turno_id === itemManual.id)
-    : presencas.filter(p => p.atividade_id === itemManual.id);
-  const idsPresentes = new Set(presencasDoItem.map(p => p.participante_id));
-  const termoManual = buscaManual.trim().toLowerCase();
-  const candidatos = !itemManual ? [] : credenciados
-    .filter(p => !idsPresentes.has(p.id))
-    .filter(p => !termoManual || p.nome.toLowerCase().includes(termoManual))
-    .slice(0, 20);
+  const participantesOrdenados = participantesFiltrados
+    .map(p => {
+      const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
+      const meusRegistros = porTurno
+        ? presencasTurno.filter(pt => pt.participante_id === p.id).length
+        : presencas.filter(pr => pr.participante_id === p.id).length;
+      return { ...p, _registros: meusRegistros, _pct: p.credenciado ? r.pct : -1 };
+    })
+    .sort((a, b) => {
+      let va, vb;
+      switch (ordenacao.campo) {
+        case "cpf": va = a.cpf || ""; vb = b.cpf || ""; break;
+        case "instituicao": va = a.instituicao || ""; vb = b.instituicao || ""; break;
+        case "registros": va = a._registros; vb = b._registros; break;
+        case "frequencia": va = a._pct; vb = b._pct; break;
+        default: va = a.nome || ""; vb = b.nome || "";
+      }
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "pt-BR");
+      return ordenacao.dir === "asc" ? cmp : -cmp;
+    });
 
-  async function adicionarPresencaManual(participanteId) {
-    if (!itemManual) return;
-    if (porTurno) {
-      const { data, error } = await inserirPresencaTurno(participanteId, itemManual.id);
-      if (error) { showToast("Erro ao registrar presença: " + error.message, "error"); return; }
-      setPresencasTurno(prev => [...prev, data]);
-    } else {
-      const { data, error } = await inserirPresenca(participanteId, itemManual.id);
-      if (error) { showToast("Erro ao registrar presença: " + error.message, "error"); return; }
-      setPresencas(prev => [...prev, data]);
-    }
-    showToast("Presença registrada!", "success");
+  function ThOrdenavel({ campo, children, style }) {
+    const ativo = ordenacao.campo === campo;
+    return (
+      <th style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => toggleOrdenacao(campo)} title="Ordenar">
+        {children}{ativo ? (ordenacao.dir === "asc" ? " ▲" : " ▼") : ""}
+      </th>
+    );
   }
 
+  // ── Cancelar presença (usado na lista de presentes do turno) ──
   async function cancelarPresencaManual(registro) {
     if (!confirm("Cancelar esta presença?")) return;
     if (porTurno) {
@@ -107,6 +131,86 @@ export function Presencas() {
       setPresencas(prev => prev.filter(p => p.id !== registro.id));
     }
     showToast("Presença cancelada", "info");
+  }
+
+  // ── Registrar presença individual (botão ao lado do participante) ──
+  // As marcações ficam pendentes localmente e só são gravadas quando o
+  // usuário clica em "Registrar" — nada é salvo a cada clique no checkbox.
+  const [participanteRegistro, setParticipanteRegistro] = useState(null);
+  const [checklistParticipante, setChecklistParticipante] = useState({}); // itemId -> bool
+  const [salvandoRegistroParticipante, setSalvandoRegistroParticipante] = useState(false);
+
+  const registrosParticipanteRegistro = !participanteRegistro ? new Map() : new Map(
+    (porTurno ? presencasTurno : presencas)
+      .filter(r => r.participante_id === participanteRegistro.id)
+      .map(r => [porTurno ? r.turno_id : r.atividade_id, r])
+  );
+
+  function abrirRegistroParticipante(p) {
+    setParticipanteRegistro(p);
+    const atual = {};
+    (porTurno ? presencasTurno : presencas)
+      .filter(r => r.participante_id === p.id)
+      .forEach(r => { atual[porTurno ? r.turno_id : r.atividade_id] = true; });
+    setChecklistParticipante(atual);
+  }
+
+  function fecharRegistroParticipante() {
+    setParticipanteRegistro(null);
+    setChecklistParticipante({});
+  }
+
+  async function confirmarRegistroParticipante() {
+    if (!participanteRegistro) return;
+    setSalvandoRegistroParticipante(true);
+    try {
+      for (const o of opcoesFreq) {
+        const estava = registrosParticipanteRegistro.has(o.id);
+        const quer = !!checklistParticipante[o.id];
+        if (estava === quer) continue;
+        if (quer) {
+          if (porTurno) {
+            const { data, error } = await inserirPresencaTurno(participanteRegistro.id, o.id);
+            if (error) { showToast("Erro ao registrar presença: " + error.message, "error"); continue; }
+            setPresencasTurno(prev => [...prev, data]);
+          } else {
+            const { data, error } = await inserirPresenca(participanteRegistro.id, o.id);
+            if (error) { showToast("Erro ao registrar presença: " + error.message, "error"); continue; }
+            setPresencas(prev => [...prev, data]);
+          }
+        } else {
+          const registro = registrosParticipanteRegistro.get(o.id);
+          if (!registro) continue;
+          if (porTurno) {
+            const { error } = await deletarPresencaTurno(registro.id);
+            if (error) { showToast("Erro ao cancelar: " + error.message, "error"); continue; }
+            setPresencasTurno(prev => prev.filter(p => p.id !== registro.id));
+          } else {
+            const { error } = await deletarPresenca(registro.id);
+            if (error) { showToast("Erro ao cancelar: " + error.message, "error"); continue; }
+            setPresencas(prev => prev.filter(p => p.id !== registro.id));
+          }
+        }
+      }
+      showToast("Presenças atualizadas!", "success");
+      fecharRegistroParticipante();
+    } finally {
+      setSalvandoRegistroParticipante(false);
+    }
+  }
+
+  // ── Lista de assinaturas (PDF) ─────────────────────────────────
+  const [gerandoListaAssinaturas, setGerandoListaAssinaturas] = useState(false);
+
+  async function baixarListaAssinaturas() {
+    setGerandoListaAssinaturas(true);
+    try {
+      await gerarListaAssinaturasPDF(event, participantes, porTurno ? turnos : null);
+    } catch (err) {
+      showToast("Erro ao gerar PDF: " + err.message, "error");
+    } finally {
+      setGerandoListaAssinaturas(false);
+    }
   }
 
   // ── Turnos (modo de frequência "por turno") ───────────────────
@@ -180,73 +284,167 @@ export function Presencas() {
         <div>
           <h1>Presenças</h1>
           <p style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {registros.length} registros totais
             <span className="badge badge-navy" style={{ fontSize: "0.68rem" }}>
               Frequência: {porTurno ? "Por Turno" : "Por Palestra"}
             </span>
           </p>
         </div>
-        {abaPresenca === "registros" ? (
-          <button className="btn btn-hero" onClick={abrirModalManual}>
-            <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Inserir presença manual
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="btn btn-sm btn-outline" onClick={baixarListaAssinaturas} disabled={gerandoListaAssinaturas || participantes.length === 0} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <FontAwesomeIcon icon={faFilePdf} />
+            {gerandoListaAssinaturas ? "Gerando…" : "Lista de Assinaturas"}
           </button>
-        ) : (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          {porTurno && (
             <button className="btn btn-sm btn-outline" onClick={baixarPdfQRCodesTurnos} disabled={gerandoPdfTurnos || turnos.length === 0} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <FontAwesomeIcon icon={faFilePdf} />
               {gerandoPdfTurnos ? "Gerando…" : "Baixar PDF com QR Codes"}
             </button>
-            <button className="btn btn-sm btn-primary" onClick={() => { setFormTurno({ conta_certificado: true, carga_horaria: 0 }); setModalTurno(true); }}>+ Novo Turno</button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* ── Seleção de turno: select no mobile, quadros no desktop ── */}
+      {porTurno && (
+        <select
+          className="form-input presencas-turno-select"
+          style={{ marginBottom: "1.5rem" }}
+          value={turnoSelecionadoId ?? ""}
+          onChange={e => {
+            const v = e.target.value;
+            if (v === "new") { setFormTurno({ conta_certificado: true, carga_horaria: 0 }); setModalTurno(true); return; }
+            setTurnoSelecionadoId(v === "" ? null : Number(v));
+          }}>
+          <option value="">GERAL — Todos os participantes</option>
+          {opcoesFreq.map(t => {
+            const presentesCount = presencasTurno.filter(pt => pt.turno_id === t.id).length;
+            return <option key={t.id} value={t.id}>{t.nome} — {formatData(t.dia)} ({presentesCount} pres.)</option>;
+          })}
+          <option value="new">+ Novo Turno</option>
+        </select>
+      )}
 
       {porTurno && (
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <button className={`btn btn-sm ${abaPresenca === "registros" ? "btn-primary" : "btn-outline"}`} onClick={() => setAbaPresenca("registros")}>Registros de Presença</button>
-          <button className={`btn btn-sm ${abaPresenca === "turnos" ? "btn-primary" : "btn-outline"}`} onClick={() => setAbaPresenca("turnos")}>Turnos ({turnos.length})</button>
+        <div className="presencas-turno-cards" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+          <div
+            onClick={() => setTurnoSelecionadoId(null)}
+            style={{
+              cursor: "pointer", flex: "1 1 150px", maxWidth: 200,
+              background: !turnoAtivo ? "var(--navy)" : "var(--surface)",
+              color: !turnoAtivo ? "#fff" : "var(--text)",
+              border: `1.5px solid ${!turnoAtivo ? "var(--navy)" : "var(--border)"}`,
+              borderRadius: "var(--radius)", padding: "0.85rem 1rem",
+              display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 76,
+              transition: "border-color .15s, background .15s",
+            }}>
+            <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>GERAL</div>
+            <div style={{ fontSize: "0.74rem", opacity: 0.8, marginTop: 2 }}>Todos os participantes</div>
+          </div>
+
+          {opcoesFreq.map(t => {
+            const selecionado = turnoSelecionadoId === t.id;
+            const presentesCount = presencasTurno.filter(pt => pt.turno_id === t.id).length;
+            return (
+              <div key={t.id}
+                onClick={() => setTurnoSelecionadoId(t.id)}
+                style={{
+                  cursor: "pointer", flex: "1 1 190px", maxWidth: 240,
+                  background: selecionado ? "var(--navy)" : "var(--surface)",
+                  color: selecionado ? "#fff" : "var(--text)",
+                  border: `1.5px solid ${selecionado ? "var(--navy)" : "var(--border)"}`,
+                  borderRadius: "var(--radius)", padding: "0.85rem 1rem",
+                  display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 76,
+                  transition: "border-color .15s, background .15s",
+                }}>
+                <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>{t.nome}</div>
+                <div style={{ fontSize: "0.76rem", opacity: 0.8, marginTop: 3 }}>
+                  {formatData(t.dia)}{t.horario_inicio ? ` · ${t.horario_inicio}${t.horario_fim ? `–${t.horario_fim}` : ""}` : ""}
+                </div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 600, marginTop: 3, color: selecionado ? "#fff" : "var(--teal)" }}>
+                  {presentesCount} presença{presentesCount === 1 ? "" : "s"}
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            onClick={() => { setFormTurno({ conta_certificado: true, carga_horaria: 0 }); setModalTurno(true); }}
+            style={{
+              flex: "1 1 190px", maxWidth: 240, minHeight: 76,
+              border: "1.5px dashed var(--border2)", borderRadius: "var(--radius)",
+              background: "transparent", color: "var(--text3)", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "0.85rem", fontWeight: 600,
+            }}>
+            + Novo Turno
+          </button>
         </div>
       )}
 
-      {abaPresenca === "turnos" && porTurno && (
-      <div className="table-wrap">
-        <div className="table-header">
-          <span className="table-title">Turnos ({turnos.length})</span>
-        </div>
-        <table style={{ width: "100%", tableLayout: "auto", fontSize: "0.82rem" }}>
-          <thead><tr>
-            <th style={{ width: "36%" }}>Nome</th>
-            <th style={{ width: 90 }}>Dia</th>
-            <th style={{ width: 110 }}>Horário</th>
-            <th style={{ width: 50 }}>CH</th>
-            <th style={{ width: 60 }}>Cert.</th>
-            <th style={{ width: 60 }}>Pres.</th>
-            <th style={{ width: 120 }}>Ações</th>
-          </tr></thead>
-          <tbody>
-            {turnos.map(t => (
-              <tr key={t.id}>
-                <td style={{ fontWeight: 500 }}>{t.nome}</td>
-                <td style={{ fontSize: "0.78rem" }}>{formatData(t.dia)}</td>
-                <td style={{ whiteSpace: "nowrap", fontSize: "0.78rem" }}>{t.horario_inicio}{t.horario_fim ? `–${t.horario_fim}` : ""}</td>
-                <td style={{ fontSize: "0.78rem" }}>{t.carga_horaria}h</td>
-                <td><span className={`badge badge-${t.conta_certificado ? "success" : "warn"}`} style={{ fontSize: "0.68rem" }}>{t.conta_certificado ? "Sim" : "Não"}</span></td>
-                <td style={{ textAlign: "center" }}>{presencasTurno.filter(p => p.turno_id === t.id).length}</td>
-                <td>
-                  <div style={{ display: "flex", gap: "0.2rem" }}>
-                    <button className="btn btn-sm btn-outline" onClick={() => setModalQRTurno(t)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
-                    <button className="btn btn-sm btn-outline" onClick={() => { setFormTurno({ ...t, conta_certificado: t.conta_certificado ? "true" : "false" }); setModalTurno(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
-                    <button className="btn btn-sm btn-danger" onClick={() => excluirTurno(t.id)}><FontAwesomeIcon icon={faTrash} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      )}
+      {turnoAtivo ? (
+        <>
+          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)", display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", fontWeight: 700, color: "var(--navy)" }}>{turnoAtivo.nome}</div>
+              <div style={{ fontSize: "0.82rem", color: "var(--text3)", marginTop: 2 }}>
+                {formatData(turnoAtivo.dia)}{turnoAtivo.horario_inicio ? ` · ${turnoAtivo.horario_inicio}${turnoAtivo.horario_fim ? `–${turnoAtivo.horario_fim}` : ""}` : ""}
+                {" · "}<strong style={{ color: "var(--teal)" }}>{presencasTurno.filter(pt => pt.turno_id === turnoAtivo.id).length}</strong> de {credenciados.length} credenciados presentes
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button className="btn btn-sm btn-outline" onClick={() => setModalQRTurno(turnoAtivo)}><FontAwesomeIcon icon={faQrcode} style={{ marginRight: 6 }} />QR Code</button>
+              <button className="btn btn-sm btn-outline" onClick={() => { setFormTurno({ ...turnoAtivo, conta_certificado: turnoAtivo.conta_certificado ? "true" : "false" }); setModalTurno(true); }}>
+                <FontAwesomeIcon icon={faPenToSquare} style={{ marginRight: 6 }} />Editar turno
+              </button>
+              <button className="btn btn-sm btn-danger" onClick={() => { const id = turnoAtivo.id; excluirTurno(id); setTurnoSelecionadoId(prev => prev === id ? null : prev); }}>
+                <FontAwesomeIcon icon={faTrash} style={{ marginRight: 6 }} />Excluir
+              </button>
+            </div>
+          </div>
 
-      {abaPresenca === "registros" && (
+          <div className="table-wrap">
+            <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+              <span className="table-title">Presentes ({presentesTurnoAtivo.length})</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", flex: "1 1 240px" }}>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="Buscar por nome, órgão ou CPF…"
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  style={{ flex: "1 1 220px", minWidth: 180, marginBottom: 0 }}
+                />
+                {busca && (
+                  <button className="btn btn-sm btn-outline" onClick={() => setBusca("")} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
+                )}
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th><th>Instituição</th><th style={{ width: 140 }}>Registrado em</th><th style={{ width: 60 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {presentesTurnoAtivo.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhuma presença registrada neste turno ainda.</td></tr>
+                )}
+                {presentesTurnoAtivo.map(({ registro, participante }) => (
+                  <tr key={registro.id}>
+                    <td style={{ fontWeight: 500 }}>{participante.nome}</td>
+                    <td>{participante.instituicao}</td>
+                    <td style={{ fontSize: "0.78rem", color: "var(--text3)" }}>{new Date(registro.data_hora).toLocaleString("pt-BR")}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <button className="btn btn-sm btn-danger" title="Cancelar presença" onClick={() => cancelarPresencaManual(registro)}>
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
       <>
       <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)", display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>
         <div>
@@ -255,7 +453,7 @@ export function Presencas() {
         </div>
         <div>
           <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Credenciados</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gold-on-dark)" }}>{credenciados.length}/{participantes.length}</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--warn)" }}>{credenciados.length}/{participantes.length}</div>
         </div>
         <div>
           <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Registros de Presença</div>
@@ -266,125 +464,99 @@ export function Presencas() {
       <div className="table-wrap">
         <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
           <span className="table-title">Frequência por Participante</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            <select className="form-input" style={{ width: 170, marginBottom: 0 }} value={filtroOrgao} onChange={e => setFiltroOrgao(e.target.value)}>
-              <option value="">Todos os órgãos</option>
-              {orgaos.map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <select className="form-input" style={{ width: 210, marginBottom: 0 }} value={filtroFreq} onChange={e => setFiltroFreq(e.target.value)}>
-              <option value="">{porTurno ? "Todos os turnos" : "Todas as palestras"}</option>
-              {porTurno
-                ? opcoesFreq.map(t => <option key={t.id} value={t.id}>{t.nome} — {formatData(t.dia)}</option>)
-                : opcoesFreq.map(a => <option key={a.id} value={a.id}>{a.titulo} — {formatData(a.dia)}</option>)}
-            </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", flex: "1 1 240px" }}>
+            {!porTurno && (
+              <select className="form-input" style={{ flex: "1 1 200px", minWidth: 180, marginBottom: 0 }} value={filtroFreq} onChange={e => setFiltroFreq(e.target.value)}>
+                <option value="">Todas as palestras</option>
+                {opcoesFreq.map(a => <option key={a.id} value={a.id}>{a.titulo} — {formatData(a.dia)}</option>)}
+              </select>
+            )}
             <input
               className="form-input"
               type="text"
-              placeholder="Buscar por nome ou CPF…"
+              placeholder="Buscar por nome, órgão ou CPF…"
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              style={{ width: 200, marginBottom: 0 }}
+              style={{ flex: "1 1 220px", minWidth: 180, marginBottom: 0 }}
             />
-            {(busca || filtroOrgao || filtroFreq) && (
-              <button className="btn btn-sm btn-outline" onClick={() => { setBusca(""); setFiltroOrgao(""); setFiltroFreq(""); }} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
+            {(busca || filtroFreq) && (
+              <button className="btn btn-sm btn-outline" onClick={() => { setBusca(""); setFiltroFreq(""); }} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
             )}
           </div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>Nome</th><th>CPF</th><th>Instituição</th><th>Cargo</th>
-              <th style={{ width: 90 }}>Registros</th><th>Frequência</th>
+              <ThOrdenavel campo="nome">Nome</ThOrdenavel>
+              <ThOrdenavel campo="cpf">CPF</ThOrdenavel>
+              <ThOrdenavel campo="instituicao">Instituição</ThOrdenavel>
+              <ThOrdenavel campo="registros" style={{ width: 90 }}>Registros</ThOrdenavel>
+              <ThOrdenavel campo="frequencia">Frequência</ThOrdenavel>
+              <th style={{ width: 50 }}></th>
             </tr>
           </thead>
           <tbody>
-            {participantesFiltrados.length === 0 && (
+            {participantesOrdenados.length === 0 && (
               <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para os filtros atuais.</td></tr>
             )}
-            {participantesFiltrados.map(p => {
-              const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
-              const meusRegistros = porTurno
-                ? presencasTurno.filter(pt => pt.participante_id === p.id).length
-                : presencas.filter(pr => pr.participante_id === p.id).length;
-              return (
-                <tr key={p.id}>
-                  <td style={{ fontWeight: 500 }}>{p.nome}</td>
-                  <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>{p.cpf}</td>
-                  <td>{p.instituicao}</td>
-                  <td>{p.cargo}</td>
-                  <td style={{ textAlign: "center" }}>{meusRegistros}</td>
-                  <td>
-                    {p.credenciado
-                      ? <MiniBarra pct={r.pct} minimo={event.percentual_minimo} />
-                      : <span style={{ fontSize: "0.78rem", color: "var(--text3)" }}>Não credenciado</span>}
-                  </td>
-                </tr>
-              );
-            })}
+            {participantesOrdenados.map(p => (
+              <tr key={p.id}>
+                <td style={{ fontWeight: 500 }}>{p.nome}</td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.82rem" }}>{p.cpf}</td>
+                <td>{p.instituicao}</td>
+                <td style={{ textAlign: "center" }}>{p._registros}</td>
+                <td>
+                  {p.credenciado
+                    ? <MiniBarra pct={p._pct} minimo={event.percentual_minimo} />
+                    : <span style={{ fontSize: "0.78rem", color: "var(--text3)" }}>Não credenciado</span>}
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  {p.credenciado && (
+                    <button className="btn btn-sm btn-outline" title="Registrar presença" onClick={() => abrirRegistroParticipante(p)}>
+                      <FontAwesomeIcon icon={faCheck} />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       </>
       )}
 
-      {/* ── Modal: inserir/cancelar presença manual ── */}
-      <Modal show={modalManual} onClose={() => setModalManual(false)} title="Inserir Presença Manual">
-        <div className="form-group">
-          <label className="form-label">{porTurno ? "Turno" : "Palestra"}</label>
-          <select className="form-input" value={freqManual} onChange={e => setFreqManual(e.target.value)}>
-            <option value="">Selecione {porTurno ? "o turno" : "a palestra"}…</option>
-            {porTurno
-              ? opcoesFreq.map(t => <option key={t.id} value={t.id}>{t.nome} — {formatData(t.dia)}</option>)
-              : opcoesFreq.map(a => <option key={a.id} value={a.id}>{a.titulo} — {formatData(a.dia)}</option>)}
-          </select>
-        </div>
-
-        {itemManual && (
-          <>
-            <div className="form-group">
-              <label className="form-label">Buscar participante credenciado</label>
-              <input className="form-input" placeholder="Digite o nome…" value={buscaManual} onChange={e => setBuscaManual(e.target.value)} autoFocus />
-            </div>
-            {termoManual && (
-              <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", maxHeight: 180, overflowY: "auto", marginBottom: "1rem" }}>
-                {candidatos.length === 0 ? (
-                  <div style={{ padding: "0.75rem", fontSize: "0.85rem", color: "var(--text3)" }}>Nenhum participante credenciado encontrado.</div>
-                ) : candidatos.map(p => (
-                  <div key={p.id} onClick={() => adicionarPresencaManual(p.id)}
-                    style={{ padding: "0.6rem 0.85rem", cursor: "pointer", borderBottom: "1px solid var(--border)", fontSize: "0.88rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                    <span>{p.nome}</span>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text3)" }}>{p.instituicao}</span>
-                  </div>
-                ))}
+      {/* ── Modal: registrar presença individual (botão ao lado do participante) ── */}
+      <Modal show={!!participanteRegistro} onClose={fecharRegistroParticipante} title={`Registrar Presença${participanteRegistro ? ` — ${participanteRegistro.nome}` : ""}`}>
+        {participanteRegistro && (
+          <div>
+            <p style={{ fontSize: "0.85rem", color: "var(--text3)", marginBottom: "1rem" }}>
+              Marque {porTurno ? "os turnos" : "as palestras"} em que este participante esteve presente, desmarque para cancelar, e clique em Registrar.
+            </p>
+            {opcoesFreq.length === 0 ? (
+              <div style={{ fontSize: "0.85rem", color: "var(--text3)", fontStyle: "italic" }}>
+                {porTurno ? "Nenhum turno cadastrado." : "Nenhuma palestra cadastrada."}
               </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", maxHeight: 340, overflowY: "auto" }}>
+                  {opcoesFreq.map(o => {
+                    const marcado = !!checklistParticipante[o.id];
+                    return (
+                      <label key={o.id}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.5rem 0.65rem", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer", background: marcado ? "var(--success-bg)" : "transparent" }}>
+                        <input type="checkbox" checked={marcado} onChange={e => setChecklistParticipante(prev => ({ ...prev, [o.id]: e.target.checked }))} />
+                        <span style={{ flex: 1, fontSize: "0.88rem" }}>{porTurno ? o.nome : o.titulo}</span>
+                        <span style={{ color: "var(--text3)", fontSize: "0.78rem" }}>{formatData(o.dia)}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <button className="btn btn-primary btn-block" style={{ marginTop: "1rem" }} onClick={confirmarRegistroParticipante} disabled={salvandoRegistroParticipante}>
+                  {salvandoRegistroParticipante ? "Salvando…" : "Registrar"}
+                </button>
+              </>
             )}
-
-            <div style={{ marginTop: "1.5rem" }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text2)", marginBottom: "0.5rem" }}>
-                Presenças registradas ({presencasDoItem.length})
-              </div>
-              {presencasDoItem.length === 0 && (
-                <div style={{ fontSize: "0.85rem", color: "var(--text3)", fontStyle: "italic" }}>Nenhuma presença registrada ainda.</div>
-              )}
-              {presencasDoItem.map(reg => {
-                const part = participantes.find(x => x.id === reg.participante_id);
-                if (!part) return null;
-                return (
-                  <div key={reg.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.4rem 0", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" }}>
-                    <span>{part.nome}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                      <span style={{ color: "var(--text3)", fontSize: "0.78rem" }}>{new Date(reg.data_hora).toLocaleString("pt-BR")}</span>
-                      <button className="btn btn-sm btn-danger" style={{ padding: "0.2rem 0.5rem" }} title="Cancelar presença" onClick={() => cancelarPresencaManual(reg)}>
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+          </div>
         )}
       </Modal>
 

@@ -64,6 +64,36 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
       || fmtNumero(p.numero_participante).includes(q);
   });
 
+  // ── Ordenação da tabela ─────────────────────────────────────────
+  const [ordenacao, setOrdenacao] = useState({ campo: "nome", dir: "asc" });
+
+  function toggleOrdenacao(campo) {
+    setOrdenacao(prev => prev.campo === campo ? { campo, dir: prev.dir === "asc" ? "desc" : "asc" } : { campo, dir: "asc" });
+  }
+
+  function ThOrdenavel({ campo, children, style }) {
+    const ativo = ordenacao.campo === campo;
+    return (
+      <th style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => toggleOrdenacao(campo)} title="Ordenar">
+        {children}{ativo ? (ordenacao.dir === "asc" ? " ▲" : " ▼") : ""}
+      </th>
+    );
+  }
+
+  const filtradosOrdenados = [...filtrados].sort((a, b) => {
+    let va, vb;
+    switch (ordenacao.campo) {
+      case "numero": va = a.numero_participante ?? -1; vb = b.numero_participante ?? -1; break;
+      case "cpf": va = a.cpf || ""; vb = b.cpf || ""; break;
+      case "instituicao": va = a.instituicao || ""; vb = b.instituicao || ""; break;
+      case "status": va = a.credenciado ? 1 : 0; vb = b.credenciado ? 1 : 0; break;
+      case "data": va = a.credenciado_em || ""; vb = b.credenciado_em || ""; break;
+      default: va = a.nome || ""; vb = b.nome || "";
+    }
+    const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "pt-BR");
+    return ordenacao.dir === "asc" ? cmp : -cmp;
+  });
+
   return (
     <div>
       <div className="admin-topbar"><div><h1>Credenciamento</h1><p>Recepção do evento</p></div></div>
@@ -79,9 +109,17 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
           <span className="table-title">{participantes.filter(p => p.credenciado).length}/{participantes.length} credenciados</span>
         </div>
         <table>
-          <thead><tr><th style={{ width: 52 }}>Nº</th><th>Participante</th><th>CPF</th><th>Instituição</th><th>Status</th><th>Data/Hora</th><th>Ação</th></tr></thead>
+          <thead><tr>
+            <ThOrdenavel campo="numero" style={{ width: 52 }}>Nº</ThOrdenavel>
+            <ThOrdenavel campo="nome">Participante</ThOrdenavel>
+            <ThOrdenavel campo="cpf">CPF</ThOrdenavel>
+            <ThOrdenavel campo="instituicao">Instituição</ThOrdenavel>
+            <ThOrdenavel campo="status">Status</ThOrdenavel>
+            <ThOrdenavel campo="data">Data/Hora</ThOrdenavel>
+            <th>Ação</th>
+          </tr></thead>
           <tbody>
-            {filtrados.map(p => {
+            {filtradosOrdenados.map(p => {
               const dt = p.credenciado_em ? new Date(p.credenciado_em) : null;
               const dataHora = dt ? dt.toLocaleDateString("pt-BR") + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "–";
               return (
@@ -110,7 +148,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
         <div className="table-header" style={{ marginBottom: "0.75rem" }}>
           <span className="table-title">{participantes.filter(p => p.credenciado).length}/{participantes.length} credenciados</span>
         </div>
-        {filtrados.map(p => {
+        {filtradosOrdenados.map(p => {
           const dt = p.credenciado_em ? new Date(p.credenciado_em) : null;
           const dataHora = dt ? dt.toLocaleDateString("pt-BR") + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null;
           return (
