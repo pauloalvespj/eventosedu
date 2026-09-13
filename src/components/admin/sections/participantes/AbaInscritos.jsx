@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faDownload, faTriangleExclamation, faIdBadge, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPenToSquare, faTrash, faFloppyDisk, faRotateLeft, faCheck, faXmark, faTriangleExclamation, faIdBadge, faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { Modal, AvatarUpload, RoleBadge } from "../../../base/index";
 import { InstSelect } from "../InstSelect";
 import { atualizarProfile, deletarParticipante, adminCriarUsuario, reativarInscricao, atualizarEmailAuth, atualizarSenhaAuth, registrarLog } from "../../../../lib/db";
-import { baixarCSV, erroFuncaoEdge, validarSenha } from "../../../../utils/helpers";
+import { erroFuncaoEdge, validarSenha } from "../../../../utils/helpers";
 import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
@@ -277,23 +277,14 @@ export function AbaInscritos() {
     }
   }
 
-  function exportarCSV() {
-    const header = "Número,Nome,Instituição\n";
-    const rows = [...participantes]
-      .sort((a, b) => (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity))
-      .map(p => `"${fmtNumero(p.numero_participante)}","${p.nome || ""}","${p.instituicao || ""}"`)
-      .join("\n");
-    baixarCSV("participantes.csv", header + rows);
-    showToast("Lista exportada!", "success");
-  }
-
   async function exportarXLS() {
     const XLSX = await import("xlsx");
     const rows = [...participantes]
-      .sort((a, b) => (a.numero_participante ?? Infinity) - (b.numero_participante ?? Infinity))
-      .map(p => ({
+      .map(p => ({ p, nomeExibido: p.nome_publico || p.nome || "" }))
+      .sort((a, b) => a.nomeExibido.localeCompare(b.nomeExibido, "pt-BR", { sensitivity: "base" }))
+      .map(({ p, nomeExibido }) => ({
         "Nº de Inscrição": fmtNumero(p.numero_participante),
-        "Nome": p.nome_publico || p.nome || "",
+        "Nome": nomeExibido,
         "Órgão": p.instituicao || "",
       }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -316,9 +307,6 @@ export function AbaInscritos() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        <button className="btn btn-outline" onClick={exportarCSV}>
-          <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
-        </button>
         <button className="btn btn-outline" onClick={exportarXLS}>
           <FontAwesomeIcon icon={faFileExcel} style={{ marginRight: 6 }} />Exportar XLS
         </button>

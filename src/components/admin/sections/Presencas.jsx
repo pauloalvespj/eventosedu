@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus, faTrash, faQrcode, faPenToSquare, faDownload, faExpand, faXmark, faFilePdf,
+} from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
-import { Modal } from "../../base/index";
-import { calcPresenca, formatData } from "../../../utils/helpers";
-import { inserirPresenca, deletarPresenca, inserirPresencaTurno, deletarPresencaTurno } from "../../../lib/db";
+import { Modal, QRCodeCanvas, DatePickerInput } from "../../base/index";
+import { calcPresenca, formatData, qrPresencaTurnoValue } from "../../../utils/helpers";
+import { gerarQRCodesTurnosPDF } from "../../../utils/gerarQRCodesTurnosPDF";
+import {
+  inserirPresenca, deletarPresenca, inserirPresencaTurno, deletarPresencaTurno,
+  inserirTurno, atualizarTurno, deletarTurno, fetchQrTokenTurno, registrarLog,
+} from "../../../lib/db";
 
 function MiniBarra({ pct, minimo }) {
   const cls = pct >= minimo ? "" : pct >= minimo * 0.7 ? " warn" : " danger";
@@ -21,7 +27,7 @@ function MiniBarra({ pct, minimo }) {
 export function Presencas() {
   const {
     event, presencas, setPresencas, presencasTurno, setPresencasTurno,
-    participantes, atividades, turnos, showToast,
+    participantes, atividades, turnos, setTurnos, showToast,
   } = useAdmin();
   const [busca, setBusca] = useState("");
   const [filtroOrgao, setFiltroOrgao] = useState("");
@@ -29,6 +35,7 @@ export function Presencas() {
   const porTurno = event.modo_frequencia === "turno";
   const registros = porTurno ? presencasTurno : presencas;
   const credenciados = participantes.filter(p => p.credenciado);
+  const [abaPresenca, setAbaPresenca] = useState("registros"); // "registros" | "turnos"
 
   const orgaos = [...new Set(participantes.map(p => p.instituicao).filter(Boolean))].sort();
   const opcoesFreq = porTurno
@@ -102,6 +109,71 @@ export function Presencas() {
     showToast("Presença cancelada", "info");
   }
 
+  // ── Turnos (modo de frequência "por turno") ───────────────────
+  const [modalTurno, setModalTurno]     = useState(false);
+  const [formTurno, setFormTurno]       = useState({});
+  const [modalQRTurno, setModalQRTurno] = useState(null);
+  const [qrTokenTurno, setQrTokenTurno] = useState(null);
+  const [gerandoPdfTurnos, setGerandoPdfTurnos] = useState(false);
+
+  useEffect(() => {
+    if (!modalQRTurno) { setQrTokenTurno(null); return; }
+    fetchQrTokenTurno(modalQRTurno.id).then(setQrTokenTurno);
+  }, [modalQRTurno]);
+
+  // ── Telão (exibição em tela cheia do QR do turno para o telão do evento) ──
+  const [telaoTurno, setTelaoTurno] = useState(false);
+  const telaoRef                    = useRef(null);
+
+  useEffect(() => {
+    if (!telaoTurno) return;
+    telaoRef.current?.requestFullscreen?.().catch(() => {});
+    function onFsChange() { if (!document.fullscreenElement) setTelaoTurno(false); }
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [telaoTurno]);
+
+  function fecharTelao() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setTelaoTurno(false);
+  }
+
+  async function salvarTurno() {
+    if (!formTurno.nome || !formTurno.dia) { showToast("Preencha os campos obrigatórios", "error"); return; }
+    const dados = { ...formTurno, carga_horaria: Number(formTurno.carga_horaria) || 0, conta_certificado: formTurno.conta_certificado === "true" || formTurno.conta_certificado === true };
+    if (formTurno.id) {
+      setTurnos(prev => prev.map(t => t.id === formTurno.id ? { ...dados } : t));
+      atualizarTurno(formTurno.id, dados);
+    } else {
+      const tempId = Date.now();
+      setTurnos(prev => [...prev, { ...dados, id: tempId }]);
+      const { data } = await inserirTurno({ ...dados, event_id: event.id });
+      if (data) setTurnos(prev => prev.map(t => t.id === tempId ? data : t));
+    }
+    setModalTurno(false);
+    showToast("Turno salvo!", "success");
+  }
+
+  async function excluirTurno(id) {
+    if (!confirm("Excluir turno?")) return;
+    const t = turnos.find(x => x.id === id);
+    setTurnos(prev => prev.filter(t => t.id !== id));
+    deletarTurno(id);
+    registrarLog("turno.excluir", "turno", id, t?.nome);
+    showToast("Turno excluído", "info");
+  }
+
+  async function baixarPdfQRCodesTurnos() {
+    setGerandoPdfTurnos(true);
+    try {
+      await gerarQRCodesTurnosPDF(event, turnos);
+    } catch (err) {
+      showToast("Erro ao gerar PDF: " + err.message, "error");
+    } finally {
+      setGerandoPdfTurnos(false);
+    }
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -114,11 +186,68 @@ export function Presencas() {
             </span>
           </p>
         </div>
-        <button className="btn btn-hero" onClick={abrirModalManual}>
-          <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Inserir presença manual
-        </button>
+        {abaPresenca === "registros" ? (
+          <button className="btn btn-hero" onClick={abrirModalManual}>
+            <FontAwesomeIcon icon={faPlus} style={{ marginRight: 6 }} />Inserir presença manual
+          </button>
+        ) : (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-sm btn-outline" onClick={baixarPdfQRCodesTurnos} disabled={gerandoPdfTurnos || turnos.length === 0} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <FontAwesomeIcon icon={faFilePdf} />
+              {gerandoPdfTurnos ? "Gerando…" : "Baixar PDF com QR Codes"}
+            </button>
+            <button className="btn btn-sm btn-primary" onClick={() => { setFormTurno({ conta_certificado: true, carga_horaria: 0 }); setModalTurno(true); }}>+ Novo Turno</button>
+          </div>
+        )}
       </div>
 
+      {porTurno && (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          <button className={`btn btn-sm ${abaPresenca === "registros" ? "btn-primary" : "btn-outline"}`} onClick={() => setAbaPresenca("registros")}>Registros de Presença</button>
+          <button className={`btn btn-sm ${abaPresenca === "turnos" ? "btn-primary" : "btn-outline"}`} onClick={() => setAbaPresenca("turnos")}>Turnos ({turnos.length})</button>
+        </div>
+      )}
+
+      {abaPresenca === "turnos" && porTurno && (
+      <div className="table-wrap">
+        <div className="table-header">
+          <span className="table-title">Turnos ({turnos.length})</span>
+        </div>
+        <table style={{ width: "100%", tableLayout: "auto", fontSize: "0.82rem" }}>
+          <thead><tr>
+            <th style={{ width: "36%" }}>Nome</th>
+            <th style={{ width: 90 }}>Dia</th>
+            <th style={{ width: 110 }}>Horário</th>
+            <th style={{ width: 50 }}>CH</th>
+            <th style={{ width: 60 }}>Cert.</th>
+            <th style={{ width: 60 }}>Pres.</th>
+            <th style={{ width: 120 }}>Ações</th>
+          </tr></thead>
+          <tbody>
+            {turnos.map(t => (
+              <tr key={t.id}>
+                <td style={{ fontWeight: 500 }}>{t.nome}</td>
+                <td style={{ fontSize: "0.78rem" }}>{formatData(t.dia)}</td>
+                <td style={{ whiteSpace: "nowrap", fontSize: "0.78rem" }}>{t.horario_inicio}{t.horario_fim ? `–${t.horario_fim}` : ""}</td>
+                <td style={{ fontSize: "0.78rem" }}>{t.carga_horaria}h</td>
+                <td><span className={`badge badge-${t.conta_certificado ? "success" : "warn"}`} style={{ fontSize: "0.68rem" }}>{t.conta_certificado ? "Sim" : "Não"}</span></td>
+                <td style={{ textAlign: "center" }}>{presencasTurno.filter(p => p.turno_id === t.id).length}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "0.2rem" }}>
+                    <button className="btn btn-sm btn-outline" onClick={() => setModalQRTurno(t)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => { setFormTurno({ ...t, conta_certificado: t.conta_certificado ? "true" : "false" }); setModalTurno(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                    <button className="btn btn-sm btn-danger" onClick={() => excluirTurno(t.id)}><FontAwesomeIcon icon={faTrash} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      )}
+
+      {abaPresenca === "registros" && (
+      <>
       <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)", display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Participantes</div>
@@ -195,6 +324,8 @@ export function Presencas() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {/* ── Modal: inserir/cancelar presença manual ── */}
       <Modal show={modalManual} onClose={() => setModalManual(false)} title="Inserir Presença Manual">
@@ -256,6 +387,87 @@ export function Presencas() {
           </>
         )}
       </Modal>
+
+      {/* MODAL TURNO */}
+      <Modal show={modalTurno} onClose={() => setModalTurno(false)} title={formTurno.id ? "Editar Turno" : "Novo Turno"}>
+        <div className="form-group"><label className="form-label">Nome *</label><input className="form-input" placeholder="Ex: Manhã" value={formTurno.nome || ""} onChange={e => setFormTurno(f => ({ ...f, nome: e.target.value }))} /></div>
+        <div className="form-grid">
+          <DatePickerInput label="Dia *" value={formTurno.dia || ""} onChange={v => setFormTurno(f => ({ ...f, dia: v }))} />
+          <div className="form-group"><label className="form-label">Horário início</label><input type="time" className="form-input" value={formTurno.horario_inicio || ""} onChange={e => setFormTurno(f => ({ ...f, horario_inicio: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Horário fim</label><input type="time" className="form-input" value={formTurno.horario_fim || ""} onChange={e => setFormTurno(f => ({ ...f, horario_fim: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Carga Horária (h)</label><input type="number" min={0} step={0.25} className="form-input" value={formTurno.carga_horaria || 0} onChange={e => setFormTurno(f => ({ ...f, carga_horaria: e.target.value }))} /></div>
+          <div className="form-group"><label className="form-label">Conta para certificado</label>
+            <select className="form-input" value={formTurno.conta_certificado} onChange={e => setFormTurno(f => ({ ...f, conta_certificado: e.target.value }))}>
+              <option value="true">Sim</option><option value="false">Não</option>
+            </select>
+          </div>
+        </div>
+        <button className="btn btn-primary btn-block" onClick={salvarTurno} style={{ marginTop: "1rem" }}>Salvar</button>
+      </Modal>
+
+      {/* MODAL QR CODE DO TURNO */}
+      <Modal show={!!modalQRTurno} onClose={() => setModalQRTurno(null)} title="QR Code de Presença do Turno">
+        {modalQRTurno && (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ marginBottom: "1rem", color: "var(--text2)", fontSize: "0.9rem", fontWeight: 600 }}>{modalQRTurno.nome}</p>
+            <p style={{ marginBottom: "1.25rem", fontSize: "0.8rem", color: "var(--text3)" }}>{formatData(modalQRTurno.dia)}{modalQRTurno.horario_inicio ? ` · ${modalQRTurno.horario_inicio}${modalQRTurno.horario_fim ? `–${modalQRTurno.horario_fim}` : ""}` : ""}</p>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
+              {qrTokenTurno
+                ? <QRCodeCanvas value={qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)} size={200} />
+                : <div style={{ width: 200, height: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderRadius: 8, color: "var(--text3)", fontSize: "0.85rem" }}>Carregando…</div>}
+            </div>
+            {qrTokenTurno && (
+              <div style={{ padding: "0.5rem 0.75rem", background: "var(--gold-pale)", borderRadius: "var(--radius-sm)", fontSize: "0.78rem", color: "var(--warn)", fontFamily: "monospace", marginBottom: "1rem", wordBreak: "break-all" }}>
+                {qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+              <button className="btn btn-sm btn-outline" onClick={() => {
+                const canvas = document.querySelector("canvas");
+                if (canvas) { const a = document.createElement("a"); a.href = canvas.toDataURL("image/png"); a.download = `qrcode-turno-${modalQRTurno.id}.png`; a.click(); }
+              }}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar PNG</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setTelaoTurno(true)} disabled={!qrTokenTurno}>
+                <FontAwesomeIcon icon={faExpand} style={{ marginRight: 6 }} />Exibir no telão
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* TELÃO — exibição em tela cheia do QR do turno (projeção no evento) */}
+      {telaoTurno && modalQRTurno && (
+        <div ref={telaoRef} style={{
+          position: "fixed", inset: 0, zIndex: 5000,
+          background: "var(--hero-gradient, linear-gradient(135deg,var(--hero-dark),var(--hero)))",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          padding: "4vh 4vw", textAlign: "center",
+        }}>
+          <button className="btn btn-sm btn-outline" onClick={fecharTelao} title="Fechar (Esc)"
+            style={{ position: "absolute", top: "1.5rem", right: "1.5rem", background: "rgba(255,255,255,0.1)", borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
+            <FontAwesomeIcon icon={faXmark} style={{ marginRight: 6 }} />Fechar
+          </button>
+
+          {event.logo_url && (
+            <img src={event.logo_url} alt={event.nome} style={{ maxHeight: "min(20vh,220px)", maxWidth: "55vw", objectFit: "contain", marginBottom: "2rem", filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.25))" }} />
+          )}
+
+          <div style={{
+            background: "#fff", borderRadius: "1.25rem", padding: "clamp(1.5rem,3vw,2.5rem)",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column", alignItems: "center",
+            margin: "0.5rem 0 2rem",
+          }}>
+            <QRCodeCanvas value={qrPresencaTurnoValue(modalQRTurno.id, qrTokenTurno)} size={Math.min(360, typeof window !== "undefined" ? Math.round(window.innerHeight * 0.36) : 360)} />
+          </div>
+
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(1.1rem,2.2vw,1.6rem)", color: "#1c2333", fontWeight: 700 }}>
+            {modalQRTurno.nome}
+          </div>
+
+          <div style={{ marginTop: "2rem", fontSize: "clamp(0.8rem,1.3vw,0.95rem)", color: "var(--hero-subtext)" }}>
+            📱 Aponte a câmera do celular para o QR Code e confirme sua presença
+          </div>
+        </div>
+      )}
     </div>
   );
 }
