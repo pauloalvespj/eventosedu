@@ -570,10 +570,11 @@ export default function App() {
         <Route path="/quiz" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
         <Route path="/quiz/:codigo" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
 
-        {/* Telão de apresentação de uma pergunta — aberto em nova janela pelo
-            botão "Apresentar" no admin do quiz, pra arrastar pro projetor
-            sem precisar espelhar a tela do admin. */}
-        <Route path="/quiz-telao/:perguntaId" element={<ApresentacaoQuizPage />} />
+        {/* Telão do quiz — link único e estável pelo código de 4 dígitos (o
+            mesmo do QR), aberto em nova janela pelo botão "Abrir Telão" no
+            admin do quiz, pra arrastar pro projetor sem espelhar a tela do
+            admin. Acompanha sozinho qual pergunta está aberta no momento. */}
+        <Route path="/quiz-telao/:codigo" element={<ApresentacaoQuizPage />} />
 
         {/* /admin e /admin/* redirecionam para /painel */}
         <Route path="/admin"   element={<Navigate to="/painel" replace />} />

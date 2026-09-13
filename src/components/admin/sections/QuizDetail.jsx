@@ -137,10 +137,13 @@ export function QuizDetail() {
     navigate("/painel/quiz");
   }
 
-  // Abre o telão em nova janela/aba — dá pra arrastar pra um segundo
-  // monitor/projetor sem espelhar a tela do admin.
-  function apresentar(p) {
-    window.open(`/quiz-telao/${p.id}`, "_blank", "noopener,width=1400,height=900");
+  // Abre o telão em nova janela/aba — link único e estável pelo código do
+  // quiz (o mesmo do QR), dá pra arrastar pra um segundo monitor/projetor
+  // sem espelhar a tela do admin, e pra colar direto na apresentação
+  // (PowerPoint/slides). Acompanha sozinho qual pergunta está aberta.
+  function abrirTelao() {
+    if (!quiz) return;
+    window.open(`/quiz-telao/${quiz.codigo}`, "_blank", "noopener,width=1400,height=900");
   }
 
   const perguntaResultados = perguntas.find(p => p.id === resultadosId);
@@ -159,9 +162,14 @@ export function QuizDetail() {
             {quiz?.data_inicio && <> · válido {formatData(quiz.data_inicio)}{quiz.data_fim && quiz.data_fim !== quiz.data_inicio ? ` a ${formatData(quiz.data_fim)}` : ""}</>}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={abrirNova}>
-          <FontAwesomeIcon icon={faBolt} style={{ marginRight: 6 }} />+ Nova Pergunta
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button className="btn btn-outline" disabled={!quiz} onClick={() => abrirTelao()}>
+            <FontAwesomeIcon icon={faDisplay} style={{ marginRight: 6 }} />Abrir Telão
+          </button>
+          <button className="btn btn-primary" onClick={abrirNova}>
+            <FontAwesomeIcon icon={faBolt} style={{ marginRight: 6 }} />+ Nova Pergunta
+          </button>
+        </div>
       </div>
 
       <div className="table-wrap">
@@ -192,7 +200,7 @@ export function QuizDetail() {
                 <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
                 <td>
                   <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <button className="btn btn-sm btn-outline" title="Apresentar (tela cheia)" onClick={() => apresentar(p)}>
+                    <button className="btn btn-sm btn-outline" title="Abrir Telão" onClick={() => abrirTelao()}>
                       <FontAwesomeIcon icon={faDisplay} />
                     </button>
                     {p.status !== "aberta" ? (

@@ -1,43 +1,71 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faChartSimple, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faChartSimple, faArrowLeft, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../lib/supabase";
-import { fetchLivePerguntaPorId, fetchQuiz, fetchEvent, fetchLiveRespostas } from "../../lib/db";
+import { fetchQuizPorCodigo, fetchPerguntaAbertaDoQuiz, fetchEvent, fetchLiveRespostas } from "../../lib/db";
 import { QRCodeCanvas } from "../base/index";
 import { BAR_COLORS } from "../../utils/quizColors";
 
-// Página standalone do telão — aberta em nova janela/aba pelo botão
-// "Apresentar" no admin do quiz (QuizDetail), pra poder ser arrastada pra um
+// Página standalone do telão — link estável por CÓDIGO do quiz (o mesmo
+// código de 4 dígitos do QR), aberto em nova janela/aba pelo botão "Abrir
+// Telão" no admin do quiz (QuizDetail), pra poder ser arrastada pra um
 // segundo monitor/projetor em modo tela estendida, sem espelhar a tela do
-// admin. Busca os próprios dados (não depende do AdminContext) e assina
-// Realtime pra atualizar os resultados ao vivo.
+// admin. Acompanha via Realtime qual pergunta está "aberta" no momento —
+// o admin troca de pergunta no painel e o telão atualiza sozinho, sem
+// precisar reabrir a janela a cada pergunta nova.
 export function ApresentacaoQuizPage() {
-  const { perguntaId } = useParams();
-  const [pergunta, setPergunta] = useState(null);
+  const { codigo } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [event, setEvent] = useState(null);
-  const [fase, setFase] = useState(null);
-  const [naoEncontrada, setNaoEncontrada] = useState(false);
+  const [pergunta, setPergunta] = useState(null);
+  const [fase, setFase] = useState("lobby");
+  const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [contagens, setContagens] = useState({});
   const [pulso, setPulso] = useState({});
   const [pops, setPops] = useState([]);
 
+  // Resolve o quiz pelo código e o evento (pro logo) uma única vez.
   useEffect(() => {
     let ativo = true;
     (async () => {
-      const { data: p } = await fetchLivePerguntaPorId(perguntaId);
+      const { data: ev, error: evErro } = await fetchEvent();
       if (!ativo) return;
-      if (!p) { setNaoEncontrada(true); return; }
-      setPergunta(p);
-      setFase(p.status === "aberta" ? "lobby" : "resultados");
-      const [{ data: q }, { data: ev }] = await Promise.all([fetchQuiz(p.quiz_id), fetchEvent()]);
+      if (!ev) { console.error("Telão do quiz: falha ao buscar evento", evErro); setNaoEncontrado(true); return; }
+      const { data: q, error: qErro } = await fetchQuizPorCodigo(ev.id, codigo);
       if (!ativo) return;
-      setQuiz(q);
+      if (!q) { console.error("Telão do quiz: código não encontrado", { codigo, eventId: ev.id, erro: qErro }); setNaoEncontrado(true); return; }
       setEvent(ev);
+      setQuiz(q);
     })();
     return () => { ativo = false; };
-  }, [perguntaId]);
+  }, [codigo]);
+
+  // Acompanha sozinho qual pergunta está "aberta" nesse quiz — o admin
+  // troca de pergunta no painel e esse telão atualiza sem precisar reabrir
+  // a janela a cada pergunta nova.
+  useEffect(() => {
+    if (!quiz) return;
+    let ativo = true;
+
+    function buscarAberta() {
+      fetchPerguntaAbertaDoQuiz(quiz.id).then(({ data }) => {
+        if (!ativo) return;
+        setPergunta(prev => {
+          if (data && (!prev || prev.id !== data.id)) setFase("lobby");
+          return data ?? null;
+        });
+      });
+    }
+    buscarAberta();
+
+    const channel = supabase
+      .channel(`quiz-telao-${quiz.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "live_perguntas", filter: `quiz_id=eq.${quiz.id}` }, buscarAberta)
+      .subscribe();
+
+    return () => { ativo = false; supabase.removeChannel(channel); };
+  }, [quiz?.id]);
 
   useEffect(() => {
     if (!pergunta) return;
@@ -75,18 +103,31 @@ export function ApresentacaoQuizPage() {
   const total = Object.values(contagens).reduce((s, n) => s + n, 0);
   const urlResposta = quiz ? `${window.location.origin}/quiz?c=${quiz.codigo}` : "";
 
-  if (naoEncontrada) {
+  if (naoEncontrado) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text2)" }}>
-        Pergunta não encontrada.
+        Código de quiz não encontrado.
       </div>
     );
   }
 
-  if (!pergunta || !fase) {
+  if (!quiz) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text2)" }}>
         Carregando…
+      </div>
+    );
+  }
+
+  if (!pergunta) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "linear-gradient(160deg,#fafafb,#eceef1)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.25rem" }}>
+        {event?.logo_url && (
+          <img src={event.logo_url} alt={event.nome} style={{ maxHeight: 64, maxWidth: 220, objectFit: "contain", marginBottom: "1rem" }} />
+        )}
+        <FontAwesomeIcon icon={faHourglassHalf} style={{ fontSize: "2.5rem", color: "var(--text3)" }} />
+        <h2 style={{ fontFamily: "'Poppins',sans-serif", color: "var(--navy)", fontSize: "1.5rem", margin: 0 }}>{quiz.titulo}</h2>
+        <p style={{ color: "var(--text3)", fontSize: "1rem", margin: 0 }}>Aguardando a próxima pergunta…</p>
       </div>
     );
   }
