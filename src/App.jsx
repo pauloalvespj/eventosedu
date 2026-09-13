@@ -564,8 +564,10 @@ export default function App() {
         {/* Validação pública de certificado — sem autenticação */}
         <Route path="/validar" element={<ValidarCertificado />} />
 
-        {/* Perguntas ao Vivo — responder é público, sem login (QR/código do telão) */}
+        {/* Perguntas ao Vivo — responder é público, sem login (QR/código do telão).
+            Aceita tanto /quiz (digitando o código na tela) quanto /quiz/CODIGO direto na URL. */}
         <Route path="/quiz" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
+        <Route path="/quiz/:codigo" element={<QuizPage event={event} eventLoaded={eventLoaded} />} />
 
         {/* /admin e /admin/* redirecionam para /painel */}
         <Route path="/admin"   element={<Navigate to="/painel" replace />} />

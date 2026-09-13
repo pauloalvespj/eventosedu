@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../lib/supabase";
@@ -27,6 +27,7 @@ function getAnonId() {
 // Voto é amarrado a um id anônimo salvo no navegador, só pra evitar
 // duplicidade óbvia no mesmo aparelho.
 export function QuizPage({ event, eventLoaded }) {
+  const { codigo: codigoRota } = useParams();
   const [searchParams] = useSearchParams();
   const [anonId] = useState(getAnonId);
   const [quiz, setQuiz] = useState(null);
@@ -56,10 +57,11 @@ export function QuizPage({ event, eventLoaded }) {
     setCodigo("");
   }
 
-  // QR code já chega com ?c=XXXX — resolve sozinho, sem precisar digitar
+  // Código já chega pronto via /quiz/CODIGO ou /quiz?c=CODIGO — resolve
+  // sozinho, sem precisar digitar.
   useEffect(() => {
     if (!event?.id) return;
-    const cParam = (searchParams.get("c") || "").trim();
+    const cParam = (codigoRota || searchParams.get("c") || "").replace(/\D/g, "").slice(0, 4);
     if (cParam.length === 4) resolverCodigo(cParam);
   }, [event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
