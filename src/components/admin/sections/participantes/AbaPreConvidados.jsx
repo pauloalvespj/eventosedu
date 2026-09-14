@@ -237,25 +237,38 @@ export function AbaPreConvidados() {
     try {
       const leadsParaEnviar = convidados.filter(c => ids.includes(c.id));
       const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke("enviar-convite", {
-        body: {
-          leads: leadsParaEnviar, event,
-          bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
-          assunto: convite.assunto, mensagem: convite.mensagem,
-          anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
-          corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
-          ctaTexto: convite.ctaTexto,
-          avisoTitulo: convite.avisoTitulo, avisoTexto: convite.avisoTexto, avisoDestaque: convite.avisoDestaque,
-          avisoLinkUrl: convite.avisoLinkUrl, avisoLinkTexto: convite.avisoLinkTexto,
-          ocultarRealizacao: convite.ocultarRealizacao, ocultarCta: convite.ocultarCta,
-        },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error) throw new Error(await erroFuncaoEdge(error));
-      if (data?.error) throw new Error(data.error);
 
-      const enviados = data?.sent || [];
-      const falhas = data?.failed || [];
+      // Manda em lotes — com muitos leads selecionados, um envio único pode
+      // estourar o tempo limite de execução da Edge Function.
+      const TAMANHO_LOTE = 15;
+      const enviados = [];
+      const falhas = [];
+      for (let i = 0; i < leadsParaEnviar.length; i += TAMANHO_LOTE) {
+        const lote = leadsParaEnviar.slice(i, i + TAMANHO_LOTE);
+        try {
+          const { data, error } = await supabase.functions.invoke("enviar-convite", {
+            body: {
+              leads: lote, event,
+              bannerUrl: convite.bannerUrl, inscricaoUrl: convite.inscricaoUrl,
+              assunto: convite.assunto, mensagem: convite.mensagem,
+              anexoUrl: convite.anexoUrl, anexoNome: convite.anexoNome,
+              corCabecalho: convite.corCabecalho, corRodape: convite.corRodape, corBotao: convite.corBotao,
+              ctaTexto: convite.ctaTexto,
+              avisoTitulo: convite.avisoTitulo, avisoTexto: convite.avisoTexto, avisoDestaque: convite.avisoDestaque,
+              avisoLinkUrl: convite.avisoLinkUrl, avisoLinkTexto: convite.avisoLinkTexto,
+              ocultarRealizacao: convite.ocultarRealizacao, ocultarCta: convite.ocultarCta,
+            },
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          });
+          if (error) throw new Error(await erroFuncaoEdge(error));
+          if (data?.error) throw new Error(data.error);
+          enviados.push(...(data?.sent || []));
+          falhas.push(...(data?.failed || []));
+        } catch (err) {
+          lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
+        }
+      }
+
       let erroPersistencia = null;
       if (enviados.length) {
         setConvidados(prev => prev.map(c => enviados.includes(c.id) ? { ...c, email_enviado: true } : c));

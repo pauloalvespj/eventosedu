@@ -246,10 +246,21 @@ export function AbaInscritos() {
     setEnviandoAtualizacao(true);
     try {
       const leads = incompletos.map(p => ({ id: p.id, email: p.email }));
-      const data = await dispararAtualizacaoCadastro(leads);
-      if (!data) return;
-      const enviados = data.sent || [];
-      const falhas = data.failed || [];
+      // Manda em lotes — com muitos destinatários, um envio único pode
+      // estourar o tempo limite de execução da Edge Function.
+      const TAMANHO_LOTE = 15;
+      const enviados = [];
+      const falhas = [];
+      for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
+        const lote = leads.slice(i, i + TAMANHO_LOTE);
+        try {
+          const data = await dispararAtualizacaoCadastro(lote);
+          enviados.push(...(data?.sent || []));
+          falhas.push(...(data?.failed || []));
+        } catch (err) {
+          lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
+        }
+      }
       registrarLog("participantes.solicitar_atualizacao", "participante", null, null, { enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
         showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
@@ -334,10 +345,23 @@ export function AbaInscritos() {
     setEnviandoComunicado(true);
     try {
       const leads = aprovados.map(p => ({ id: p.id, email: p.email }));
-      const data = await dispararComunicado(template, leads);
-      if (!data) return;
-      const enviados = data.sent || [];
-      const falhas = data.failed || [];
+      // Manda em lotes — uma Edge Function só tem um tempo limite de
+      // execução, e com muitos inscritos (91 nesse evento) um envio único
+      // estoura esse limite e a função é encerrada no meio (erro genérico
+      // "non-2xx status"). Lotes menores ficam sempre dentro do limite.
+      const TAMANHO_LOTE = 15;
+      const enviados = [];
+      const falhas = [];
+      for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
+        const lote = leads.slice(i, i + TAMANHO_LOTE);
+        try {
+          const data = await dispararComunicado(template, lote);
+          enviados.push(...(data?.sent || []));
+          falhas.push(...(data?.failed || []));
+        } catch (err) {
+          lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
+        }
+      }
       registrarLog("participantes.enviar_comunicado", "participante", null, null, { modelo: template.nome, enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
         showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
