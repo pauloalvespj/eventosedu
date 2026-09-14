@@ -56,10 +56,15 @@ export function gerarTemplateHTMLPesquisa({ event, bannerUrl, pesquisaUrl, assun
 </body></html>`;
 }
 
-export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto }) {
+export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, ocultarRealizacao, ocultarCta }) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
   const corCta = corBotao || "#0a1f40";
+  // white-space:pre-line preserva \n como quebra de linha — mas quando a
+  // mensagem já é HTML com tags de bloco (<p>...</p>\n\n<p>...</p>), esse
+  // espaço "decorativo" entre tags também vira uma linha em branco visível,
+  // duplicando o espaçamento. Remove só o espaço/quebra que fica ENTRE tags.
+  const mensagemLimpa = (mensagem || DEFAULT_MENSAGEM).replace(/>\s*\n\s*</g, "><");
   const blocoAviso = avisoTitulo ? `
         <table cellpadding="0" cellspacing="0" style="background:#fff8ea;border:2px solid ${corCta};border-radius:10px;width:100%;margin:0 0 28px;">
           <tr><td style="padding:22px 24px 20px;">
@@ -102,13 +107,14 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
         ${event.nome_completo ? `<div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:8px;">${event.nome_completo}</div>` : ""}
       </td></tr>`}
       <tr><td style="padding:40px 48px;">
-        <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagem || DEFAULT_MENSAGEM}</p>
+        <div style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagemLimpa}</div>
         <table cellpadding="0" cellspacing="0" style="background:#f7f9fc;border-radius:8px;padding:20px;margin:0 0 28px;width:100%;">
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📍 <strong>Local:</strong> ${event.local || ""}</td></tr>
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${formatDataBR(event.data_inicio)} a ${formatDataBR(event.data_fim)}</td></tr>
-          ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
+          ${event.realizacao && !ocultarRealizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
         </table>
         ${blocoAviso}
+        ${!ocultarCta ? `
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
           <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
@@ -118,7 +124,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
         </table>
         <p style="font-size:13px;color:#a0aec0;text-align:center;margin:0 0 ${anexoUrl ? "20" : "0"}px;">
           Se o botão não funcionar, acesse: <a href="${inscricaoUrl}" style="color:#0a1f40;">${inscricaoUrl}</a>
-        </p>
+        </p>` : ""}
         ${anexoUrl ? `
         <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
           <tr><td align="center" style="border-radius:8px;border:1.5px solid #0a1f40;">

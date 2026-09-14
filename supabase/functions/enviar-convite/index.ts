@@ -32,10 +32,15 @@ function formatDataBR(d: string | undefined): string {
   return `${dia}/${m}/${y}`;
 }
 
-function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto }: any) {
+function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, ocultarRealizacao, ocultarCta }: any) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
   const corCta = corBotao || "#0a1f40";
+  // white-space:pre-line preserva \n como quebra de linha — mas quando a
+  // mensagem já é HTML com tags de bloco (<p>...</p>\n\n<p>...</p>), esse
+  // espaço "decorativo" entre tags também vira uma linha em branco visível,
+  // duplicando o espaçamento. Remove só o espaço/quebra que fica ENTRE tags.
+  const mensagemLimpa = (mensagem || DEFAULT_MENSAGEM).replace(/>\s*\n\s*</g, "><");
   const blocoAviso = avisoTitulo ? `
         <table cellpadding="0" cellspacing="0" style="background:#fff8ea;border:2px solid ${corCta};border-radius:10px;width:100%;margin:0 0 28px;">
           <tr><td style="padding:22px 24px 20px;">
@@ -78,13 +83,14 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, 
         ${event.nome_completo ? `<div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:8px;">${event.nome_completo}</div>` : ""}
       </td></tr>`}
       <tr><td style="padding:40px 48px;">
-        <p style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagem || DEFAULT_MENSAGEM}</p>
+        <div style="font-size:15px;color:#4a5568;line-height:1.7;margin:0 0 20px;white-space:pre-line;">${mensagemLimpa}</div>
         <table cellpadding="0" cellspacing="0" style="background:#f7f9fc;border-radius:8px;padding:20px;margin:0 0 28px;width:100%;">
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📍 <strong>Local:</strong> ${event.local || ""}</td></tr>
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${formatDataBR(event.data_inicio)} a ${formatDataBR(event.data_fim)}</td></tr>
-          ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
+          ${event.realizacao && !ocultarRealizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
         </table>
         ${blocoAviso}
+        ${!ocultarCta ? `
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
           <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
@@ -94,7 +100,7 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, 
         </table>
         <p style="font-size:13px;color:#a0aec0;text-align:center;margin:0 0 ${anexoUrl ? "20" : "0"}px;">
           Se o botão não funcionar, acesse: <a href="${inscricaoUrl}" style="color:#0a1f40;">${inscricaoUrl}</a>
-        </p>
+        </p>` : ""}
         ${anexoUrl ? `
         <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
           <tr><td align="center" style="border-radius:8px;border:1.5px solid #0a1f40;">
@@ -137,7 +143,7 @@ Deno.serve(async (req) => {
       .from("profiles").select("role").eq("id", caller.id).single();
     if (callerProfile?.role !== "admin") return json({ error: "Permissão insuficiente" }, 403);
 
-    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, magicLink, origin } = await req.json();
+    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, ocultarRealizacao, ocultarCta, magicLink, origin } = await req.json();
     if (!Array.isArray(leads) || !leads.length) {
       return json({ error: "leads é obrigatório e não pode ser vazio" }, 400);
     }
@@ -168,13 +174,16 @@ Deno.serve(async (req) => {
     const failed: { id: string | number; email: string; error: string }[] = [];
 
     // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só.
-    // Usa o campo nativo `html` do denomailer (quoted-printable) em vez de
-    // montar mimeContent em base64 manualmente — um base64 numa linha só
-    // corrompe a mensagem em alguns clientes, e quebrar linha manualmente
-    // (a cada 76 caracteres, RFC 2045) também vazava um trecho do <head>
-    // no Gmail, provavelmente por causa de algo no caminho (relay da Brevo)
-    // reprocessando o CRLF embutido de forma errada.
-    const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
+    // Nem base64 nem quoted-printable sobrevivem intactos até o Gmail nesse
+    // caminho (relay da Brevo) — os dois casos mostraram sinais de que o
+    // Content-Transfer-Encoding não é respeitado corretamente. Manda o HTML
+    // cru (UTF-8, sem nenhuma codificação de transferência), o que evita
+    // qualquer decodificação incorreta no meio do caminho.
+    const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, ocultarRealizacao, ocultarCta });
+    const mimeContentPadrao = htmlPadrao ? [{
+      mimeType: 'text/html; charset="utf-8"',
+      content: htmlPadrao,
+    }] : null;
 
     // Reenvia até 2x em caso de falha transitória de rede/SMTP antes de marcar como falho
     async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
@@ -193,7 +202,7 @@ Deno.serve(async (req) => {
 
     for (const lead of leads) {
       try {
-        let html = htmlPadrao;
+        let mimeContent = mimeContentPadrao;
 
         if (magicLink) {
           // Link de login direto (sem precisar digitar e-mail/senha de novo) —
@@ -210,14 +219,15 @@ Deno.serve(async (req) => {
           } catch {
             // Segue com o link estático (inscricaoUrl) como fallback
           }
-          html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
+          const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, ocultarRealizacao, ocultarCta });
+          mimeContent = [{ mimeType: 'text/html; charset="utf-8"', content: html }];
         }
 
         await enviarComRetry({
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: lead.email,
           subject: assunto || `Convite — ${event?.nome || "Evento"}`,
-          html,
+          mimeContent,
         });
         sent.push(lead.id);
       } catch (err) {

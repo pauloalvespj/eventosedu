@@ -218,6 +218,7 @@ export function AbaPreConvidados() {
       ctaTexto: convite.ctaTexto,
       avisoTitulo: convite.avisoTitulo, avisoTexto: convite.avisoTexto, avisoDestaque: convite.avisoDestaque,
       avisoLinkUrl: convite.avisoLinkUrl, avisoLinkTexto: convite.avisoLinkTexto,
+      ocultarRealizacao: convite.ocultarRealizacao, ocultarCta: convite.ocultarCta,
     });
   }
 
@@ -246,6 +247,7 @@ export function AbaPreConvidados() {
           ctaTexto: convite.ctaTexto,
           avisoTitulo: convite.avisoTitulo, avisoTexto: convite.avisoTexto, avisoDestaque: convite.avisoDestaque,
           avisoLinkUrl: convite.avisoLinkUrl, avisoLinkTexto: convite.avisoLinkTexto,
+          ocultarRealizacao: convite.ocultarRealizacao, ocultarCta: convite.ocultarCta,
         },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });

@@ -119,6 +119,9 @@ Deno.serve(async (req) => {
     const failed: { id: string | number; email: string; error: string }[] = [];
 
     const html = gerarTemplateHTML({ event: event || {}, bannerUrl, pesquisaUrl, assunto, mensagem, corCabecalho, corRodape, corBotao });
+    // Nem base64 nem quoted-printable sobrevivem intactos nesse caminho
+    // (relay da Brevo) — manda o HTML cru, sem codificação de transferência.
+    const mimeContent = [{ mimeType: 'text/html; charset="utf-8"', content: html }];
 
     async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
       let ultimoErro: unknown;
@@ -140,7 +143,7 @@ Deno.serve(async (req) => {
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: dest.email,
           subject: assunto || `Pesquisa de Satisfação — ${event?.nome || "Evento"}`,
-          html,
+          mimeContent,
         });
         sent.push(dest.id);
       } catch (err) {

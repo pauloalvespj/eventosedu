@@ -297,6 +297,7 @@ export function AbaInscritos() {
         ctaTexto: template.ctaTexto,
         avisoTitulo: template.avisoTitulo, avisoTexto: template.avisoTexto, avisoDestaque: template.avisoDestaque,
         avisoLinkUrl: template.avisoLinkUrl, avisoLinkTexto: template.avisoLinkTexto,
+        ocultarRealizacao: template.ocultarRealizacao, ocultarCta: template.ocultarCta,
       },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });

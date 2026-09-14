@@ -21,6 +21,8 @@ const TEMPLATE_DEFAULTS = {
   avisoDestaque: "",
   avisoLinkUrl: "",
   avisoLinkTexto: "",
+  ocultarRealizacao: false,
+  ocultarCta: false,
 };
 
 function CorField({ label, value, onChange }) {
@@ -137,6 +139,8 @@ export function AbaConfigEmail() {
       avisoDestaque: ativo.avisoDestaque,
       avisoLinkUrl: ativo.avisoLinkUrl,
       avisoLinkTexto: ativo.avisoLinkTexto,
+      ocultarRealizacao: ativo.ocultarRealizacao,
+      ocultarCta: ativo.ocultarCta,
     });
   }
 
@@ -150,35 +154,28 @@ export function AbaConfigEmail() {
   }
 
   async function baixarPDF() {
+    const body = iframeRef.current?.contentDocument?.body;
+    if (!body) { showToast("Preview ainda não carregou.", "warn"); return; }
     setGerandoPdf(true);
-    // Renderiza num container no próprio documento (não no iframe aninhado) —
-    // jsPDF/html2canvas resolvem estilos computados errado através da
-    // fronteira de outro document/window, o que deixava o PDF quebrado.
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-10000px";
-    container.style.top = "0";
-    container.style.width = "600px";
-    const parsed = new DOMParser().parseFromString(htmlPreview(), "text/html");
-    container.innerHTML = parsed.body.innerHTML;
-    document.body.appendChild(container);
     try {
-      const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      await new Promise((resolve) => {
-        doc.html(container, {
-          x: 0, y: 0,
-          width: 595,
-          windowWidth: 600,
-          autoPaging: "slice",
-          callback: () => resolve(),
-        });
-      });
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+      // Captura o body do iframe isolado do preview — evita que o CSS do
+      // próprio painel admin vaze pro HTML do e-mail durante a captura.
+      const canvas = await html2canvas(body, { scale: 2, backgroundColor: "#ffffff", windowWidth: 600, useCORS: true });
+      const imgW = 595.28; // largura A4 em pt, só como referência de escala
+      const imgH = (canvas.height * imgW) / canvas.width;
+      // Página com altura sob medida pro conteúdo — sai sempre em 1 página,
+      // em vez de cortar o e-mail em várias páginas A4.
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: [imgW, imgH] });
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 0, 0, imgW, imgH);
       doc.save(`${(ativo.nome || "modelo").toLowerCase().replace(/\s+/g, "-")}.pdf`);
     } catch (err) {
       showToast("Erro ao gerar PDF: " + (err.message || err), "error");
     } finally {
-      document.body.removeChild(container);
       setGerandoPdf(false);
     }
   }
@@ -271,6 +268,16 @@ export function AbaConfigEmail() {
           <div className="form-group">
             <label className="form-label">URL da Página de Inscrição *</label>
             <input className="form-input" type="url" value={ativo.inscricaoUrl} onChange={e => set("inscricaoUrl", e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", cursor: "pointer", marginBottom: 8 }}>
+              <input type="checkbox" checked={!!ativo.ocultarCta} onChange={e => set("ocultarCta", e.target.checked)} />
+              Ocultar botão principal (e o link de fallback)
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", cursor: "pointer" }}>
+              <input type="checkbox" checked={!!ativo.ocultarRealizacao} onChange={e => set("ocultarRealizacao", e.target.checked)} />
+              Ocultar linha "Realização" da caixa de local/data
+            </label>
           </div>
           <div className="form-group">
             <label className="form-label">Anexo (PDF, imagem, etc.)</label>
