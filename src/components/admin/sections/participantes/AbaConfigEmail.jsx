@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faUpload, faTrash, faEye, faPaperclip, faPlus, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faUpload, faTrash, faEye, faPaperclip, faPlus, faDownload, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { atualizarEvento, uploadConviteAnexo } from "../../../../lib/db";
 import { gerarTemplateHTML, DEFAULT_MENSAGEM } from "../../../../lib/emailTemplate";
@@ -62,7 +62,9 @@ export function AbaConfigEmail() {
   const [ativoId, setAtivoId]     = useState(() => templates[0]?.id);
   const [salvando, setSalvando]   = useState(false);
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
   const fileRef = useRef();
+  const iframeRef = useRef();
 
   const ativo = templates.find(t => t.id === ativoId) || templates[0];
 
@@ -145,6 +147,30 @@ export function AbaConfigEmail() {
     a.download = `${(ativo.nome || "modelo").toLowerCase().replace(/\s+/g, "-")}.html`;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  async function baixarPDF() {
+    const body = iframeRef.current?.contentDocument?.body;
+    if (!body) { showToast("Preview ainda não carregou.", "warn"); return; }
+    setGerandoPdf(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      await new Promise((resolve, reject) => {
+        doc.html(body, {
+          x: 0, y: 0,
+          width: 595,
+          windowWidth: 600,
+          autoPaging: "slice",
+          callback: () => resolve(),
+        });
+      });
+      doc.save(`${(ativo.nome || "modelo").toLowerCase().replace(/\s+/g, "-")}.pdf`);
+    } catch (err) {
+      showToast("Erro ao gerar PDF: " + (err.message || err), "error");
+    } finally {
+      setGerandoPdf(false);
+    }
   }
 
   return (
@@ -260,11 +286,17 @@ export function AbaConfigEmail() {
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
             <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
               <span><FontAwesomeIcon icon={faEye} style={{ marginRight: 6 }} />Preview do E-mail — {ativo.nome}</span>
-              <button type="button" className="btn btn-sm btn-outline" style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600 }} onClick={baixarHTML} title="Baixar o HTML deste modelo">
-                <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar HTML
-              </button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button type="button" className="btn btn-sm btn-outline" style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600 }} onClick={baixarHTML} title="Baixar o HTML deste modelo">
+                  <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />HTML
+                </button>
+                <button type="button" className="btn btn-sm btn-outline" style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600 }} onClick={baixarPDF} disabled={gerandoPdf} title="Baixar o preview deste modelo em PDF">
+                  <FontAwesomeIcon icon={faFilePdf} style={{ marginRight: 6 }} />{gerandoPdf ? "Gerando…" : "PDF"}
+                </button>
+              </div>
             </div>
             <iframe
+              ref={iframeRef}
               title="preview-config-email"
               srcDoc={htmlPreview()}
               style={{ width: "100%", height: 800, border: 0, display: "block" }}
