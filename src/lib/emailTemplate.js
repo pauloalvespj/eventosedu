@@ -70,7 +70,7 @@ export function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, men
             ${avisoLinkUrl ? `
             <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
               <tr><td align="center" style="border-radius:8px;background:${corCta};">
-                <a href="${avisoLinkUrl}" style="display:inline-block;padding:13px 28px;font-size:14.5px;font-weight:700;color:#ffffff;letter-spacing:0.2px;">
+                <a href="${avisoLinkUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:13px 28px;font-size:14.5px;font-weight:700;color:#ffffff;letter-spacing:0.2px;">
                   ${avisoLinkTexto || "Saiba mais →"}
                 </a>
               </td></tr>
