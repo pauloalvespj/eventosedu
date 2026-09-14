@@ -168,7 +168,11 @@ Deno.serve(async (req) => {
       const bytes = new TextEncoder().encode(str);
       let binary = "";
       for (const b of bytes) binary += String.fromCharCode(b);
-      return btoa(binary);
+      const b64 = btoa(binary);
+      // RFC 2045 exige linhas de no máximo 76 caracteres em conteúdo base64 —
+      // sem isso, alguns servidores/clientes de e-mail corrompem a mensagem
+      // (o base64 cru aparece como corpo do e-mail em vez do HTML renderizado).
+      return b64.replace(/.{76}/g, "$&\r\n");
     }
 
     // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só
