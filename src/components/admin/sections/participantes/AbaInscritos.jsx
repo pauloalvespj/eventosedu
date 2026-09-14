@@ -409,6 +409,11 @@ export function AbaInscritos() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <button className="btn btn-outline" disabled={aprovados.length === 0 || templatesComunicado.length === 0}
+          onClick={() => setModalComunicado(true)}
+          title="Escolha um modelo (Participantes → Modelos) e envie pra todos os inscritos aprovados — ex: orientações de véspera, lembretes, avisos.">
+          📧 Enviar Comunicado ({aprovados.length})
+        </button>
         <button className="btn btn-outline" onClick={exportarXLS}>
           <FontAwesomeIcon icon={faFileExcel} style={{ marginRight: 6 }} />Exportar XLS
         </button>
@@ -582,15 +587,6 @@ export function AbaInscritos() {
         </p>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
-        <button className="btn btn-outline" disabled={aprovados.length === 0 || templatesComunicado.length === 0}
-          onClick={() => setModalComunicado(true)}>
-          📧 Enviar comunicado ({aprovados.length})
-        </button>
-        <p style={{ fontSize: "0.8rem", color: "var(--text3)", margin: 0, flex: 1, minWidth: 220 }}>
-          Escolhe um modelo (Participantes → Modelos) e envia para todos os {aprovados.length} inscrito{aprovados.length !== 1 ? "s" : ""} com inscrição aprovada — ex: orientações de véspera, lembretes, avisos.
-        </p>
-      </div>
 
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
         title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"} wide>
