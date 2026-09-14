@@ -167,25 +167,14 @@ Deno.serve(async (req) => {
     const sent: (string | number)[] = [];
     const failed: { id: string | number; email: string; error: string }[] = [];
 
-    // Base64 evita o bug de quoted-printable do denomailer que deixava "=20" visível no corpo do e-mail
-    function toBase64Utf8(str: string): string {
-      const bytes = new TextEncoder().encode(str);
-      let binary = "";
-      for (const b of bytes) binary += String.fromCharCode(b);
-      const b64 = btoa(binary);
-      // RFC 2045 exige linhas de no máximo 76 caracteres em conteúdo base64 —
-      // sem isso, alguns servidores/clientes de e-mail corrompem a mensagem
-      // (o base64 cru aparece como corpo do e-mail em vez do HTML renderizado).
-      return b64.replace(/.{76}/g, "$&\r\n");
-    }
-
-    // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só
+    // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só.
+    // Usa o campo nativo `html` do denomailer (quoted-printable) em vez de
+    // montar mimeContent em base64 manualmente — um base64 numa linha só
+    // corrompe a mensagem em alguns clientes, e quebrar linha manualmente
+    // (a cada 76 caracteres, RFC 2045) também vazava um trecho do <head>
+    // no Gmail, provavelmente por causa de algo no caminho (relay da Brevo)
+    // reprocessando o CRLF embutido de forma errada.
     const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
-    const mimeContentPadrao = htmlPadrao ? [{
-      mimeType: 'text/html; charset="utf-8"',
-      content: toBase64Utf8(htmlPadrao),
-      transferEncoding: "base64",
-    }] : null;
 
     // Reenvia até 2x em caso de falha transitória de rede/SMTP antes de marcar como falho
     async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
@@ -204,7 +193,7 @@ Deno.serve(async (req) => {
 
     for (const lead of leads) {
       try {
-        let mimeContent = mimeContentPadrao;
+        let html = htmlPadrao;
 
         if (magicLink) {
           // Link de login direto (sem precisar digitar e-mail/senha de novo) —
@@ -221,19 +210,14 @@ Deno.serve(async (req) => {
           } catch {
             // Segue com o link estático (inscricaoUrl) como fallback
           }
-          const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
-          mimeContent = [{
-            mimeType: 'text/html; charset="utf-8"',
-            content: toBase64Utf8(html),
-            transferEncoding: "base64",
-          }];
+          html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
         }
 
         await enviarComRetry({
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: lead.email,
           subject: assunto || `Convite — ${event?.nome || "Evento"}`,
-          mimeContent,
+          html,
         });
         sent.push(lead.id);
       } catch (err) {

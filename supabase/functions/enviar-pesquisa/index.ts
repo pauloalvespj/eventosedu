@@ -120,19 +120,6 @@ Deno.serve(async (req) => {
 
     const html = gerarTemplateHTML({ event: event || {}, bannerUrl, pesquisaUrl, assunto, mensagem, corCabecalho, corRodape, corBotao });
 
-    // Base64 evita o bug de quoted-printable do denomailer que deixava "=20" visível no corpo do e-mail
-    function toBase64Utf8(str: string): string {
-      const bytes = new TextEncoder().encode(str);
-      let binary = "";
-      for (const b of bytes) binary += String.fromCharCode(b);
-      return btoa(binary);
-    }
-    const mimeContent = [{
-      mimeType: 'text/html; charset="utf-8"',
-      content: toBase64Utf8(html),
-      transferEncoding: "base64",
-    }];
-
     async function enviarComRetry(payload: Record<string, unknown>, tentativas = 2) {
       let ultimoErro: unknown;
       for (let i = 0; i < tentativas; i++) {
@@ -153,7 +140,7 @@ Deno.serve(async (req) => {
           from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
           to: dest.email,
           subject: assunto || `Pesquisa de Satisfação — ${event?.nome || "Evento"}`,
-          mimeContent,
+          html,
         });
         sent.push(dest.id);
       } catch (err) {
