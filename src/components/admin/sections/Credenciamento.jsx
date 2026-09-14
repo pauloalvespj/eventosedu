@@ -27,25 +27,18 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
 
   function iniciarCredenciamento(p) {
     const faltaCpf = !p.cpf;
-    const faltaNomePublico = !p.nome_publico;
-    if (!faltaCpf && !faltaNomePublico) { credenciar(p.id, true); return; }
-    setPendencia({ participante: p, faltaCpf, faltaNomePublico, cpf: p.cpf || "", nomePublico: p.nome_publico || "", erro: "", salvando: false });
+    if (!faltaCpf) { credenciar(p.id, true); return; }
+    setPendencia({ participante: p, cpf: "", erro: "", salvando: false });
   }
 
   async function salvarPendenciaECredenciar() {
-    const { participante, faltaCpf, faltaNomePublico, cpf, nomePublico } = pendencia;
-    if (faltaNomePublico && !nomePublico.trim()) {
-      setPendencia(pd => ({ ...pd, erro: "Informe o nome para o crachá." }));
-      return;
-    }
-    if (faltaCpf && !validateCPF(cpf)) {
+    const { participante, cpf } = pendencia;
+    if (!validateCPF(cpf)) {
       setPendencia(pd => ({ ...pd, erro: "CPF inválido." }));
       return;
     }
     setPendencia(pd => ({ ...pd, salvando: true, erro: "" }));
-    const updates = {};
-    if (faltaCpf) updates.cpf = cpf;
-    if (faltaNomePublico) updates.nome_publico = nomePublico.trim();
+    const updates = { cpf };
     const { error } = await atualizarProfile(participante.id, updates);
     if (error) {
       setPendencia(pd => ({ ...pd, salvando: false, erro: "Erro ao salvar dados. Tente novamente." }));
@@ -193,23 +186,14 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
       <Modal show={!!pendencia} onClose={() => setPendencia(null)} title="Completar cadastro">
         <div style={{ fontSize: "0.8rem", color: "var(--text3)", marginTop: "-0.75rem", marginBottom: "1.25rem" }}>{pendencia?.participante.nome}</div>
         <p style={{ color: "var(--text2)", fontSize: "0.88rem", marginBottom: "1rem" }}>
-          Para credenciar, complete o(s) dado(s) abaixo:
+          Para credenciar, informe o CPF abaixo:
         </p>
         <div className="form-grid">
-          {pendencia?.faltaNomePublico && (
-            <div className="form-group" style={{ gridColumn: "1/-1" }}>
-              <label className="form-label">Nome para Crachá e Divulgação *</label>
-              <input className="form-input" placeholder="Como quer ser chamado(a) no crachá"
-                value={pendencia.nomePublico} onChange={e => setPendencia(pd => ({ ...pd, nomePublico: e.target.value }))} />
-            </div>
-          )}
-          {pendencia?.faltaCpf && (
-            <div className="form-group" style={{ gridColumn: "1/-1" }}>
-              <label className="form-label">CPF *</label>
-              <input className="form-input" placeholder="000.000.000-00" maxLength={14}
-                value={pendencia.cpf} onChange={e => setPendencia(pd => ({ ...pd, cpf: formatCPF(e.target.value) }))} />
-            </div>
-          )}
+          <div className="form-group" style={{ gridColumn: "1/-1" }}>
+            <label className="form-label">CPF *</label>
+            <input className="form-input" placeholder="000.000.000-00" maxLength={14}
+              value={pendencia?.cpf || ""} onChange={e => setPendencia(pd => ({ ...pd, cpf: formatCPF(e.target.value) }))} />
+          </div>
         </div>
         {pendencia?.erro && <div className="form-error" style={{ marginBottom: "0.75rem" }}>{pendencia.erro}</div>}
         <button className="btn btn-primary btn-block" style={{ marginTop: "0.5rem" }} onClick={salvarPendenciaECredenciar} disabled={pendencia?.salvando}>
