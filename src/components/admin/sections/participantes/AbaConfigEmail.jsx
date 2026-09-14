@@ -150,14 +150,23 @@ export function AbaConfigEmail() {
   }
 
   async function baixarPDF() {
-    const body = iframeRef.current?.contentDocument?.body;
-    if (!body) { showToast("Preview ainda não carregou.", "warn"); return; }
     setGerandoPdf(true);
+    // Renderiza num container no próprio documento (não no iframe aninhado) —
+    // jsPDF/html2canvas resolvem estilos computados errado através da
+    // fronteira de outro document/window, o que deixava o PDF quebrado.
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-10000px";
+    container.style.top = "0";
+    container.style.width = "600px";
+    const parsed = new DOMParser().parseFromString(htmlPreview(), "text/html");
+    container.innerHTML = parsed.body.innerHTML;
+    document.body.appendChild(container);
     try {
       const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      await new Promise((resolve, reject) => {
-        doc.html(body, {
+      await new Promise((resolve) => {
+        doc.html(container, {
           x: 0, y: 0,
           width: 595,
           windowWidth: 600,
@@ -169,6 +178,7 @@ export function AbaConfigEmail() {
     } catch (err) {
       showToast("Erro ao gerar PDF: " + (err.message || err), "error");
     } finally {
+      document.body.removeChild(container);
       setGerandoPdf(false);
     }
   }
