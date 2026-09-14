@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faUpload, faTrash, faEye, faPaperclip, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faUpload, faTrash, faEye, faPaperclip, faPlus, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "../AdminContext";
 import { atualizarEvento, uploadConviteAnexo } from "../../../../lib/db";
 import { gerarTemplateHTML, DEFAULT_MENSAGEM } from "../../../../lib/emailTemplate";
@@ -138,6 +138,15 @@ export function AbaConfigEmail() {
     });
   }
 
+  function baixarHTML() {
+    const blob = new Blob([htmlPreview()], { type: "text/html" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(ativo.nome || "modelo").toLowerCase().replace(/\s+/g, "-")}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -249,8 +258,11 @@ export function AbaConfigEmail() {
 
         <div>
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-            <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
-              <FontAwesomeIcon icon={faEye} />Preview do E-mail — {ativo.nome}
+            <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              <span><FontAwesomeIcon icon={faEye} style={{ marginRight: 6 }} />Preview do E-mail — {ativo.nome}</span>
+              <button type="button" className="btn btn-sm btn-outline" style={{ textTransform: "none", letterSpacing: 0, fontWeight: 600 }} onClick={baixarHTML} title="Baixar o HTML deste modelo">
+                <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Baixar HTML
+              </button>
             </div>
             <iframe
               title="preview-config-email"
