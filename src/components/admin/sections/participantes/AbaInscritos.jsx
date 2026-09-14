@@ -246,10 +246,10 @@ export function AbaInscritos() {
     setEnviandoAtualizacao(true);
     try {
       const leads = incompletos.map(p => ({ id: p.id, email: p.email }));
-      // Manda em lotes pequenos, com pausa entre eles — com muitos
-      // destinatários, um envio único (ou lotes grandes demais) estoura o
-      // limite de recursos da Edge Function (HTTP 546, "WORKER_LIMIT").
-      const TAMANHO_LOTE = 5;
+      // Um e-mail por invocação, com pausa entre elas — mesmo lotes de 5
+      // estouram o limite de recursos da Edge Function (HTTP 546,
+      // "WORKER_LIMIT"); só o envio de teste (1 e-mail) é confiável.
+      const TAMANHO_LOTE = 1;
       const enviados = [];
       const falhas = [];
       for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
@@ -261,7 +261,7 @@ export function AbaInscritos() {
         } catch (err) {
           lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
         }
-        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 600));
+        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 500));
       }
       registrarLog("participantes.solicitar_atualizacao", "participante", null, null, { enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
@@ -347,10 +347,10 @@ export function AbaInscritos() {
     setEnviandoComunicado(true);
     try {
       const leads = aprovados.map(p => ({ id: p.id, email: p.email }));
-      // Manda em lotes pequenos, com pausa entre eles — com muitos inscritos
-      // (91 nesse evento) um envio único ou lotes grandes estouram o limite
-      // de recursos da Edge Function (HTTP 546, "WORKER_LIMIT").
-      const TAMANHO_LOTE = 5;
+      // Um e-mail por invocação, com pausa entre elas — mesmo lotes de 5
+      // estouram o limite de recursos da Edge Function (HTTP 546,
+      // "WORKER_LIMIT"); só o envio de teste (1 e-mail) é confiável.
+      const TAMANHO_LOTE = 1;
       const enviados = [];
       const falhas = [];
       for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
@@ -362,7 +362,7 @@ export function AbaInscritos() {
         } catch (err) {
           lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
         }
-        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 600));
+        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 500));
       }
       registrarLog("participantes.enviar_comunicado", "participante", null, null, { modelo: template.nome, enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {

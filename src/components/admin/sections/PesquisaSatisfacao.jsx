@@ -225,16 +225,32 @@ function AbaEnviar({ event, setEvent, participantes, showToast }) {
     setEnviando(true);
     try {
       const destinatarios = participantes.filter(p => ids.includes(p.id)).map(p => ({ id: p.id, email: p.email }));
-      const { data: { session } } = await supabase.auth.getSession();
       const pesquisaUrl = `${window.location.origin}/painel/pesquisa`;
-      const { data, error } = await supabase.functions.invoke("enviar-pesquisa", {
-        body: { destinatarios, event, pesquisaUrl, ...template },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error) throw new Error(await erroFuncaoEdge(error));
-      if (data?.error) throw new Error(data.error);
-      const enviados = data?.sent || [];
-      const falhas = data?.failed || [];
+
+      // Um e-mail por invocação, com pausa entre elas — mesmo lotes de 5
+      // estouram o limite de recursos da Edge Function (HTTP 546,
+      // "WORKER_LIMIT"); só o envio de teste (1 e-mail) é confiável.
+      const TAMANHO_LOTE = 1;
+      const enviados = [];
+      const falhas = [];
+      for (let i = 0; i < destinatarios.length; i += TAMANHO_LOTE) {
+        const lote = destinatarios.slice(i, i + TAMANHO_LOTE);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const { data, error } = await supabase.functions.invoke("enviar-pesquisa", {
+            body: { destinatarios: lote, event, pesquisaUrl, ...template },
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          });
+          if (error) throw new Error(await erroFuncaoEdge(error));
+          if (data?.error) throw new Error(data.error);
+          enviados.push(...(data?.sent || []));
+          falhas.push(...(data?.failed || []));
+        } catch (err) {
+          lote.forEach(d => falhas.push({ id: d.id, email: d.email, error: err.message || String(err) }));
+        }
+        if (i + TAMANHO_LOTE < destinatarios.length) await new Promise(r => setTimeout(r, 500));
+      }
+
       if (falhas.length) {
         showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
         console.warn("Falhas ao enviar pesquisa:", falhas);

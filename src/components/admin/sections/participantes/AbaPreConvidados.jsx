@@ -237,10 +237,10 @@ export function AbaPreConvidados() {
     try {
       const leadsParaEnviar = convidados.filter(c => ids.includes(c.id));
 
-      // Manda em lotes pequenos, com pausa entre eles — com muitos leads
-      // selecionados, um envio único ou lotes grandes estouram o limite de
-      // recursos da Edge Function (HTTP 546, "WORKER_LIMIT").
-      const TAMANHO_LOTE = 5;
+      // Um e-mail por invocação, com pausa entre elas — mesmo lotes de 5
+      // estouram o limite de recursos da Edge Function (HTTP 546,
+      // "WORKER_LIMIT"); só o envio de teste (1 e-mail) é confiável.
+      const TAMANHO_LOTE = 1;
       const enviados = [];
       const falhas = [];
       for (let i = 0; i < leadsParaEnviar.length; i += TAMANHO_LOTE) {
@@ -268,7 +268,7 @@ export function AbaPreConvidados() {
         } catch (err) {
           lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
         }
-        if (i + TAMANHO_LOTE < leadsParaEnviar.length) await new Promise(r => setTimeout(r, 600));
+        if (i + TAMANHO_LOTE < leadsParaEnviar.length) await new Promise(r => setTimeout(r, 500));
       }
 
       let erroPersistencia = null;
