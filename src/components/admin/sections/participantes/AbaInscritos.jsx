@@ -21,6 +21,11 @@ export function AbaInscritos() {
   const [enviandoAtualizacao, setEnviandoAtualizacao] = useState(false);
   const [emailTeste, setEmailTeste]               = useState("pauloalvespj@ufc.br");
   const [enviandoTeste, setEnviandoTeste]         = useState(false);
+  const [modalComunicado, setModalComunicado]     = useState(false);
+  const [templateComunicadoId, setTemplateComunicadoId] = useState("");
+  const [enviandoComunicado, setEnviandoComunicado] = useState(false);
+  const [emailTesteComunicado, setEmailTesteComunicado] = useState("pauloalvespj@ufc.br");
+  const [enviandoTesteComunicado, setEnviandoTesteComunicado] = useState(false);
   const [busca, setBusca]               = useState("");
   const [filtroRole, setFiltroRole]     = useState("todos");
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
@@ -208,6 +213,8 @@ export function AbaInscritos() {
   const totCancelados = participantes.filter(p => p.ativo === false).length;
   const incompletos = participantes.filter(p => p.ativo !== false && estaIncompleto(p));
   const completos = participantes.filter(p => p.ativo !== false && p.status_inscricao !== "pendente" && !estaIncompleto(p));
+  const aprovados = participantes.filter(p => p.ativo !== false && p.status_inscricao === "aprovado");
+  const templatesComunicado = event?.convite_templates || [];
 
   async function dispararAtualizacaoCadastro(leads) {
     const template = (event.convite_templates || []).find(t => t.id === "tpl-atualizacao-cadastro");
@@ -274,6 +281,74 @@ export function AbaInscritos() {
       showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
     } finally {
       setEnviandoTeste(false);
+    }
+  }
+
+  async function dispararComunicado(template, leads) {
+    const inscricaoUrl = template.inscricaoUrl || window.location.origin;
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke("enviar-convite", {
+      body: {
+        leads, event,
+        bannerUrl: template.bannerUrl, inscricaoUrl,
+        assunto: template.assunto, mensagem: template.mensagem,
+        anexoUrl: template.anexoUrl, anexoNome: template.anexoNome,
+        corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
+        ctaTexto: template.ctaTexto,
+        avisoTitulo: template.avisoTitulo, avisoTexto: template.avisoTexto, avisoDestaque: template.avisoDestaque,
+        avisoLinkUrl: template.avisoLinkUrl, avisoLinkTexto: template.avisoLinkTexto,
+      },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) throw new Error(await erroFuncaoEdge(error));
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function enviarTesteComunicado() {
+    const template = templatesComunicado.find(t => t.id === templateComunicadoId);
+    if (!template) { showToast("Escolha um modelo.", "error"); return; }
+    const email = emailTesteComunicado.trim();
+    if (!email) { showToast("Informe um e-mail para o teste.", "error"); return; }
+    setEnviandoTesteComunicado(true);
+    try {
+      const data = await dispararComunicado(template, [{ id: "teste", email }]);
+      if (!data) return;
+      if (data.failed?.length) {
+        showToast("Falha ao enviar teste: " + (data.failed[0]?.error || "erro desconhecido"), "error");
+      } else {
+        showToast(`E-mail de teste enviado para ${email}!`, "success");
+      }
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviandoTesteComunicado(false);
+    }
+  }
+
+  async function solicitarComunicado() {
+    const template = templatesComunicado.find(t => t.id === templateComunicadoId);
+    if (!template) { showToast("Escolha um modelo.", "error"); return; }
+    if (!aprovados.length) { showToast("Nenhum participante confirmado.", "warn"); return; }
+    setEnviandoComunicado(true);
+    try {
+      const leads = aprovados.map(p => ({ id: p.id, email: p.email }));
+      const data = await dispararComunicado(template, leads);
+      if (!data) return;
+      const enviados = data.sent || [];
+      const falhas = data.failed || [];
+      registrarLog("participantes.enviar_comunicado", "participante", null, null, { modelo: template.nome, enviados: enviados.length, falhas: falhas.length });
+      if (falhas.length) {
+        showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
+        console.warn("Falhas ao enviar comunicado:", falhas);
+      } else {
+        showToast(`E-mail enviado para ${enviados.length} participante${enviados.length !== 1 ? "s" : ""}!`, "success");
+      }
+      setModalComunicado(false);
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviandoComunicado(false);
     }
   }
 
@@ -480,6 +555,16 @@ export function AbaInscritos() {
         </p>
       </div>
 
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+        <button className="btn btn-outline" disabled={aprovados.length === 0 || templatesComunicado.length === 0}
+          onClick={() => setModalComunicado(true)}>
+          📧 Enviar comunicado ({aprovados.length})
+        </button>
+        <p style={{ fontSize: "0.8rem", color: "var(--text3)", margin: 0, flex: 1, minWidth: 220 }}>
+          Escolhe um modelo (Participantes → Modelos) e envia para todos os {aprovados.length} inscrito{aprovados.length !== 1 ? "s" : ""} com inscrição aprovada — ex: orientações de véspera, lembretes, avisos.
+        </p>
+      </div>
+
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
         title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"} wide>
         {modalPart !== "new" && formPart.id && (
@@ -599,6 +684,36 @@ export function AbaInscritos() {
 
         <button className="btn btn-primary btn-block" onClick={solicitarAtualizacaoCadastro} disabled={enviandoAtualizacao || incompletos.length === 0}>
           {enviandoAtualizacao ? "Enviando…" : `Enviar para ${incompletos.length} pessoa${incompletos.length !== 1 ? "s" : ""}`}
+        </button>
+      </Modal>
+
+      <Modal show={modalComunicado} onClose={() => setModalComunicado(false)} title="Enviar comunicado">
+        <div className="form-group">
+          <label className="form-label">Modelo</label>
+          <select className="form-input" value={templateComunicadoId} onChange={e => setTemplateComunicadoId(e.target.value)}>
+            <option value="">Selecione um modelo…</option>
+            {templatesComunicado.map(t => (
+              <option key={t.id} value={t.id}>{t.nome || "Sem nome"}</option>
+            ))}
+          </select>
+        </div>
+        <p style={{ fontSize: "0.9rem", color: "var(--text2)", lineHeight: 1.6, margin: "0.75rem 0 1rem" }}>
+          Envia o modelo escolhido para os <strong>{aprovados.length}</strong> inscrito{aprovados.length !== 1 ? "s" : ""} com inscrição aprovada.
+        </p>
+
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <input className="form-input" placeholder="seu@email.com" value={emailTesteComunicado}
+            onChange={e => setEmailTesteComunicado(e.target.value)} style={{ flex: 1 }} />
+          <button className="btn btn-outline" onClick={enviarTesteComunicado} disabled={enviandoTesteComunicado || !emailTesteComunicado.trim() || !templateComunicadoId}>
+            {enviandoTesteComunicado ? "Enviando…" : "Enviar teste"}
+          </button>
+        </div>
+        <p style={{ fontSize: "0.78rem", color: "var(--text3)", margin: "0 0 1.25rem" }}>
+          Envia só para esse e-mail, sem afetar os {aprovados.length} inscrito{aprovados.length !== 1 ? "s" : ""}. Use pra conferir o modelo antes de disparar pra todo mundo.
+        </p>
+
+        <button className="btn btn-primary btn-block" onClick={solicitarComunicado} disabled={enviandoComunicado || !templateComunicadoId || aprovados.length === 0}>
+          {enviandoComunicado ? "Enviando…" : `Enviar para ${aprovados.length} pessoa${aprovados.length !== 1 ? "s" : ""}`}
         </button>
       </Modal>
     </div>

@@ -16,6 +16,11 @@ const TEMPLATE_DEFAULTS = {
   corCabecalho: "#0a1f40",
   corRodape: "#0a1f40",
   corBotao: "#0a1f40",
+  avisoTitulo: "",
+  avisoTexto: "",
+  avisoDestaque: "",
+  avisoLinkUrl: "",
+  avisoLinkTexto: "",
 };
 
 function CorField({ label, value, onChange }) {
@@ -125,6 +130,11 @@ export function AbaConfigEmail() {
       corRodape: ativo.corRodape,
       corBotao: ativo.corBotao,
       ctaTexto: ativo.ctaTexto,
+      avisoTitulo: ativo.avisoTitulo,
+      avisoTexto: ativo.avisoTexto,
+      avisoDestaque: ativo.avisoDestaque,
+      avisoLinkUrl: ativo.avisoLinkUrl,
+      avisoLinkTexto: ativo.avisoLinkTexto,
     });
   }
 
@@ -187,6 +197,23 @@ export function AbaConfigEmail() {
             <label className="form-label">URL do Banner do Evento (opcional)</label>
             <input className="form-input" type="url" placeholder="https://exemplo.com/banner.jpg"
               value={ativo.bannerUrl} onChange={e => set("bannerUrl", e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">
+              Bloco de Aviso <span style={{ fontWeight: 400, color: "var(--text3)" }}>(opcional — caixa de destaque, ex: estacionamento, alerta importante)</span>
+            </label>
+            <input className="form-input" type="text" placeholder="Título do aviso (ex: Estacionamento)" style={{ marginBottom: 8 }}
+              value={ativo.avisoTitulo || ""} onChange={e => set("avisoTitulo", e.target.value)} />
+            <textarea className="form-input" rows={2} placeholder="Texto explicativo do aviso" style={{ marginBottom: 8 }}
+              value={ativo.avisoTexto || ""} onChange={e => set("avisoTexto", e.target.value)} />
+            <textarea className="form-input" rows={2} placeholder="Texto em destaque dentro de caixa escura (opcional, ex: instrução de acesso)" style={{ marginBottom: 8 }}
+              value={ativo.avisoDestaque || ""} onChange={e => set("avisoDestaque", e.target.value)} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="form-input" type="url" placeholder="URL do botão secundário (opcional)"
+                value={ativo.avisoLinkUrl || ""} onChange={e => set("avisoLinkUrl", e.target.value)} />
+              <input className="form-input" type="text" placeholder="Texto do botão"
+                value={ativo.avisoLinkTexto || ""} onChange={e => set("avisoLinkTexto", e.target.value)} />
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Cores (identidade do evento)</label>

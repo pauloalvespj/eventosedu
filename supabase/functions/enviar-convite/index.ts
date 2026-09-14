@@ -32,10 +32,31 @@ function formatDataBR(d: string | undefined): string {
   return `${dia}/${m}/${y}`;
 }
 
-function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto }: any) {
+function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto }: any) {
   const corTopo = corCabecalho || "#0a1f40";
   const corBase = corRodape || "#0a1f40";
   const corCta = corBotao || "#0a1f40";
+  const blocoAviso = avisoTitulo ? `
+        <table cellpadding="0" cellspacing="0" style="background:#fff8ea;border:2px solid ${corCta};border-radius:10px;width:100%;margin:0 0 28px;">
+          <tr><td style="padding:22px 24px 20px;">
+            <div style="font-size:12px;font-weight:700;color:${corTopo};letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">${avisoTitulo}</div>
+            ${avisoTexto ? `<p style="margin:0 0 ${avisoDestaque ? "12" : "0"}px;font-size:14.5px;line-height:1.65;color:#4a5568;white-space:pre-line;">${avisoTexto}</p>` : ""}
+            ${avisoDestaque ? `
+            <table cellpadding="0" cellspacing="0" style="background:${corTopo};border-radius:8px;width:100%;margin:0 0 ${avisoLinkUrl ? "14" : "0"}px;">
+              <tr><td style="padding:14px 18px;">
+                <p style="margin:0;font-size:14.5px;line-height:1.6;color:#ffffff;white-space:pre-line;">${avisoDestaque}</p>
+              </td></tr>
+            </table>` : ""}
+            ${avisoLinkUrl ? `
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+              <tr><td align="center" style="border-radius:8px;background:${corCta};">
+                <a href="${avisoLinkUrl}" style="display:inline-block;padding:13px 28px;font-size:14.5px;font-weight:700;color:#ffffff;letter-spacing:0.2px;">
+                  ${avisoLinkTexto || "Saiba mais →"}
+                </a>
+              </td></tr>
+            </table>` : ""}
+          </td></tr>
+        </table>` : "";
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -59,6 +80,7 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, 
           <tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">📅 <strong>Data:</strong> ${formatDataBR(event.data_inicio)} a ${formatDataBR(event.data_fim)}</td></tr>
           ${event.realizacao ? `<tr><td style="font-size:14px;color:#4a5568;padding:4px 0;">🏛 <strong>Realização:</strong> ${event.realizacao}</td></tr>` : ""}
         </table>
+        ${blocoAviso}
         <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
           <tr><td align="center" style="border-radius:8px;background:${corCta};">
             <a href="${inscricaoUrl}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#c9a84c;text-decoration:none;letter-spacing:0.5px;">
@@ -111,7 +133,7 @@ Deno.serve(async (req) => {
       .from("profiles").select("role").eq("id", caller.id).single();
     if (callerProfile?.role !== "admin") return json({ error: "Permissão insuficiente" }, 403);
 
-    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, magicLink, origin } = await req.json();
+    const { leads, event, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto, magicLink, origin } = await req.json();
     if (!Array.isArray(leads) || !leads.length) {
       return json({ error: "leads é obrigatório e não pode ser vazio" }, 400);
     }
@@ -150,7 +172,7 @@ Deno.serve(async (req) => {
     }
 
     // Sem magicLink: mesmo HTML pra todo mundo, gerado uma vez só
-    const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
+    const htmlPadrao = magicLink ? null : gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
     const mimeContentPadrao = htmlPadrao ? [{
       mimeType: 'text/html; charset="utf-8"',
       content: toBase64Utf8(htmlPadrao),
@@ -191,7 +213,7 @@ Deno.serve(async (req) => {
           } catch {
             // Segue com o link estático (inscricaoUrl) como fallback
           }
-          const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto });
+          const html = gerarTemplateHTML({ event: event || {}, bannerUrl, inscricaoUrl: linkFinal, assunto, mensagem, anexoUrl, anexoNome, corCabecalho, corRodape, corBotao, ctaTexto, avisoTitulo, avisoTexto, avisoDestaque, avisoLinkUrl, avisoLinkTexto });
           mimeContent = [{
             mimeType: 'text/html; charset="utf-8"',
             content: toBase64Utf8(html),
