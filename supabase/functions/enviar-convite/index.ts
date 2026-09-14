@@ -59,8 +59,12 @@ function gerarTemplateHTML({ event, bannerUrl, inscricaoUrl, assunto, mensagem, 
         </table>` : "";
   return `<!DOCTYPE html>
 <html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${assunto || `Convite — ${event.nome}`}</title></head>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${assunto || `Convite — ${event.nome}`}</title>
+</head>
 <body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:32px 0;">
   <tr><td align="center">
