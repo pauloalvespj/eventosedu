@@ -246,9 +246,10 @@ export function AbaInscritos() {
     setEnviandoAtualizacao(true);
     try {
       const leads = incompletos.map(p => ({ id: p.id, email: p.email }));
-      // Manda em lotes — com muitos destinatários, um envio único pode
-      // estourar o tempo limite de execução da Edge Function.
-      const TAMANHO_LOTE = 15;
+      // Manda em lotes pequenos, com pausa entre eles — com muitos
+      // destinatários, um envio único (ou lotes grandes demais) estoura o
+      // limite de recursos da Edge Function (HTTP 546, "WORKER_LIMIT").
+      const TAMANHO_LOTE = 5;
       const enviados = [];
       const falhas = [];
       for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
@@ -260,6 +261,7 @@ export function AbaInscritos() {
         } catch (err) {
           lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
         }
+        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 600));
       }
       registrarLog("participantes.solicitar_atualizacao", "participante", null, null, { enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
@@ -345,11 +347,10 @@ export function AbaInscritos() {
     setEnviandoComunicado(true);
     try {
       const leads = aprovados.map(p => ({ id: p.id, email: p.email }));
-      // Manda em lotes — uma Edge Function só tem um tempo limite de
-      // execução, e com muitos inscritos (91 nesse evento) um envio único
-      // estoura esse limite e a função é encerrada no meio (erro genérico
-      // "non-2xx status"). Lotes menores ficam sempre dentro do limite.
-      const TAMANHO_LOTE = 15;
+      // Manda em lotes pequenos, com pausa entre eles — com muitos inscritos
+      // (91 nesse evento) um envio único ou lotes grandes estouram o limite
+      // de recursos da Edge Function (HTTP 546, "WORKER_LIMIT").
+      const TAMANHO_LOTE = 5;
       const enviados = [];
       const falhas = [];
       for (let i = 0; i < leads.length; i += TAMANHO_LOTE) {
@@ -361,6 +362,7 @@ export function AbaInscritos() {
         } catch (err) {
           lote.forEach(l => falhas.push({ id: l.id, email: l.email, error: err.message || String(err) }));
         }
+        if (i + TAMANHO_LOTE < leads.length) await new Promise(r => setTimeout(r, 600));
       }
       registrarLog("participantes.enviar_comunicado", "participante", null, null, { modelo: template.nome, enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
