@@ -51,10 +51,22 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
 
   const fmtNumero = (n) => (n == null ? "—" : String(n).padStart(3, "0"));
 
+  // ── Filtros por coluna ───────────────────────────────────────────
+  const [filtrosCol, setFiltrosCol] = useState({ numero: "", nome: "", cpf: "", instituicao: "", status: "todos" });
+  const algumFiltroCol = filtrosCol.numero || filtrosCol.nome || filtrosCol.cpf || filtrosCol.instituicao || filtrosCol.status !== "todos";
+
   const filtrados = participantes.filter(p => {
     const q = busca.toLowerCase();
-    return !q || p.nome.toLowerCase().includes(q) || p.cpf.includes(q) || p.email.toLowerCase().includes(q)
+    const okBusca = !q || p.nome.toLowerCase().includes(q) || p.cpf.includes(q) || p.email.toLowerCase().includes(q)
       || fmtNumero(p.numero_participante).includes(q);
+    if (!okBusca) return false;
+    if (filtrosCol.numero && !fmtNumero(p.numero_participante).toLowerCase().includes(filtrosCol.numero.toLowerCase())) return false;
+    if (filtrosCol.nome && !(p.nome.toLowerCase().includes(filtrosCol.nome.toLowerCase()) || (p.email || "").toLowerCase().includes(filtrosCol.nome.toLowerCase()))) return false;
+    if (filtrosCol.cpf && !(p.cpf || "").toLowerCase().includes(filtrosCol.cpf.toLowerCase())) return false;
+    if (filtrosCol.instituicao && !(p.instituicao || "").toLowerCase().includes(filtrosCol.instituicao.toLowerCase())) return false;
+    if (filtrosCol.status === "credenciado" && !p.credenciado) return false;
+    if (filtrosCol.status === "aguardando" && p.credenciado) return false;
+    return true;
   });
 
   // ── Ordenação da tabela ─────────────────────────────────────────
@@ -102,15 +114,47 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
           <span className="table-title">{participantes.filter(p => p.credenciado).length}/{participantes.length} credenciados</span>
         </div>
         <table>
-          <thead><tr>
-            <ThOrdenavel campo="numero" style={{ width: 52 }}>Nº</ThOrdenavel>
+          <thead>
+          <tr>
+            <ThOrdenavel campo="numero" style={{ width: 84 }}>Nº</ThOrdenavel>
             <ThOrdenavel campo="nome">Participante</ThOrdenavel>
             <ThOrdenavel campo="cpf">CPF</ThOrdenavel>
             <ThOrdenavel campo="instituicao">Instituição</ThOrdenavel>
             <ThOrdenavel campo="status">Status</ThOrdenavel>
             <ThOrdenavel campo="data">Data/Hora</ThOrdenavel>
             <th>Ação</th>
-          </tr></thead>
+          </tr>
+          <tr>
+            <th style={{ padding: "0.3rem 0.4rem", fontWeight: 400 }}>
+              <input className="search-input" style={{ width: "100%", fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
+                placeholder="Filtrar..." value={filtrosCol.numero} onChange={e => setFiltrosCol(f => ({ ...f, numero: e.target.value }))} />
+            </th>
+            <th style={{ padding: "0.3rem 0.4rem", fontWeight: 400 }}>
+              <input className="search-input" style={{ width: "100%", fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
+                placeholder="Filtrar..." value={filtrosCol.nome} onChange={e => setFiltrosCol(f => ({ ...f, nome: e.target.value }))} />
+            </th>
+            <th style={{ padding: "0.3rem 0.4rem", fontWeight: 400 }}>
+              <input className="search-input" style={{ width: "100%", fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
+                placeholder="Filtrar..." value={filtrosCol.cpf} onChange={e => setFiltrosCol(f => ({ ...f, cpf: e.target.value }))} />
+            </th>
+            <th style={{ padding: "0.3rem 0.4rem", fontWeight: 400 }}>
+              <input className="search-input" style={{ width: "100%", fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
+                placeholder="Filtrar..." value={filtrosCol.instituicao} onChange={e => setFiltrosCol(f => ({ ...f, instituicao: e.target.value }))} />
+            </th>
+            <th style={{ padding: "0.3rem 0.4rem", fontWeight: 400 }}>
+              <select className="search-input" style={{ width: "100%", fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
+                value={filtrosCol.status} onChange={e => setFiltrosCol(f => ({ ...f, status: e.target.value }))}>
+                <option value="todos">Todos</option>
+                <option value="credenciado">Credenciado</option>
+                <option value="aguardando">Aguardando</option>
+              </select>
+            </th>
+            <th></th>
+            <th>
+              {algumFiltroCol && <button className="btn btn-sm btn-outline" style={{ fontSize: "0.72rem", padding: "0.2rem 0.5rem" }} onClick={() => setFiltrosCol({ numero: "", nome: "", cpf: "", instituicao: "", status: "todos" })}>Limpar</button>}
+            </th>
+          </tr>
+          </thead>
           <tbody>
             {filtradosOrdenados.map(p => {
               const dt = p.credenciado_em ? new Date(p.credenciado_em) : null;

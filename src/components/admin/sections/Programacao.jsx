@@ -3,10 +3,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQrcode, faPenToSquare, faTrash, faCheck, faMicrophone,
   faDownload, faClock, faFileAlt, faEye, faEyeSlash, faFilePdf,
+  faCircleCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal, TipoBadge, QRCodeCanvas, DatePickerInput } from "../../base/index";
-import { formatData, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue } from "../../../utils/helpers";
+import { formatData, TIPO_LABEL, TIPO_COLOR, TIPO_BG, TIPO_ICON, qrPresencaValue, ATIVIDADE_STATUS_LABEL, ATIVIDADE_STATUS_BADGE } from "../../../utils/helpers";
 import { gerarProgramacaoPDF } from "../../../utils/gerarProgramacaoPDF";
 import {
   inserirAtividade, atualizarAtividade, deletarAtividade,
@@ -24,7 +25,7 @@ function formatBytes(b) {
 
 export function Programacao() {
   const {
-    atividades, setAtividades, palestrantes, presencas,
+    atividades, setAtividades, palestrantes,
     event, setEvent, showToast,
   } = useAdmin();
 
@@ -59,6 +60,13 @@ export function Programacao() {
     }
     setModalAtv(false);
     showToast("Atividade salva!", "success");
+  }
+
+  async function toggleStatus(a) {
+    const novoStatus = a.status === "realizada" ? "agendada" : "realizada";
+    setAtividades(prev => prev.map(x => x.id === a.id ? { ...x, status: novoStatus } : x));
+    atualizarAtividade(a.id, { status: novoStatus });
+    showToast(novoStatus === "realizada" ? "Atividade marcada como realizada — materiais liberados aos participantes" : "Atividade marcada como agendada", novoStatus === "realizada" ? "success" : "info");
   }
 
   async function excluirAtividade(id) {
@@ -104,7 +112,7 @@ export function Programacao() {
             <FontAwesomeIcon icon={faFilePdf} />
             Exportar PDF
           </button>
-          <button className="btn btn-sm btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [] }); setModalAtv(true); }}>+ Nova Atividade</button>
+          <button className="btn btn-sm btn-primary" onClick={() => { setFormAtv({ conta_certificado: true, carga_horaria: 1, tipo: "palestra", convidados: "", palestrantes_ids: [], materiais: [], status: "agendada" }); setModalAtv(true); }}>+ Nova Atividade</button>
         </div>
       </div>
 
@@ -113,23 +121,23 @@ export function Programacao() {
           <span className="table-title">Atividades ({atividades.length})</span>
           <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
-        <table style={{ width: "100%", tableLayout: "auto", fontSize: "0.82rem" }}>
+        <table style={{ width: "100%", minWidth: 760, tableLayout: "auto", fontSize: "0.82rem" }}>
           <thead><tr>
             <th style={{ whiteSpace:"nowrap" }}>Tipo</th>
             <th style={{ width:"40%" }}>Título</th>
             <th style={{ width: 82 }}>Dia</th>
             <th style={{ width: 100 }}>Horário</th>
             <th style={{ width: 44 }}>CH</th>
-            <th style={{ width: 52 }}>Cert.</th>
-            <th style={{ width: 52 }}>Pres.</th>
+            <th style={{ width: 52 }}>Anexo</th>
+            <th style={{ width: 90 }}>Status</th>
             <th style={{ width: 112 }}>Ações</th>
           </tr></thead>
           <tbody>
             {filtradas.map(a => (
               <tr key={a.id}>
                 <td><span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"0.15rem 0.5rem", borderRadius:50, fontSize:"0.7rem", fontWeight:700, background: TIPO_BG[a.tipo]||"#eee", color: TIPO_COLOR[a.tipo]||"#333", whiteSpace:"nowrap" }}>{TIPO_ICON[a.tipo]} {TIPO_LABEL[a.tipo]||a.tipo}</span></td>
-                <td title={a.titulo} style={{ maxWidth: 0 }}>
-                  <div style={{ fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.titulo}</div>
+                <td>
+                  <div style={{ fontWeight:500 }}>{a.titulo}</div>
                   {getPalestrantes(a).length > 0 && (
                     <div style={{ fontSize:"0.7rem", color:"var(--teal)", marginTop:1 }}>
                       <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:3, fontSize:"0.65rem" }} />
@@ -146,17 +154,28 @@ export function Programacao() {
                       ))}
                     </div>
                   )}
-                  {(a.materiais || []).length > 0 && (
-                    <span style={{ fontSize:"0.65rem", color:"var(--teal)", fontWeight:600 }}>
-                      <FontAwesomeIcon icon={faDownload} style={{ marginRight:2 }} />{a.materiais.length} material(is)
-                    </span>
-                  )}
                 </td>
                 <td style={{ fontSize:"0.78rem" }}>{formatData(a.dia)}</td>
                 <td style={{ whiteSpace:"nowrap", fontSize:"0.78rem" }}>{a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</td>
                 <td style={{ fontSize:"0.78rem" }}>{a.carga_horaria}h</td>
-                <td><span className={`badge badge-${a.conta_certificado ? "success" : "warn"}`} style={{ fontSize:"0.68rem" }}>{a.conta_certificado ? "Sim" : "Não"}</span></td>
-                <td style={{ textAlign:"center" }}>{presencas.filter(p => p.atividade_id === a.id).length}</td>
+                <td style={{ textAlign:"center" }}>
+                  {(a.materiais || []).length > 0
+                    ? <a href={a.materiais[0].url} target="_blank" rel="noreferrer" title={`Baixar: ${a.materiais.map(m => m.nome).join(", ")}`} style={{ color:"var(--teal)" }}>
+                        <FontAwesomeIcon icon={faFilePdf} />
+                      </a>
+                    : <span style={{ color:"var(--text3)" }}>—</span>}
+                </td>
+                <td>
+                  <button
+                    className={`badge ${ATIVIDADE_STATUS_BADGE[a.status] || "badge-warn"}`}
+                    onClick={() => toggleStatus(a)}
+                    title={a.status === "realizada" ? "Clique para voltar para Agendada" : "Clique para marcar como Realizada e liberar materiais"}
+                    style={{ fontSize:"0.68rem", border:"none", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}
+                  >
+                    <FontAwesomeIcon icon={a.status === "realizada" ? faCircleCheck : faClock} />
+                    {ATIVIDADE_STATUS_LABEL[a.status] || "Agendada"}
+                  </button>
+                </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.2rem" }}>
                     {a.conta_certificado && event.modo_frequencia !== "turno" && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>}
@@ -214,6 +233,18 @@ export function Programacao() {
             <select className="form-input" value={formAtv.conta_certificado} onChange={e => setFormAtv(f => ({ ...f, conta_certificado: e.target.value }))}>
               <option value="true">Sim</option><option value="false">Não</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Status</label>
+            <select className="form-input" value={formAtv.status || "agendada"} onChange={e => setFormAtv(f => ({ ...f, status: e.target.value }))}>
+              <option value="agendada">Agendada</option>
+              <option value="realizada">Realizada</option>
+            </select>
+            {formAtv.status === "realizada" && (
+              <span style={{ fontSize:"0.72rem", color:"var(--success)", fontWeight:600 }}>
+                <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight:4 }} />Materiais liberados para download na área do participante
+              </span>
+            )}
           </div>
         </div>
         <div className="form-group">

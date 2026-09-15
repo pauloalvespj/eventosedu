@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { useAdmin } from "./AdminContext";
+import { Modal } from "../../base/index";
+import { AbaGeral }          from "./participantes/AbaGeral";
 import { AbaInscritos }     from "./participantes/AbaInscritos";
 import { AbaPalestrantes }  from "./participantes/AbaPalestrantes";
 import { AbaPreConvidados } from "./participantes/AbaPreConvidados";
 import { AbaConfigEmail } from "./participantes/AbaConfigEmail";
 
 const ABAS = [
-  { key: "inscritos",     label: "Inscritos"           },
+  { key: "geral",         label: "Geral"                },
+  { key: "inscritos",     label: "Participantes"        },
   { key: "palestrantes",  label: "Palestrantes"         },
   { key: "pre-convidados", label: "Leads" },
-  { key: "config-email", label: "Modelos" },
 ];
 
 export function GestaoParticipantes() {
   const { participantes, palestrantes, convidados } = useAdmin();
-  const [aba, setAba] = useState("inscritos");
+  const [aba, setAba] = useState("geral");
+  const [modalModelos, setModalModelos] = useState(false);
 
   const contagens = {
-    inscritos:      participantes.length,
+    geral:          participantes.length,
+    inscritos:      participantes.filter(p => !p.is_palestrante).length,
     palestrantes:   palestrantes.length,
     "pre-convidados": (convidados || []).filter(c => c.status !== "inscrito").length,
   };
@@ -34,6 +38,7 @@ export function GestaoParticipantes() {
             {(convidados || []).length} lead{(convidados || []).length !== 1 ? "s" : ""}
           </p>
         </div>
+        <button className="btn btn-outline" onClick={() => setModalModelos(true)}>📧 Modelos de E-mail</button>
       </div>
 
       {/* Abas */}
@@ -78,10 +83,14 @@ export function GestaoParticipantes() {
       </div>
 
       {/* Conteúdo da aba ativa */}
+      {aba === "geral"          && <AbaGeral />}
       {aba === "inscritos"      && <AbaInscritos />}
       {aba === "palestrantes"   && <AbaPalestrantes />}
       {aba === "pre-convidados" && <AbaPreConvidados />}
-      {aba === "config-email"   && <AbaConfigEmail />}
+
+      <Modal show={modalModelos} onClose={() => setModalModelos(false)} title="Modelos de E-mail" wide>
+        <AbaConfigEmail />
+      </Modal>
     </div>
   );
 }

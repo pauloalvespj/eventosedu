@@ -15,15 +15,15 @@ export function Programacao() {
     <div>
       {/* ── POPUP BIO PALESTRANTE ── */}
       {palBio && (
-        <div onClick={() => setPalBio(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"var(--surface)", borderRadius:"var(--radius-lg)", padding:"1.75rem", maxWidth:480, width:"100%", boxShadow:"0 8px 32px rgba(0,0,0,0.22)", position:"relative" }}>
+        <div onClick={() => setPalBio(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem", boxSizing:"border-box" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"var(--surface)", borderRadius:"var(--radius-lg)", padding:"1.5rem", maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto", boxSizing:"border-box", boxShadow:"0 8px 32px rgba(0,0,0,0.22)", position:"relative" }}>
             <button onClick={() => setPalBio(null)} style={{ position:"absolute", top:"0.75rem", right:"0.75rem", background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"var(--text3)", lineHeight:1 }}>✕</button>
-            <div style={{ display:"flex", alignItems:"flex-start", gap:"1.1rem", marginBottom:"1rem" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", gap:"1.1rem", marginBottom:"1rem" }}>
               {palBio.foto_url
-                ? <img src={palBio.foto_url} alt={palBio.nome} style={{ width:130, height:170, borderRadius:"var(--radius-sm)", objectFit:"cover", flexShrink:0 }} />
-                : <div style={{ width:130, height:170, borderRadius:"var(--radius-sm)", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.8rem", flexShrink:0 }}>{palBio.foto_iniciais}</div>
+                ? <img src={palBio.foto_url} alt={palBio.nome} style={{ width:100, height:130, borderRadius:"var(--radius-sm)", objectFit:"cover", flexShrink:0 }} />
+                : <div style={{ width:100, height:130, borderRadius:"var(--radius-sm)", background:"var(--navy)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.6rem", flexShrink:0 }}>{palBio.foto_iniciais}</div>
               }
-              <div>
+              <div style={{ flex:"1 1 160px", minWidth:0 }}>
                 <div style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--navy)", marginBottom:"0.25rem" }}>{palBio.nome}</div>
                 {(palBio.instituicao || palBio.cargo) && (
                   <div style={{ fontSize:"0.8rem", color:"var(--text2)" }}>
@@ -57,7 +57,7 @@ export function Programacao() {
                 const temPres = !porTurno && minasPresencas.some(p => p.atividade_id === a.id);
                 const ehMinha = isPalestrante && (a.palestrantes_ids || []).includes(user.id);
                 const pals = (a.palestrantes_ids || []).map(id => palestrantes.find(p => p.id === id)).filter(Boolean);
-                const mats = a.materiais || [];
+                const mats = a.status === "realizada" ? (a.materiais || []) : [];
 
                 if (a.tipo === "intervalo") return (
                   <div key={a.id} style={{ padding:"0.5rem 0", fontSize:"0.8rem", color:"var(--text3)", display:"flex", gap:"1rem" }}>
@@ -66,7 +66,10 @@ export function Programacao() {
                 );
 
                 return (
-                  <div key={a.id} className="pgrid-card" style={{ borderLeftColor: temPres ? "var(--success)" : ehMinha ? "var(--teal)" : (TIPO_COLOR[a.tipo] || "var(--navy)") }}>
+                  <div key={a.id} className="pgrid-card" style={{
+                    borderLeftColor: ehMinha ? "var(--danger)" : temPres ? "var(--success)" : a.status === "realizada" ? "var(--success)" : (TIPO_COLOR[a.tipo] || "var(--navy)"),
+                    background: ehMinha ? "var(--danger-bg)" : a.status === "realizada" ? "var(--success-bg)" : undefined,
+                  }}>
                     {/* Horário início/fim + tipo */}
                     <div className="pgrid-top">
                       <span>⏱ {a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</span>
@@ -98,17 +101,17 @@ export function Programacao() {
 
                     {(ehMinha || temPres) && (
                       <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap" }}>
-                        {ehMinha && <span className="badge badge-teal">✓ Sua palestra</span>}
+                        {ehMinha && <span className="badge badge-danger">🎤 Sua palestra</span>}
                         {temPres && <span className="badge badge-success">✓ Presença confirmada</span>}
                       </div>
                     )}
 
                     {mats.length > 0 && (
                       <div style={{ marginTop:6, display:"flex", flexWrap:"wrap", gap:4 }}>
-                        {mats.map(m => (
-                          <a key={m.id} href={m.url} target="_blank" rel="noreferrer"
+                        {mats.map((m, i) => (
+                          <a key={m.id} href={m.url} target="_blank" rel="noreferrer" title={m.nome}
                             style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"0.18rem 0.55rem", background:"rgba(29,106,106,0.1)", border:"1px solid rgba(29,106,106,0.3)", borderRadius:4, fontSize:"0.7rem", color:"var(--teal)", fontWeight:600, textDecoration:"none" }}>
-                            <FontAwesomeIcon icon={faDownload} />{m.nome}
+                            <FontAwesomeIcon icon={faDownload} />Apresentação disponível{mats.length > 1 ? ` ${i + 1}` : ""}
                           </a>
                         ))}
                       </div>

@@ -183,12 +183,9 @@ export function AbaConfigEmail() {
   return (
     <div>
       <div className="admin-topbar">
-        <div>
-          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Modelos de E-mail</h2>
-          <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
-            Crie modelos (convite, lembrete, etc.) — na hora de enviar, escolha qual usar na aba Pré-Convidados.
-          </p>
-        </div>
+        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
+          Crie modelos (convite, lembrete, etc.) — na hora de enviar, escolha qual usar.
+        </p>
         <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
           <FontAwesomeIcon icon={faSave} style={{ marginRight: 6 }} />
           {salvando ? "Salvando…" : "Salvar Modelos"}

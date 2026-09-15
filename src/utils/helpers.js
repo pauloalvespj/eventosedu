@@ -6,6 +6,10 @@ export const TIPO_COLOR = { palestra: "var(--navy)", mesa_redonda: "var(--teal)"
 export const TIPO_BG    = { palestra: "#e8f0fb", mesa_redonda: "#e1f3f3", solenidade: "var(--gold-pale)", intervalo: "var(--surface2)", painel: "#f0eafb", encerramento: "var(--success-bg)", credenciamento: "#fbf0e1" };
 export const TIPO_ICON  = { palestra: "🎤", mesa_redonda: "🗣️", solenidade: "🏛", intervalo: "☕", painel: "🗣️", encerramento: "🎓", credenciamento: "🪪" };
 
+// ── Status de atividade ──────────────────────────────────────
+export const ATIVIDADE_STATUS_LABEL = { agendada: "Agendada", realizada: "Realizada" };
+export const ATIVIDADE_STATUS_BADGE = { agendada: "badge-warn", realizada: "badge-success" };
+
 // ── Role labels ───────────────────────────────────────────────
 export const ROLE_LABEL = { admin: "Administrador", credenciador: "Credenciador", palestrante: "Palestrante", participante: "Participante" };
 export const ROLE_COLOR = { admin: "navy", credenciador: "teal", palestrante: "gold", participante: "navy" };

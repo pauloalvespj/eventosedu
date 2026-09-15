@@ -10,13 +10,14 @@ import { supabase } from "../../../../lib/supabase";
 
 const ROLE_OPTS = [
   { value: "participante", label: "Participante" },
-  { value: "palestrante",  label: "Palestrante" },
   { value: "credenciador", label: "Credenciador" },
   { value: "admin",        label: "Administrador" },
 ];
 
 export function AbaInscritos() {
   const { event, participantes, setParticipantes, instituicoes, setInstituicoes, showToast } = useAdmin();
+  // Esta aba é só para quem não é palestrante — palestrantes têm a aba própria (visão "Geral" mostra todo mundo).
+  const inscritos = participantes.filter(p => !p.is_palestrante);
   const [modalAtualizacao, setModalAtualizacao]   = useState(false);
   const [enviandoAtualizacao, setEnviandoAtualizacao] = useState(false);
   const [emailTeste, setEmailTeste]               = useState("pauloalvespj@ufc.br");
@@ -47,7 +48,6 @@ export function AbaInscritos() {
   function corAvatarBorda(p) {
     if (p.role === "admin") return "var(--gold, #c9a84c)";
     if (p.is_credenciador) return "#22c55e";
-    if (p.is_palestrante) return "#ef4444";
     return null;
   }
 
@@ -61,9 +61,9 @@ export function AbaInscritos() {
     return faltando;
   }
 
-  const totPendentes = participantes.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
+  const totPendentes = inscritos.filter(p => p.status_inscricao === "pendente" && p.ativo !== false).length;
 
-  const filtrados = participantes.filter(p => {
+  const filtrados = inscritos.filter(p => {
     const q = busca.toLowerCase();
     const ok = !q || p.nome?.toLowerCase().includes(q) || p.cpf?.includes(q)
       || p.instituicao?.toLowerCase().includes(q) || p.cargo?.toLowerCase().includes(q)
@@ -154,7 +154,7 @@ export function AbaInscritos() {
       if (role === "admin" || is_credenciador) {
         registrarLog("usuario.criar", "participante", data.user.id, formPart.nome, { role, is_credenciador });
       }
-      showToast("Inscrito criado com acesso ao sistema!", "success");
+      showToast("Participante criado com acesso ao sistema!", "success");
     } else {
       const original = participantes.find(p => p.id === formPart.id);
       setSalvando(true);
@@ -195,7 +195,7 @@ export function AbaInscritos() {
       if (original && (original.role !== role || !!original.is_credenciador !== is_credenciador)) {
         registrarLog("usuario.editar_role", "participante", formPart.id, formPart.nome, { role_antes: original.role, role_depois: role, credenciador_antes: !!original.is_credenciador, credenciador_depois: is_credenciador });
       }
-      showToast("Inscrito atualizado!", "success");
+      showToast("Participante atualizado!", "success");
     }
     setModalPart(null);
   }
@@ -209,11 +209,11 @@ export function AbaInscritos() {
     showToast(`Inscrição de ${p.nome.split(" ")[0]} reativada.`, "success");
   }
 
-  const totP = participantes.filter(p => p.ativo !== false).length;
-  const totCancelados = participantes.filter(p => p.ativo === false).length;
-  const incompletos = participantes.filter(p => p.ativo !== false && estaIncompleto(p));
-  const completos = participantes.filter(p => p.ativo !== false && p.status_inscricao !== "pendente" && !estaIncompleto(p));
-  const aprovados = participantes.filter(p => p.ativo !== false && p.status_inscricao === "aprovado");
+  const totP = inscritos.filter(p => p.ativo !== false).length;
+  const totCancelados = inscritos.filter(p => p.ativo === false).length;
+  const incompletos = inscritos.filter(p => p.ativo !== false && estaIncompleto(p));
+  const completos = inscritos.filter(p => p.ativo !== false && p.status_inscricao !== "pendente" && !estaIncompleto(p));
+  const aprovados = inscritos.filter(p => p.ativo !== false && p.status_inscricao === "aprovado");
   const templatesComunicado = event?.convite_templates || [];
 
   async function dispararAtualizacaoCadastro(leads) {
@@ -381,7 +381,7 @@ export function AbaInscritos() {
 
   async function exportarXLS() {
     const XLSX = await import("xlsx");
-    const rows = [...participantes]
+    const rows = [...inscritos]
       .map(p => ({ p, nomeExibido: p.nome_publico || p.nome || "" }))
       .sort((a, b) => a.nomeExibido.localeCompare(b.nomeExibido, "pt-BR", { sensitivity: "base" }))
       .map(({ p, nomeExibido }) => ({
@@ -400,9 +400,9 @@ export function AbaInscritos() {
     <div>
       <div className="admin-topbar">
         <div>
-          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Inscrições</h2>
+          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Participantes</h2>
           <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text3)" }}>
-            {totP} inscrito{totP !== 1 ? "s" : ""}
+            {totP} participante{totP !== 1 ? "s" : ""}
             {totCancelados > 0 && <span style={{ color: "var(--danger, #c0392b)", marginLeft: 6 }}>· {totCancelados} cancelado{totCancelados !== 1 ? "s" : ""}</span>}
             {totPendentes > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {totPendentes} pendente{totPendentes !== 1 ? "s" : ""} de aprovação</span>}
             {incompletos.length > 0 && <span style={{ color: "var(--warn, #a07020)", marginLeft: 6 }}>· {incompletos.length} com cadastro incompleto</span>}
@@ -411,7 +411,7 @@ export function AbaInscritos() {
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button className="btn btn-outline" disabled={aprovados.length === 0 || templatesComunicado.length === 0}
           onClick={() => setModalComunicado(true)}
-          title="Escolha um modelo (Participantes → Modelos) e envie pra todos os inscritos aprovados — ex: orientações de véspera, lembretes, avisos.">
+          title="Escolha um modelo (Participantes → Modelos) e envie pra todos os participantes aprovados — ex: orientações de véspera, lembretes, avisos.">
           📧 Enviar Comunicado ({aprovados.length})
         </button>
         <button className="btn btn-outline" onClick={exportarXLS}>
@@ -421,14 +421,14 @@ export function AbaInscritos() {
           setFormPart({ nome: "", cpf: "", email: "", instituicao: "", cargo: "", _palestrante: false, _admin: false, _credenciador: false });
           setModalPart("new");
         }}>
-          <FontAwesomeIcon icon={faUsers} style={{ marginRight: 6 }} />Novo Inscrito
+          <FontAwesomeIcon icon={faUsers} style={{ marginRight: 6 }} />Novo Participante
         </button>
         </div>
       </div>
 
       <div className="table-wrap">
         <div className="table-header">
-          <span className="table-title">Inscritos ({filtrados.length})</span>
+          <span className="table-title">Participantes ({filtrados.length})</span>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <button
               className={`btn btn-sm ${mostrarPendentes ? "btn-gold" : "btn-outline"}`}
@@ -570,10 +570,6 @@ export function AbaInscritos() {
             <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #22c55e", outlineOffset: 3, display: "inline-block" }} />
             Credenciador
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--navy)", outline: "2px solid #ef4444", outlineOffset: 3, display: "inline-block" }} />
-            Palestrante
-          </span>
         </div>
       </div>
 
@@ -589,7 +585,7 @@ export function AbaInscritos() {
 
 
       <Modal show={!!modalPart} onClose={() => setModalPart(null)}
-        title={modalPart === "new" ? "Novo Inscrito" : "Editar Inscrito"} wide>
+        title={modalPart === "new" ? "Novo Participante" : "Editar Participante"} wide>
         {modalPart !== "new" && formPart.id && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.25rem" }}>
             <AvatarUpload

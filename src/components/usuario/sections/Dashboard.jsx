@@ -23,7 +23,7 @@ export function Dashboard() {
   const encerrado   = hoje > fim;
 
   const proximasAtividades = atividades
-    .filter(a => a.tipo !== "intervalo" && a.dia >= hojeISO)
+    .filter(a => a.tipo !== "intervalo" && a.dia >= hojeISO && a.status !== "realizada")
     .slice()
     .sort((a,b) => (a.dia||"").localeCompare(b.dia||"") || (a.horario||"").localeCompare(b.horario||""))
     .slice(0, 4);
@@ -103,7 +103,7 @@ export function Dashboard() {
             </div>
           )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.65rem", marginBottom: isPalestrante ? "0.85rem" : 0 }}>
-            {[["CPF",user.cpf||"–"],["E-mail",user.email]].map(([k,v]) => (
+            {[["Nº de Inscrição", user.numero_participante != null ? String(user.numero_participante).padStart(3, "0") : "–"], ["CPF",user.cpf||"–"],["E-mail",user.email]].map(([k,v]) => (
               <div key={k}>
                 <div style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.15rem" }}>{k}</div>
                 <div style={{ fontSize:"0.82rem", color:"var(--text)", wordBreak:"break-all", lineHeight:1.3 }}>{v}</div>
