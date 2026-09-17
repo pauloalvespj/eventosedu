@@ -69,6 +69,11 @@ export function Programacao() {
     showToast(novoStatus === "realizada" ? "Atividade marcada como realizada — materiais liberados aos participantes" : "Atividade marcada como agendada", novoStatus === "realizada" ? "success" : "info");
   }
 
+  function abrirEdicao(a) {
+    setFormAtv({ ...a, conta_certificado: a.conta_certificado ? "true" : "false", palestrantes_ids: a.palestrantes_ids || [], materiais: a.materiais || [] });
+    setModalAtv(true);
+  }
+
   async function excluirAtividade(id) {
     if (!confirm("Excluir atividade?")) return;
     const a = atividades.find(x => x.id === id);
@@ -98,7 +103,7 @@ export function Programacao() {
     <div>
       <div className="admin-topbar">
         <div><h1>Programação</h1><p>Atividades e palestras</p></div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           <button
             className={`btn btn-sm ${visivel ? "btn-outline" : "btn-danger"}`}
             onClick={toggleVisibilidade}
@@ -116,7 +121,7 @@ export function Programacao() {
         </div>
       </div>
 
-      <div className="table-wrap">
+      <div className="table-wrap prog-table-wrap">
         <div className="table-header">
           <span className="table-title">Atividades ({atividades.length})</span>
           <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
@@ -179,7 +184,7 @@ export function Programacao() {
                 <td>
                   <div style={{ display: "flex", gap: "0.2rem" }}>
                     {a.conta_certificado && event.modo_frequencia !== "turno" && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)} title="QR Code"><FontAwesomeIcon icon={faQrcode} /></button>}
-                    <button className="btn btn-sm btn-outline" onClick={() => { setFormAtv({ ...a, conta_certificado: a.conta_certificado ? "true" : "false", palestrantes_ids: a.palestrantes_ids || [], materiais: a.materiais || [] }); setModalAtv(true); }}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                    <button className="btn btn-sm btn-outline" onClick={() => abrirEdicao(a)}><FontAwesomeIcon icon={faPenToSquare} /></button>
                     <button className="btn btn-sm btn-danger" onClick={() => excluirAtividade(a.id)}><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
                 </td>
@@ -187,6 +192,56 @@ export function Programacao() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="prog-cards">
+        <div className="table-header" style={{ marginBottom: "0.75rem" }}>
+          <span className="table-title">Atividades ({atividades.length})</span>
+          <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
+        </div>
+        {filtradas.map(a => (
+          <div className="credenc-card" key={a.id}>
+            <div className="credenc-card-top">
+              <div>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"0.15rem 0.5rem", borderRadius:50, fontSize:"0.68rem", fontWeight:700, background: TIPO_BG[a.tipo]||"#eee", color: TIPO_COLOR[a.tipo]||"#333", marginBottom:6 }}>{TIPO_ICON[a.tipo]} {TIPO_LABEL[a.tipo]||a.tipo}</span>
+                <div className="credenc-card-nome">{a.titulo}</div>
+                {getPalestrantes(a).length > 0 && (
+                  <div className="credenc-card-sub">
+                    <FontAwesomeIcon icon={faMicrophone} style={{ marginRight:4, fontSize:"0.68rem" }} />
+                    {getPalestrantes(a).map(p => p.nome).join(" · ")}
+                  </div>
+                )}
+              </div>
+              <button
+                className={`badge ${ATIVIDADE_STATUS_BADGE[a.status] || "badge-warn"}`}
+                onClick={() => toggleStatus(a)}
+                title={a.status === "realizada" ? "Clique para voltar para Agendada" : "Clique para marcar como Realizada e liberar materiais"}
+                style={{ fontSize:"0.68rem", border:"none", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4, flexShrink:0 }}
+              >
+                <FontAwesomeIcon icon={a.status === "realizada" ? faCircleCheck : faClock} />
+                {ATIVIDADE_STATUS_LABEL[a.status] || "Agendada"}
+              </button>
+            </div>
+            <div className="credenc-card-meta">
+              <span>{formatData(a.dia)}</span>
+              <span>{a.horario}{a.horario_fim ? `–${a.horario_fim}` : ""}</span>
+              <span>{a.carga_horaria}h</span>
+              {(a.materiais || []).length > 0 && (
+                <a href={a.materiais[0].url} target="_blank" rel="noreferrer" title={`Baixar: ${a.materiais.map(m => m.nome).join(", ")}`} style={{ color:"var(--teal)" }}>
+                  <FontAwesomeIcon icon={faFilePdf} /> Anexo
+                </a>
+              )}
+            </div>
+            <div className="credenc-card-actions">
+              {a.conta_certificado && event.modo_frequencia !== "turno" && <button className="btn btn-sm btn-outline" onClick={() => setModalQR(a)}><FontAwesomeIcon icon={faQrcode} /></button>}
+              <button className="btn btn-sm btn-outline" onClick={() => abrirEdicao(a)}><FontAwesomeIcon icon={faPenToSquare} /></button>
+              <button className="btn btn-sm btn-danger" onClick={() => excluirAtividade(a.id)}><FontAwesomeIcon icon={faTrash} /></button>
+            </div>
+          </div>
+        ))}
+        {filtradas.length === 0 && (
+          <div style={{ textAlign: "center", padding: "1.5rem", color: "var(--text3)" }}>Nenhuma atividade encontrada.</div>
+        )}
       </div>
 
       {/* MODAL ATIVIDADE */}
