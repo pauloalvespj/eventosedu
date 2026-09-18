@@ -28,11 +28,17 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
   function iniciarCredenciamento(p) {
     const faltaCpf = !p.cpf;
     if (!faltaCpf) { credenciar(p.id, true); return; }
-    setPendencia({ participante: p, cpf: "", erro: "", salvando: false });
+    setPendencia({ participante: p, cpf: "", semCpf: false, erro: "", salvando: false });
   }
 
   async function salvarPendenciaECredenciar() {
-    const { participante, cpf } = pendencia;
+    const { participante, cpf, semCpf } = pendencia;
+    if (semCpf) {
+      setPendencia(null);
+      registrarLog("participante.credenciar_sem_cpf", "participante", participante.id, participante.nome);
+      credenciar(participante.id, true);
+      return;
+    }
     if (!validateCPF(cpf)) {
       setPendencia(pd => ({ ...pd, erro: "CPF inválido." }));
       return;
@@ -57,7 +63,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
 
   const filtrados = participantes.filter(p => {
     const q = busca.toLowerCase();
-    const okBusca = !q || p.nome.toLowerCase().includes(q) || p.cpf.includes(q) || p.email.toLowerCase().includes(q)
+    const okBusca = !q || p.nome.toLowerCase().includes(q) || (p.cpf || "").includes(q) || (p.email || "").toLowerCase().includes(q)
       || fmtNumero(p.numero_participante).includes(q);
     if (!okBusca) return false;
     if (filtrosCol.numero && !fmtNumero(p.numero_participante).toLowerCase().includes(filtrosCol.numero.toLowerCase())) return false;
@@ -166,7 +172,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
                   <div style={{ fontWeight: 600 }}>{p.nome}</div>
                   <div style={{ fontSize: "0.8rem", color: "var(--text3)" }}>{p.email}</div>
                 </div></td>
-                <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>{p.cpf}</td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.85rem", color: p.cpf ? undefined : "var(--text3)" }}>{p.cpf || "—"}</td>
                 <td>{p.instituicao}</td>
                 <td><span className={`badge badge-${p.credenciado ? "success" : "warn"}`}>{p.credenciado ? <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 4 }} />Credenciado</> : "Aguardando"}</span></td>
                 <td style={{ fontSize: "0.82rem", color: p.credenciado ? "var(--text2)" : "var(--text3)" }}>{dataHora}</td>
@@ -203,7 +209,7 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
                 </span>
               </div>
               <div className="credenc-card-meta">
-                <span style={{ fontFamily: "monospace" }}>{p.cpf}</span>
+                <span style={{ fontFamily: "monospace", color: p.cpf ? undefined : "var(--text3)" }}>{p.cpf || "—"}</span>
                 <span>{p.instituicao}</span>
               </div>
               {dataHora && <div className="credenc-card-data">{dataHora}</div>}
@@ -234,14 +240,19 @@ export function Credenciamento({ participantes, setParticipantes, showToast }) {
         </p>
         <div className="form-grid">
           <div className="form-group" style={{ gridColumn: "1/-1" }}>
-            <label className="form-label">CPF *</label>
-            <input className="form-input" placeholder="000.000.000-00" maxLength={14}
-              value={pendencia?.cpf || ""} onChange={e => setPendencia(pd => ({ ...pd, cpf: formatCPF(e.target.value) }))} />
+            <label className="form-label">CPF {pendencia?.semCpf ? "" : "*"}</label>
+            <input className="form-input" placeholder="000.000.000-00" maxLength={14} disabled={pendencia?.semCpf}
+              value={pendencia?.semCpf ? "" : (pendencia?.cpf || "")} onChange={e => setPendencia(pd => ({ ...pd, cpf: formatCPF(e.target.value) }))} />
           </div>
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", color: "var(--text2)", fontSize: "0.88rem", marginBottom: "1rem" }}>
+          <input type="checkbox" checked={!!pendencia?.semCpf}
+            onChange={e => setPendencia(pd => ({ ...pd, semCpf: e.target.checked, erro: "" }))} />
+          Participante não informou o CPF (credenciar sem CPF)
+        </label>
         {pendencia?.erro && <div className="form-error" style={{ marginBottom: "0.75rem" }}>{pendencia.erro}</div>}
         <button className="btn btn-primary btn-block" style={{ marginTop: "0.5rem" }} onClick={salvarPendenciaECredenciar} disabled={pendencia?.salvando}>
-          {pendencia?.salvando ? "Salvando..." : "Salvar e credenciar"}
+          {pendencia?.salvando ? "Salvando..." : pendencia?.semCpf ? "Credenciar sem CPF" : "Salvar e credenciar"}
         </button>
       </Modal>
     </div>
