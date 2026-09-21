@@ -1,8 +1,12 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll,
+  faFileImport, faXmark, faCircleCheck, faCircleExclamation, faCloudArrowUp,
+} from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
+import { Modal } from "../../base/index";
 import { calcPresenca, formatData, baixarCSV } from "../../../utils/helpers";
 import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
 
@@ -18,6 +22,44 @@ function MiniBarra({ pct, minimo }) {
   );
 }
 
+// ── Casamento automático de arquivo → participante (upload em massa) ──
+// Tenta primeiro pelo CPF (só dígitos) e depois pelo nome, ambos extraídos
+// do nome do arquivo — não depende de um padrão fixo de nomenclatura.
+function normalizarNome(s) {
+  return (s || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // remove acentos
+    .toLowerCase()
+    .replace(/\.[^.]+$/, "") // remove extensão, se for um nome de arquivo
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function encontrarParticipantePorArquivo(filename, participantes) {
+  const base = filename.replace(/\.[^.]+$/, "");
+  const digitos = base.replace(/\D/g, "");
+
+  if (digitos.length >= 11) {
+    const porCpf = participantes.find(p => {
+      const cpfLimpo = (p.cpf || "").replace(/\D/g, "");
+      return cpfLimpo && (cpfLimpo === digitos || digitos.includes(cpfLimpo));
+    });
+    if (porCpf) return porCpf;
+  }
+
+  const nomeArquivo = normalizarNome(base);
+  if (!nomeArquivo) return null;
+
+  const exatos = participantes.filter(p => normalizarNome(p.nome) === nomeArquivo);
+  if (exatos.length === 1) return exatos[0];
+
+  const parciais = participantes.filter(p => {
+    const nomeParticipante = normalizarNome(p.nome);
+    return nomeParticipante && (nomeArquivo.includes(nomeParticipante) || nomeParticipante.includes(nomeArquivo));
+  });
+  return parciais.length === 1 ? parciais[0] : null;
+}
+
 export function Certificados() {
   const { event, setEvent, atividades, participantes, setParticipantes, presencas, turnos, presencasTurno, showToast } = useAdmin();
   const navigate = useNavigate();
@@ -27,6 +69,12 @@ export function Certificados() {
   const [filtroFreq, setFiltroFreq] = useState(""); // id do turno ou da atividade selecionada
   const fileRefs = useRef({});
   const porTurno = event.modo_frequencia === "turno";
+
+  // ── Upload em massa ──────────────────────────────────────────
+  const [modalBulk, setModalBulk] = useState(false);
+  const [bulkItems, setBulkItems] = useState([]); // [{key, file, participanteId, status, erro}]
+  const [bulkEnviando, setBulkEnviando] = useState(false);
+  const bulkFileRef = useRef(null);
 
   async function toggleCertificado() {
     const novo = !event.certificado_disponivel;
@@ -65,6 +113,62 @@ export function Certificados() {
       showToast("Erro ao enviar certificado: " + e.message, "error");
     } finally {
       setUploading(null);
+    }
+  }
+
+  function adicionarArquivosBulk(fileList) {
+    const novos = Array.from(fileList).map(file => {
+      const key = `${file.name}-${file.size}-${file.lastModified}`;
+      const match = encontrarParticipantePorArquivo(file.name, participantes);
+      return { key, file, participanteId: match?.id ?? "", status: "pendente", erro: null };
+    });
+    setBulkItems(prev => {
+      const existentes = new Set(prev.map(i => i.key));
+      return [...prev, ...novos.filter(i => !existentes.has(i.key))];
+    });
+  }
+
+  function removerItemBulk(key) {
+    setBulkItems(prev => prev.filter(i => i.key !== key));
+  }
+
+  function alterarParticipanteBulk(key, participanteId) {
+    setBulkItems(prev => prev.map(i => i.key === key ? { ...i, participanteId } : i));
+  }
+
+  function fecharModalBulk() {
+    if (bulkEnviando) return;
+    setModalBulk(false);
+    setBulkItems([]);
+  }
+
+  async function enviarBulk() {
+    const pendentes = bulkItems.filter(i => i.participanteId && i.status !== "ok");
+    if (pendentes.length === 0) return;
+    setBulkEnviando(true);
+    const atualizacoes = {}; // participanteId → certificado_url
+    let enviados = 0, falhas = 0;
+    for (const item of pendentes) {
+      setBulkItems(prev => prev.map(i => i.key === item.key ? { ...i, status: "enviando", erro: null } : i));
+      try {
+        const url = await uploadCertificado(item.participanteId, item.file);
+        atualizacoes[item.participanteId] = url;
+        enviados++;
+        setBulkItems(prev => prev.map(i => i.key === item.key ? { ...i, status: "ok" } : i));
+      } catch (e) {
+        falhas++;
+        setBulkItems(prev => prev.map(i => i.key === item.key ? { ...i, status: "erro", erro: e.message } : i));
+      }
+    }
+    if (Object.keys(atualizacoes).length > 0) {
+      setParticipantes(prev => prev.map(p => atualizacoes[p.id] ? { ...p, certificado_url: atualizacoes[p.id] } : p));
+      registrarLog("certificado.upload_massa", "evento", event.id, event.nome, { enviados, falhas });
+    }
+    setBulkEnviando(false);
+    if (falhas === 0) {
+      showToast(`${enviados} certificado${enviados === 1 ? "" : "s"} enviado${enviados === 1 ? "" : "s"}!`, "success");
+    } else {
+      showToast(`${enviados} enviado${enviados === 1 ? "" : "s"}, ${falhas} falharam — confira abaixo.`, falhas === pendentes.length ? "error" : "info");
     }
   }
 
@@ -132,6 +236,12 @@ export function Certificados() {
             <FontAwesomeIcon icon={event.certificado_disponivel ? faToggleOn : faToggleOff} style={{ fontSize: "1.1rem" }} />
             {event.certificado_disponivel ? "Certificados liberados" : "Liberar certificados"}
           </button>
+          {event.certificado_externo && (
+            <button className="btn btn-outline" onClick={() => setModalBulk(true)} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FontAwesomeIcon icon={faFileImport} />
+              Upload em massa
+            </button>
+          )}
           <button className="btn btn-gold" onClick={exportarLista}>
             <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
           </button>
@@ -203,7 +313,7 @@ export function Certificados() {
         </div>
         <div>
           <div style={{ fontSize: "0.78rem", color: "var(--text3)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>Credenciados</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gold-on-dark)" }}>{credenciados.length}/{participantes.length}</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--warn)" }}>{credenciados.length}/{participantes.length}</div>
         </div>
       </div>
 
@@ -302,6 +412,94 @@ export function Certificados() {
           </tbody>
         </table>
       </div>
+
+      {/* MODAL: upload em massa de certificados */}
+      <Modal show={modalBulk} onClose={fecharModalBulk} title="Upload em massa de certificados" wide>
+        <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1rem" }}>
+          Selecione todos os arquivos recebidos de uma vez. O sistema tenta identificar o participante
+          pelo CPF ou pelo nome no nome do arquivo — confira e corrija na lista abaixo antes de enviar.
+        </p>
+
+        <input
+          type="file"
+          accept=".pdf,image/*"
+          multiple
+          style={{ display: "none" }}
+          ref={bulkFileRef}
+          onChange={e => { if (e.target.files.length) adicionarArquivosBulk(e.target.files); e.target.value = ""; }}
+        />
+        <button className="btn btn-outline btn-block" onClick={() => bulkFileRef.current?.click()} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: "1.25rem" }}>
+          <FontAwesomeIcon icon={faCloudArrowUp} />
+          {bulkItems.length === 0 ? "Selecionar arquivos…" : "Adicionar mais arquivos…"}
+        </button>
+
+        {bulkItems.length > 0 && (
+          <>
+            <div style={{ maxHeight: 360, overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", marginBottom: "1rem" }}>
+              {bulkItems.map(item => {
+                const semCorrespondencia = !item.participanteId;
+                const duplicado = item.participanteId && bulkItems.filter(i => i.participanteId === item.participanteId).length > 1;
+                const jaTemCertificado = item.participanteId && participantes.find(p => p.id === item.participanteId)?.certificado_url;
+                return (
+                  <div key={item.key} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 0.85rem",
+                    borderBottom: "1px solid var(--border)", background: semCorrespondencia ? "var(--warn-bg)" : "transparent",
+                  }}>
+                    <div style={{ flex: "0 0 20px" }}>
+                      {item.status === "ok" && <FontAwesomeIcon icon={faCircleCheck} style={{ color: "var(--success)" }} />}
+                      {item.status === "erro" && <FontAwesomeIcon icon={faCircleExclamation} style={{ color: "var(--danger)" }} title={item.erro} />}
+                      {item.status === "enviando" && <span style={{ fontSize: "0.72rem", color: "var(--text3)" }}>...</span>}
+                    </div>
+                    <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.file.name}>{item.file.name}</div>
+                      {item.status === "erro" && <div style={{ fontSize: "0.72rem", color: "var(--danger)" }}>{item.erro}</div>}
+                      {duplicado && <div style={{ fontSize: "0.72rem", color: "var(--warn)" }}>⚠ outro arquivo também aponta para este participante</div>}
+                      {jaTemCertificado && !duplicado && <div style={{ fontSize: "0.72rem", color: "var(--text3)" }}>já tem certificado — será substituído</div>}
+                    </div>
+                    <select
+                      className="form-input"
+                      style={{ flex: "1 1 240px", marginBottom: 0, fontSize: "0.85rem" }}
+                      value={item.participanteId}
+                      disabled={item.status === "enviando" || item.status === "ok"}
+                      onChange={e => alterarParticipanteBulk(item.key, e.target.value ? Number(e.target.value) : "")}
+                    >
+                      <option value="">— sem correspondência —</option>
+                      {[...participantes].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(p => (
+                        <option key={p.id} value={p.id}>{p.nome} — {p.cpf}</option>
+                      ))}
+                    </select>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      title="Remover da lista"
+                      disabled={item.status === "enviando"}
+                      onClick={() => removerItemBulk(item.key)}
+                      style={{ flex: "0 0 auto" }}
+                    >
+                      <FontAwesomeIcon icon={faXmark} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.82rem", color: "var(--text3)" }}>
+                {bulkItems.filter(i => i.participanteId).length} de {bulkItems.length} identificados
+                {bulkItems.some(i => !i.participanteId) && " — selecione manualmente os sem correspondência"}
+              </span>
+              <button
+                className="btn btn-primary"
+                disabled={bulkEnviando || bulkItems.filter(i => i.participanteId && i.status !== "ok").length === 0}
+                onClick={enviarBulk}
+              >
+                {bulkEnviando
+                  ? "Enviando…"
+                  : `Enviar ${bulkItems.filter(i => i.participanteId && i.status !== "ok").length} certificado${bulkItems.filter(i => i.participanteId && i.status !== "ok").length === 1 ? "" : "s"}`}
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
