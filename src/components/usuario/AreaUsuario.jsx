@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRoutes, Navigate, NavLink } from "react-router-dom";
+import { useRoutes, useNavigate, Navigate, NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
@@ -75,6 +75,50 @@ function AvisosBanner() {
   );
 }
 
+// "Meus Certificados" — sempre no menu, mas o conteúdo depende do estado:
+// 1) organização ainda não liberou → bloqueado;
+// 2) liberado, mas exige pesquisa de satisfação e o participante ainda não
+//    respondeu (e está apto a responder — ver podeResponderPesquisa) → pede
+//    pra responder antes;
+// 3) liberado e sem pendência → mostra o certificado (gerado pela
+//    plataforma ou externo, conforme event.certificado_externo).
+function CertificadoTab() {
+  const { event, respondeuPesquisa, podeResponderPesquisa } = useUsuario();
+  const navigate = useNavigate();
+
+  if (!event.certificado_disponivel) {
+    return (
+      <div>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", color: "var(--navy)", marginBottom: "1.5rem" }}>🏆 Meus Certificados</h2>
+        <div style={{ textAlign: "center", padding: "3rem", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px dashed var(--border2)" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🔒</div>
+          <p style={{ fontWeight: 700, color: "var(--text2)", marginBottom: "0.35rem" }}>Ainda não liberado</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--text3)" }}>A organização do evento ainda não liberou os certificados. Assim que liberar, eles aparecem aqui.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const exigePesquisaPendente = event.pesquisa_ativa && event.certificado_exige_pesquisa && podeResponderPesquisa && !respondeuPesquisa;
+  if (exigePesquisaPendente) {
+    return (
+      <div>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", color: "var(--navy)", marginBottom: "1.5rem" }}>🏆 Meus Certificados</h2>
+        <div style={{ textAlign: "center", padding: "3rem", background: "var(--warn-bg)", borderRadius: "var(--radius)", border: "1px solid var(--warn)" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📋</div>
+          <p style={{ fontWeight: 700, color: "var(--warn)", marginBottom: "0.35rem" }}>Responda a pesquisa de satisfação</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1.5rem" }}>
+            Para liberar seu certificado, a organização pede que você responda antes à pesquisa de satisfação do evento.
+          </p>
+          <button className="btn btn-gold" onClick={() => navigate("/painel/pesquisa")}>Responder pesquisa</button>
+        </div>
+      </div>
+    );
+  }
+
+  return event.certificado_externo ? <MeusCertificados /> : <Certificado />;
+}
+
 function CredenciamentoTab() {
   const { participantes, setParticipantes, showToast } = useUsuario();
   return <Credenciamento participantes={participantes} setParticipantes={setParticipantes} showToast={showToast} />;
@@ -132,7 +176,7 @@ function AreaUsuarioRoutes() {
     { index: true, element: perfilIncompleto ? <Navigate to="/painel/dados/editar" replace /> : <Dashboard /> },
     { path: "programacao", element: <Programacao /> },
     { path: "presencas",   element: <Presencas /> },
-    { path: "certificado", element: !event.certificado_disponivel ? <Navigate to="/painel" replace /> : (event.certificado_externo ? <MeusCertificados /> : <Certificado />) },
+    { path: "certificado", element: <CertificadoTab /> },
     { path: "credencial",  element: <CredencialQR /> },
     { path: "forum",       element: event.forum_ativo !== false ? <ForumTab /> : <Navigate to="/painel" replace /> },
     { path: "ranking",     element: event.gamificacao_ativa !== false ? <RankingTab /> : <Navigate to="/painel" replace /> },
@@ -254,11 +298,11 @@ export function AreaUsuario(props) {
     ["",              faHouse,         "Início"],
     ["programacao",   faCalendarDays,  "Programação"],
     ["presencas",     faCircleCheck,   "Presenças"],
-    ...(event.certificado_disponivel ? [["certificado", faTrophy, "Meus Certificados"]] : []),
+    ["certificado", faTrophy, "Meus Certificados"],
     ...(event.forum_ativo !== false ? [["forum", faComments, "Fórum"]] : []),
     ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
-    ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa de Satisfação"]] : []),
+    ...(event.pesquisa_ativa && podeResponderPesquisa ? [["pesquisa", faClipboardList, "Pesquisa"]] : []),
   ];
   const MENU_CREDENCIADOR_EXTRA = isCredenciador
     ? [["credenciamento", faIdBadge, "Credenciar"]]

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus, faPenToSquare, faTrash, faEye, faEyeSlash, faArrowUp, faArrowDown,
-  faPaperPlane, faDownload, faChartBar,
+  faPaperPlane, faDownload, faChartBar, faFilePdf,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
@@ -13,6 +13,7 @@ import {
   fetchPerguntasPesquisa, inserirPerguntaPesquisa, atualizarPerguntaPesquisa, deletarPerguntaPesquisa,
   fetchRespostasPesquisa, atualizarEvento,
 } from "../../../lib/db";
+import { gerarResultadosPesquisaPDF } from "../../../utils/gerarResultadosPesquisaPDF";
 
 const TEMPLATE_DEFAULTS = {
   assunto: "", mensagem: DEFAULT_MENSAGEM_PESQUISA, bannerUrl: "",
@@ -350,9 +351,10 @@ function AbaEnviar({ event, setEvent, participantes, showToast }) {
   );
 }
 
-function AbaResultados({ perguntas, participantes, showToast }) {
+function AbaResultados({ event, perguntas, participantes, showToast }) {
   const [respostas, setRespostas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   useEffect(() => {
     fetchRespostasPesquisa().then(({ data }) => { setRespostas(data); setLoading(false); });
@@ -373,13 +375,29 @@ function AbaResultados({ perguntas, participantes, showToast }) {
     showToast("Exportado!", "success");
   }
 
+  async function baixarPdf() {
+    setGerandoPdf(true);
+    try {
+      await gerarResultadosPesquisaPDF(event, ordenadas, respostas, participantes);
+    } catch (err) {
+      showToast("Erro ao gerar PDF: " + err.message, "error");
+    } finally {
+      setGerandoPdf(false);
+    }
+  }
+
   if (loading) return <div style={{ textAlign: "center", padding: "2rem", color: "var(--text3)" }}>Carregando…</div>;
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <span style={{ fontSize: "0.88rem", color: "var(--text2)" }}>{totalRespondentes} participante{totalRespondentes !== 1 ? "s" : ""} respondeu{totalRespondentes !== 1 ? "ram" : ""} a pesquisa</span>
-        <button className="btn btn-sm btn-outline" onClick={exportar}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV</button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button className="btn btn-sm btn-outline" onClick={baixarPdf} disabled={gerandoPdf || ordenadas.length === 0}>
+            <FontAwesomeIcon icon={faFilePdf} style={{ marginRight: 6 }} />{gerandoPdf ? "Gerando…" : "Baixar PDF"}
+          </button>
+          <button className="btn btn-sm btn-outline" onClick={exportar}><FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV</button>
+        </div>
       </div>
 
       {ordenadas.length === 0 && (
@@ -464,7 +482,7 @@ export function PesquisaSatisfacao() {
         <>
           {aba === "perguntas" && <AbaPerguntas event={event} setEvent={setEvent} perguntas={perguntas} setPerguntas={setPerguntas} showToast={showToast} />}
           {aba === "enviar" && <AbaEnviar event={event} setEvent={setEvent} participantes={participantes} showToast={showToast} />}
-          {aba === "resultados" && <AbaResultados perguntas={perguntas} participantes={participantes} showToast={showToast} />}
+          {aba === "resultados" && <AbaResultados event={event} perguntas={perguntas} participantes={participantes} showToast={showToast} />}
         </>
       )}
     </div>

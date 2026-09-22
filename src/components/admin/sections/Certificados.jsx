@@ -7,7 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
-import { calcPresenca, formatData, baixarCSV } from "../../../utils/helpers";
+import { calcPresenca, formatData } from "../../../utils/helpers";
 import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
 
 function MiniBarra({ pct, minimo }) {
@@ -88,6 +88,19 @@ export function Certificados() {
     } else {
       registrarLog(novo ? "certificado.liberar" : "certificado.ocultar", "evento", event.id, event.nome);
       showToast(novo ? "Certificados liberados para os participantes." : "Certificados ocultados.", "success");
+    }
+  }
+
+  async function toggleExigePesquisa() {
+    const novo = !event.certificado_exige_pesquisa;
+    setEvent(prev => ({ ...prev, certificado_exige_pesquisa: novo }));
+    const { error } = await atualizarEvento(event.id, { certificado_exige_pesquisa: novo });
+    if (error) {
+      setEvent(prev => ({ ...prev, certificado_exige_pesquisa: !novo }));
+      showToast("Erro ao salvar.", "error");
+    } else {
+      registrarLog(novo ? "certificado.exigir_pesquisa_on" : "certificado.exigir_pesquisa_off", "evento", event.id, event.nome);
+      showToast(novo ? "Certificado agora exige resposta da pesquisa." : "Certificado não exige mais a pesquisa.", "success");
     }
   }
 
@@ -206,26 +219,25 @@ export function Certificados() {
     return true;
   });
 
-  function csvCell(v) {
-    return `"${String(v).replace(/"/g, '""')}"`;
-  }
-
-  function exportarLista(cpfComCaracteres) {
+  // Planilha .xlsx de verdade (não CSV) — o CPF é escrito como string JS,
+  // então a célula nasce com tipo texto no arquivo. Isso preserva o zero à
+  // esquerda de forma confiável em qualquer programa (Excel, Sheets,
+  // LibreOffice), sem depender do truque de fórmula ="..." do CSV, que
+  // alguns desses programas mostram como texto literal em vez de avaliar.
+  async function exportarLista(cpfComCaracteres) {
     if (aptos.length === 0) { showToast("Nenhum participante apto para exportar.", "error"); return; }
-    const header = "Nome Completo,Email,CPF\n";
+    const XLSX = await import("xlsx");
     const rows = aptos.map(p => {
       const digitos = (p.cpf || "").replace(/\D/g, "").padStart(11, "0");
-      // Sem pontuação, o CPF vai como fórmula ="00123456789" — força o Excel
-      // a tratar a célula como texto e não cortar o zero à esquerda (o que
-      // aconteceria com os dígitos soltos: Excel reconhece como número).
-      // Com pontuação isso não é necessário — os pontos/traço já impedem o
-      // Excel de interpretar como número.
       const cpf = cpfComCaracteres
         ? `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`
-        : `="${digitos}"`;
-      return [csvCell(p.nome), csvCell(p.email || ""), csvCell(cpf)].join(",");
-    }).join("\n");
-    baixarCSV("lista_certificados.csv", header + rows);
+        : digitos;
+      return { "Nome Completo": p.nome, "Email": p.email || "", "CPF": cpf };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Aptos");
+    XLSX.writeFile(wb, "lista_certificados.xlsx");
     showToast(`${aptos.length} apto${aptos.length === 1 ? "" : "s"} exportado${aptos.length === 1 ? "" : "s"}!`, "success");
     setModalExportCsv(false);
   }
@@ -263,7 +275,7 @@ export function Certificados() {
             </button>
           )}
           <button className="btn btn-gold" onClick={() => setModalExportCsv(true)}>
-            <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
+            <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar planilha
           </button>
         </div>
       </div>
@@ -279,6 +291,23 @@ export function Certificados() {
           ? "✅ Participantes podem visualizar e imprimir o certificado na área deles."
           : "🔒 Certificados ocultos — participantes não veem a aba de certificado ainda."}
       </div>
+
+      <label style={{
+        display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", userSelect: "none",
+        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+        padding: "0.75rem 1.1rem", marginBottom: "1.25rem", fontSize: "0.88rem",
+      }}>
+        <input
+          type="checkbox"
+          checked={!!event.certificado_exige_pesquisa}
+          onChange={toggleExigePesquisa}
+          style={{ width: 16, height: 16, accentColor: "var(--navy)", flexShrink: 0 }}
+        />
+        <span style={{ fontWeight: 600, color: "var(--text)" }}>Exigir resposta da pesquisa de satisfação para liberar o certificado</span>
+        {!event.pesquisa_ativa && (
+          <span style={{ fontSize: "0.76rem", color: "var(--text3)" }}>(a pesquisa de satisfação não está ativa — não tem efeito ainda)</span>
+        )}
+      </label>
 
       {/* Modo do certificado */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem" }}>
