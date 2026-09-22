@@ -21,6 +21,7 @@ import { PresentesPal } from "./sections/PresentesPal";
 import { Programacao } from "./sections/Programacao";
 import { Presencas } from "./sections/Presencas";
 import { Certificado } from "./sections/Certificado";
+import { MeusCertificados } from "./sections/MeusCertificados";
 import { CredencialQR } from "./sections/CredencialQR";
 import { MeusDados } from "./sections/MeusDados";
 import { Credenciamento } from "../admin/sections/Credenciamento";
@@ -100,7 +101,7 @@ function AreaUsuarioRoutes() {
     { index: true, element: perfilIncompleto ? <Navigate to="/painel/dados/editar" replace /> : <Dashboard /> },
     { path: "programacao", element: <Programacao /> },
     { path: "presencas",   element: <Presencas /> },
-    { path: "certificado", element: event.certificado_disponivel ? <Certificado /> : <Navigate to="/painel" replace /> },
+    { path: "certificado", element: !event.certificado_disponivel ? <Navigate to="/painel" replace /> : (event.certificado_externo ? <MeusCertificados /> : <Certificado />) },
     { path: "credencial",  element: <CredencialQR /> },
     { path: "forum",       element: event.forum_ativo !== false ? <ForumTab /> : <Navigate to="/painel" replace /> },
     { path: "ranking",     element: event.gamificacao_ativa !== false ? <RankingTab /> : <Navigate to="/painel" replace /> },
@@ -222,7 +223,7 @@ export function AreaUsuario(props) {
     ["",              faHouse,         "Início"],
     ["programacao",   faCalendarDays,  "Programação"],
     ["presencas",     faCircleCheck,   "Presenças"],
-    ...(event.certificado_disponivel ? [["certificado", faTrophy, "Certificado"]] : []),
+    ...(event.certificado_disponivel ? [["certificado", faTrophy, event.certificado_externo ? "Meus Certificados" : "Certificado"]] : []),
     ...(event.forum_ativo !== false ? [["forum", faComments, "Fórum"]] : []),
     ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
