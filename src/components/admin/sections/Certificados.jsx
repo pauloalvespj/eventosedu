@@ -201,19 +201,9 @@ export function Certificados() {
   });
 
   function exportarLista() {
-    const header = "Nome,CPF,Instituição,Cargo,CH Cumprida,Percentual,Status\n";
-    const rows = participantes.map(p => {
-      const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
-      return `"${p.nome}","${p.cpf}","${p.instituicao}","${p.cargo}",${r.chCumprida}h,${r.pct}%,${r.apto ? "APTO" : "NÃO APTO"}`;
-    }).join("\n");
-    baixarCSV("lista_certificados.csv", header + rows);
-    showToast("Lista exportada!", "success");
-  }
-
-  function exportarNomeEmailCpf() {
     const header = "Nome Completo,Email,CPF\n";
     const rows = participantes.map(p => `"${p.nome}","${p.email || ""}","${p.cpf || ""}"`).join("\n");
-    baixarCSV("nome_email_cpf.csv", header + rows);
+    baixarCSV("lista_certificados.csv", header + rows);
     showToast("Lista exportada!", "success");
   }
 
@@ -249,10 +239,6 @@ export function Certificados() {
               Upload em massa
             </button>
           )}
-          <button className="btn btn-outline" onClick={exportarNomeEmailCpf} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <FontAwesomeIcon icon={faDownload} />
-            Exportar Nome/E-mail/CPF
-          </button>
           <button className="btn btn-gold" onClick={exportarLista}>
             <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
           </button>
