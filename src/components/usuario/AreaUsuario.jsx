@@ -4,8 +4,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse, faCalendarDays, faCircleCheck, faTrophy, faComments, faMedal,
   faHandshake, faClipboardList, faCircleUser, faMicrophone, faIdBadge,
+  faTriangleExclamation, faCircleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
-import { calcPresenca, calcPontos, getNivel, getUserId, nomeExibicao } from "../../utils/helpers";
+import { calcPresenca, calcPontos, getNivel, getUserId, nomeExibicao, avisosExibindo } from "../../utils/helpers";
 import { toggleHighContrast, isHighContrast } from "../../lib/a11y";
 import { AvatarUpload, Sidebar, Topbar, AlterarSenha } from "../base/index";
 import { ForumView } from "../forum/ForumView";
@@ -44,6 +45,36 @@ function PesquisaTab() {
   const { event, user, perguntasPesquisa, setRespondeuPesquisa } = useUsuario();
   return <PesquisaSatisfacaoForm event={event} user={user} perguntasPesquisa={perguntasPesquisa} onRespondido={() => setRespondeuPesquisa(true)} />;
 }
+// Banner de avisos do admin — fixo no topo do conteúdo, em qualquer tela
+// da área do participante, enquanto o aviso estiver ativo e vigente.
+const AVISO_ESTILO = {
+  danger:  { icon: faCircleExclamation,   cor: "var(--danger)",  bg: "var(--danger-bg)" },
+  alerta:  { icon: faTriangleExclamation, cor: "var(--warn)",    bg: "var(--warn-bg)" },
+  sucesso: { icon: faCircleCheck,         cor: "var(--success)", bg: "var(--success-bg)" },
+};
+function AvisosBanner() {
+  const { avisos } = useUsuario();
+  const lista = avisosExibindo(avisos);
+  if (lista.length === 0) return null;
+  return (
+    <div style={{ marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+      {lista.map(aviso => {
+        const est = AVISO_ESTILO[aviso.tipo] || AVISO_ESTILO.alerta;
+        return (
+          <div key={aviso.id} style={{
+            display: "flex", alignItems: "flex-start", gap: 10, padding: "0.85rem 1.1rem",
+            background: est.bg, border: `1px solid ${est.cor}`, borderRadius: "var(--radius-sm)",
+            color: est.cor, fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.5,
+          }}>
+            <FontAwesomeIcon icon={est.icon} style={{ marginTop: 2, flexShrink: 0 }} />
+            <span>{aviso.mensagem}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CredenciamentoTab() {
   const { participantes, setParticipantes, showToast } = useUsuario();
   return <Credenciamento participantes={participantes} setParticipantes={setParticipantes} showToast={showToast} />;
@@ -223,7 +254,7 @@ export function AreaUsuario(props) {
     ["",              faHouse,         "Início"],
     ["programacao",   faCalendarDays,  "Programação"],
     ["presencas",     faCircleCheck,   "Presenças"],
-    ...(event.certificado_disponivel ? [["certificado", faTrophy, event.certificado_externo ? "Meus Certificados" : "Certificado"]] : []),
+    ...(event.certificado_disponivel ? [["certificado", faTrophy, "Meus Certificados"]] : []),
     ...(event.forum_ativo !== false ? [["forum", faComments, "Fórum"]] : []),
     ...(event.gamificacao_ativa !== false ? [["ranking", faMedal, "Ranking"]] : []),
     ...(event.rede_visivel !== false ? [["rede", faHandshake, "Rede"]] : []),
@@ -299,6 +330,7 @@ export function AreaUsuario(props) {
 
           {/* ── CONTEÚDO ── */}
           <div className="part-content">
+            <AvisosBanner />
             <AreaUsuarioRoutes />
           </div>
         </div>

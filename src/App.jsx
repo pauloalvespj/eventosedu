@@ -10,7 +10,7 @@ import {
   fetchEvent, fetchAtividades, fetchProfiles, fetchPresencas,
   fetchAvaliacoes, fetchForumConfig, fetchTopicos, fetchPontuacoes,
   fetchInstituicoes, fetchGamificacaoConfig, fetchFollows, fetchConvidados,
-  fetchTurnos, fetchPresencasTurno, fetchPerguntasPesquisa,
+  fetchTurnos, fetchPresencasTurno, fetchPerguntasPesquisa, fetchAvisos,
   seguirUsuario, desseguirUsuario,
   inserirEnrollment,
 } from "./lib/db";
@@ -188,6 +188,7 @@ export default function App() {
   const [pontosConfig, setPontosConfig] = useState(INITIAL_GAMIFICACAO_CONFIG);
   const [follows, setFollows] = useState([]);
   const [convidados, setConvidados] = useState([]);
+  const [avisos, setAvisos] = useState([]);
 
   // ── Auth ─────────────────────────────────────────────────────
   const [user, setUser] = useState(null);         // profile do usuário logado
@@ -268,7 +269,8 @@ export default function App() {
       fetchTurnos(),
       fetchPresencasTurno(),
       fetchPerguntasPesquisa(),
-    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes, turRes, presTurRes, pergRes]) => {
+      fetchAvisos(),
+    ]).then(([presRes, avalRes, fcRes, topRes, ponRes, instRes, gamRes, folRes, convRes, turRes, presTurRes, pergRes, avisosRes]) => {
       if (get(presRes)) setPresencas(get(presRes));
       if (get(avalRes)) setAvaliacoes(get(avalRes));
       if (get(fcRes))   setForumConfig(get(fcRes));
@@ -281,6 +283,7 @@ export default function App() {
       if (get(turRes))  setTurnos(get(turRes));
       if (get(presTurRes)) setPresencasTurno(get(presTurRes));
       if (get(pergRes)) setPerguntasPesquisa(get(pergRes));
+      if (get(avisosRes)) setAvisos(get(avisosRes));
     });
   }
 
@@ -496,6 +499,7 @@ export default function App() {
     avaliacoes, setAvaliacoes,
     instituicoes, setInstituicoes,
     convidados, setConvidados,
+    avisos, setAvisos,
     onLogout: handleLogout,
     showToast,
   };
@@ -525,6 +529,7 @@ export default function App() {
           topicos={topicos} setTopicos={setTopicos} pontuacoes={pontuacoes} setPontuacoes={setPontuacoes}
           forumConfig={forumConfig} participantes={participantes} admins={admins}
           instituicoes={instituicoes} setInstituicoes={setInstituicoes} avaliacoes={avaliacoes} setAvaliacoes={setAvaliacoes}
+          avisos={avisos}
           follows={follows} setFollows={setFollows} pontosConfig={pontosConfig}
           onSeguir={async (followingId) => {
             const novo = { id: Date.now(), follower_id: user.id, following_id: followingId, criado_em: new Date().toISOString() };

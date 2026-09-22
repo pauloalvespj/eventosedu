@@ -169,6 +169,45 @@ export async function uploadLogoInstituicao(instId, file) {
   return publicUrl;
 }
 
+// ── AVISOS (banner no topo da área do participante) ────────────
+// fetchAvisos traz tudo (admin usa pra listar/editar); a área do
+// participante já recebe só os ativos/vigentes por causa da RLS pública,
+// então não precisa filtrar de novo no cliente — mas fetchAvisos() aqui é
+// usado pelo admin autenticado, que enxerga todas as linhas.
+
+export async function fetchAvisos() {
+  const { data, error } = await supabase
+    .from("avisos")
+    .select("*")
+    .order("criado_em", { ascending: false });
+  return { data: data ?? [], error };
+}
+
+export async function inserirAviso({ mensagem, tipo = "alerta", data_inicio = null, data_fim = null, ativo = true }) {
+  const { data, error } = await supabase
+    .from("avisos")
+    .insert({ event_id: 1, mensagem, tipo, data_inicio, data_fim, ativo })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function atualizarAviso(id, updates) {
+  const { error } = await supabase
+    .from("avisos")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function deletarAviso(id) {
+  const { error } = await supabase
+    .from("avisos")
+    .delete()
+    .eq("id", id);
+  return { error };
+}
+
 export async function fetchEvent() {
   const { data, error } = await supabase
     .from("events")

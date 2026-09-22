@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChartBar, faGear, faCalendarDays, faUsers, faIdBadge,
   faCircleCheck, faTrophy, faChartLine, faStar, faComments, faMedal, faLock,
-  faBuilding, faKey, faBolt,
+  faBuilding, faKey, faBolt, faBullhorn,
 } from "@fortawesome/free-solid-svg-icons";
 import { ROLE_LABEL } from "../../utils/helpers";
 import { AdminContext, useAdmin } from "./sections/AdminContext";
@@ -26,6 +26,7 @@ import { ForumAdmin }     from "./sections/ForumAdmin";
 import { Gamificacao }    from "./sections/Gamificacao";
 import { Administracao }  from "./sections/Administracao";
 import { Instituicoes }   from "./sections/Instituicoes";
+import { Avisos }         from "./sections/Avisos";
 import { QuizList }   from "./sections/QuizList";
 import { QuizDetail } from "./sections/QuizDetail";
 
@@ -37,6 +38,7 @@ const MENU = [
   { path: "credenciamento", icon: faIdBadge,      label: "Credenciamento",  roles: ["admin"] },
   { path: "presencas",      icon: faCircleCheck,  label: "Presenças",       roles: ["admin"] },
   { path: "certificados",   icon: faTrophy,       label: "Certificados",    roles: ["admin"] },
+  { path: "avisos",         icon: faBullhorn,     label: "Avisos",          roles: ["admin"] },
   { path: "relatorios",     icon: faChartLine,    label: "Relatórios",      roles: ["admin"] },
   { path: "forum",          icon: faComments,     label: "Fórum",           roles: ["admin"] },
   { path: "quiz",           icon: faBolt,         label: "Quiz / Perguntas", roles: ["admin"] },
@@ -204,6 +206,7 @@ function AdminRoutes() {
     { path: "credenciamento",    element: <CredenciamentoTab /> },
     { path: "presencas",         element: <Presencas /> },
     { path: "certificados",      element: <Certificados /> },
+    { path: "avisos",            element: <Avisos /> },
     { path: "modelo-cert",       element: <ModeloCertificado /> },
     { path: "relatorios",        element: <Relatorios /> },
     { path: "avaliacoes",        element: <Avaliacoes /> },

@@ -161,6 +161,20 @@ export function qrPresencaTurnoValue(turnoId, token) {
   return `${window.location.origin}/presenca-turno/${turnoId}?t=${token ?? ""}`;
 }
 
+// ── Avisos (banner no topo da área do participante) ────────────
+// Vigente = dentro do intervalo data_inicio/data_fim (qualquer um dos dois
+// pode ser nulo = sem limite naquele lado). Exibindo = vigente E ativo.
+export function avisoVigente(aviso) {
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (aviso.data_inicio && hoje < aviso.data_inicio) return false;
+  if (aviso.data_fim && hoje > aviso.data_fim) return false;
+  return true;
+}
+
+export function avisosExibindo(avisos) {
+  return (avisos || []).filter(a => a.ativo && avisoVigente(a));
+}
+
 // ── Gamificação ───────────────────────────────────────────────
 export function calcPontos(userId, pontuacoes) {
   return pontuacoes.filter(p => p.user_id === userId).reduce((s, p) => s + p.valor, 0);
