@@ -201,10 +201,11 @@ export function Certificados() {
   });
 
   function exportarLista() {
+    if (aptos.length === 0) { showToast("Nenhum participante apto para exportar.", "error"); return; }
     const header = "Nome Completo,Email,CPF\n";
-    const rows = participantes.map(p => `"${p.nome}","${p.email || ""}","${p.cpf || ""}"`).join("\n");
+    const rows = aptos.map(p => `"${p.nome}","${p.email || ""}","${p.cpf || ""}"`).join("\n");
     baixarCSV("lista_certificados.csv", header + rows);
-    showToast("Lista exportada!", "success");
+    showToast(`${aptos.length} apto${aptos.length === 1 ? "" : "s"} exportado${aptos.length === 1 ? "" : "s"}!`, "success");
   }
 
   return (
