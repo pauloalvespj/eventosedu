@@ -67,6 +67,7 @@ export function Certificados() {
   const [busca, setBusca] = useState("");
   const [filtroOrgao, setFiltroOrgao] = useState("");
   const [filtroFreq, setFiltroFreq] = useState(""); // id do turno ou da atividade selecionada
+  const [filtroStatus, setFiltroStatus] = useState(""); // "" = todos, "apto", "nao_apto"
   const fileRefs = useRef({});
   const porTurno = event.modo_frequencia === "turno";
 
@@ -183,6 +184,8 @@ export function Certificados() {
     ? [...turnos].sort((a, b) => (a.dia + (a.horario_inicio||"")).localeCompare(b.dia + (b.horario_inicio||"")))
     : atividades.filter(a => a.tipo !== "intervalo").sort((a, b) => (a.dia + a.horario).localeCompare(b.dia + b.horario));
 
+  const aptosIds = new Set(aptos.map(p => p.id));
+
   const participantesFiltrados = participantes.filter(p => {
     if (busca.trim()) {
       const termo = busca.trim().toLowerCase();
@@ -191,6 +194,8 @@ export function Certificados() {
       if (!p.nome.toLowerCase().includes(termo) && !(buscaCpf && cpfLimpo.includes(buscaCpf))) return false;
     }
     if (filtroOrgao && p.instituicao !== filtroOrgao) return false;
+    if (filtroStatus === "apto" && !aptosIds.has(p.id)) return false;
+    if (filtroStatus === "nao_apto" && aptosIds.has(p.id)) return false;
     if (filtroFreq) {
       const bateu = porTurno
         ? presencasTurno.some(pt => pt.turno_id === Number(filtroFreq) && pt.participante_id === p.id)
@@ -319,6 +324,11 @@ export function Certificados() {
         <div className="table-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
           <span className="table-title">Lista de Participantes</span>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            <select className="form-input" style={{ width: 150, marginBottom: 0 }} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="apto">Aptos</option>
+              <option value="nao_apto">Não aptos</option>
+            </select>
             <select className="form-input" style={{ width: 170, marginBottom: 0 }} value={filtroOrgao} onChange={e => setFiltroOrgao(e.target.value)}>
               <option value="">Todos os órgãos</option>
               {orgaos.map(o => <option key={o} value={o}>{o}</option>)}
@@ -337,8 +347,8 @@ export function Certificados() {
               onChange={e => setBusca(e.target.value)}
               style={{ width: 200, marginBottom: 0 }}
             />
-            {(busca || filtroOrgao || filtroFreq) && (
-              <button className="btn btn-sm btn-outline" onClick={() => { setBusca(""); setFiltroOrgao(""); setFiltroFreq(""); }} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
+            {(busca || filtroOrgao || filtroFreq || filtroStatus) && (
+              <button className="btn btn-sm btn-outline" onClick={() => { setBusca(""); setFiltroOrgao(""); setFiltroFreq(""); setFiltroStatus(""); }} style={{ padding: "0.35rem 0.6rem" }}>✕ Limpar</button>
             )}
           </div>
         </div>
