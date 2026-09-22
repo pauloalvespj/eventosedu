@@ -76,6 +76,7 @@ export function Certificados() {
   const [bulkItems, setBulkItems] = useState([]); // [{key, file, participanteId, status, erro}]
   const [bulkEnviando, setBulkEnviando] = useState(false);
   const bulkFileRef = useRef(null);
+  const [modalExportCsv, setModalExportCsv] = useState(false);
 
   async function toggleCertificado() {
     const novo = !event.certificado_disponivel;
@@ -205,12 +206,28 @@ export function Certificados() {
     return true;
   });
 
-  function exportarLista() {
+  function csvCell(v) {
+    return `"${String(v).replace(/"/g, '""')}"`;
+  }
+
+  function exportarLista(cpfComCaracteres) {
     if (aptos.length === 0) { showToast("Nenhum participante apto para exportar.", "error"); return; }
     const header = "Nome Completo,Email,CPF\n";
-    const rows = aptos.map(p => `"${p.nome}","${p.email || ""}","${(p.cpf || "").replace(/\D/g, "")}"`).join("\n");
+    const rows = aptos.map(p => {
+      const digitos = (p.cpf || "").replace(/\D/g, "").padStart(11, "0");
+      // Sem pontuação, o CPF vai como fórmula ="00123456789" — força o Excel
+      // a tratar a célula como texto e não cortar o zero à esquerda (o que
+      // aconteceria com os dígitos soltos: Excel reconhece como número).
+      // Com pontuação isso não é necessário — os pontos/traço já impedem o
+      // Excel de interpretar como número.
+      const cpf = cpfComCaracteres
+        ? `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`
+        : `="${digitos}"`;
+      return [csvCell(p.nome), csvCell(p.email || ""), csvCell(cpf)].join(",");
+    }).join("\n");
     baixarCSV("lista_certificados.csv", header + rows);
     showToast(`${aptos.length} apto${aptos.length === 1 ? "" : "s"} exportado${aptos.length === 1 ? "" : "s"}!`, "success");
+    setModalExportCsv(false);
   }
 
   return (
@@ -245,7 +262,7 @@ export function Certificados() {
               Upload em massa
             </button>
           )}
-          <button className="btn btn-gold" onClick={exportarLista}>
+          <button className="btn btn-gold" onClick={() => setModalExportCsv(true)}>
             <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
           </button>
         </div>
@@ -507,6 +524,27 @@ export function Certificados() {
             </div>
           </>
         )}
+      </Modal>
+
+      {/* MODAL: como exportar o CPF na planilha de aptos */}
+      <Modal show={modalExportCsv} onClose={() => setModalExportCsv(false)} title="Exportar aptos">
+        <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1.25rem" }}>
+          Como o CPF deve sair na planilha?
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <button className="btn btn-outline btn-block" onClick={() => exportarLista(true)} style={{ justifyContent: "flex-start", textAlign: "left" }}>
+            <div>
+              <div style={{ fontWeight: 700 }}>Com pontuação</div>
+              <div style={{ fontSize: "0.78rem", opacity: 0.8, fontFamily: "monospace" }}>000.000.000-00</div>
+            </div>
+          </button>
+          <button className="btn btn-outline btn-block" onClick={() => exportarLista(false)} style={{ justifyContent: "flex-start", textAlign: "left" }}>
+            <div>
+              <div style={{ fontWeight: 700 }}>Sem pontuação</div>
+              <div style={{ fontSize: "0.78rem", opacity: 0.8, fontFamily: "monospace" }}>00000000000</div>
+            </div>
+          </button>
+        </div>
       </Modal>
     </div>
   );
