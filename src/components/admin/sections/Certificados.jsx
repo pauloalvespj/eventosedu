@@ -210,6 +210,13 @@ export function Certificados() {
     showToast("Lista exportada!", "success");
   }
 
+  function exportarNomeEmailCpf() {
+    const header = "Nome Completo,Email,CPF\n";
+    const rows = participantes.map(p => `"${p.nome}","${p.email || ""}","${p.cpf || ""}"`).join("\n");
+    baixarCSV("nome_email_cpf.csv", header + rows);
+    showToast("Lista exportada!", "success");
+  }
+
   return (
     <div>
       <div className="admin-topbar">
@@ -242,6 +249,10 @@ export function Certificados() {
               Upload em massa
             </button>
           )}
+          <button className="btn btn-outline" onClick={exportarNomeEmailCpf} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FontAwesomeIcon icon={faDownload} />
+            Exportar Nome/E-mail/CPF
+          </button>
           <button className="btn btn-gold" onClick={exportarLista}>
             <FontAwesomeIcon icon={faDownload} style={{ marginRight: 6 }} />Exportar CSV
           </button>
