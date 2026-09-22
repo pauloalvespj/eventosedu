@@ -355,6 +355,12 @@ input,select,textarea{font-family:inherit}
 .admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
 .admin-topbar h1{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--admin-hd)}
 .admin-topbar p{font-size:0.85rem;color:var(--text2);margin-top:0.2rem}
+/* Credenciamento.jsx é reaproveitado tal e qual na área do participante
+   (aba "Credenciar", pra quem tem is_credenciador) — o h1 do admin-topbar
+   é maior (1.5rem) que o h2 usado no título das outras telas do
+   participante (1.4rem), o que desalinhava a altura do título entre elas.
+   Ajusta só dentro de .part-content, sem mexer no painel admin. */
+.part-content .admin-topbar h1{font-size:1.4rem}
 .admin-subtabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .admin-subtabs::-webkit-scrollbar{height:4px}
 .admin-subtabs > button{flex-shrink:0;white-space:nowrap}

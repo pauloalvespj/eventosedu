@@ -203,7 +203,11 @@ export function AreaUsuario(props) {
 
   const porTurno = event.modo_frequencia === "turno";
   const isPalestrante = user.is_palestrante;
-  const isCredenciador = user.is_credenciador;
+  // Evento encerrado (hoje depois do fim) — quem credencia só por ser
+  // participante (is_credenciador) perde o acesso a Credenciar; admin
+  // continua podendo credenciar a qualquer momento pelo painel admin.
+  const eventoEncerrado = !!event.data_fim && new Date().toISOString().slice(0, 10) > event.data_fim;
+  const isCredenciador = user.is_credenciador && !eventoEncerrado;
   const perfilIncompleto = !user.cpf || !user.email || !user.nome_publico || !user.instituicao || !user.cargo || (isPalestrante && !user.mini_bio);
   const [altoContraste, setAltoContraste] = useState(isHighContrast);
 
