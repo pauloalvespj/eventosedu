@@ -90,6 +90,8 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
   const [somenteAptos, setSomenteAptos] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [emailTeste, setEmailTeste] = useState("pauloalvespj@ufc.br");
+  const [enviandoTeste, setEnviandoTeste] = useState(false);
 
   function set(k, v) { setTemplate(t => ({ ...t, [k]: v })); }
 
@@ -130,6 +132,35 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
     ? event.certificado_link_url
     : `${window.location.origin}/painel/certificado`;
 
+  async function enviarUmLote(lote) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke("enviar-certificado", {
+      body: { destinatarios: lote, event, certificadoUrl, ...template },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) throw new Error(await erroFuncaoEdge(error));
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function enviarTeste() {
+    const email = emailTeste.trim();
+    if (!email) { showToast("Informe um e-mail para o teste.", "error"); return; }
+    setEnviandoTeste(true);
+    try {
+      const data = await enviarUmLote([{ id: "teste", email }]);
+      if (data?.failed?.length) {
+        showToast("Falha ao enviar teste: " + (data.failed[0]?.error || "erro desconhecido"), "error");
+      } else {
+        showToast(`E-mail de teste enviado para ${email}!`, "success");
+      }
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviandoTeste(false);
+    }
+  }
+
   async function enviar() {
     const ids = [...selecionados];
     if (!ids.length) { showToast("Selecione ao menos um participante.", "warn"); return; }
@@ -148,13 +179,7 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
       for (let i = 0; i < destinatarios.length; i += TAMANHO_LOTE) {
         const lote = destinatarios.slice(i, i + TAMANHO_LOTE);
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const { data, error } = await supabase.functions.invoke("enviar-certificado", {
-            body: { destinatarios: lote, event, certificadoUrl, ...template },
-            headers: { Authorization: `Bearer ${session?.access_token}` },
-          });
-          if (error) throw new Error(await erroFuncaoEdge(error));
-          if (data?.error) throw new Error(data.error);
+          const data = await enviarUmLote(lote);
           enviados.push(...(data?.sent || []));
           falhas.push(...(data?.failed || []));
         } catch (err) {
@@ -222,6 +247,17 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
         <button className="btn btn-sm btn-outline" onClick={salvarTemplate} disabled={salvando} style={{ marginBottom: "1.5rem" }}>
           {salvando ? "Salvando…" : "Salvar modelo"}
         </button>
+
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <input className="form-input" placeholder="seu@email.com" value={emailTeste}
+            onChange={e => setEmailTeste(e.target.value)} style={{ flex: 1 }} />
+          <button className="btn btn-outline" onClick={enviarTeste} disabled={enviandoTeste || !emailTeste.trim()}>
+            {enviandoTeste ? "Enviando…" : "Enviar teste"}
+          </button>
+        </div>
+        <p style={{ fontSize: "0.78rem", color: "var(--text3)", margin: "0 0 1.25rem" }}>
+          Envia só para esse e-mail, sem afetar a seleção de destinatários abaixo. Use pra conferir o modelo antes de disparar pra todo mundo.
+        </p>
 
         <div className="table-wrap">
           <div className="table-header" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
