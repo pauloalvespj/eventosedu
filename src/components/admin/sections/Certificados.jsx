@@ -4,11 +4,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll,
   faFileImport, faXmark, faCircleCheck, faCircleExclamation, faCloudArrowUp, faLink, faFloppyDisk,
+  faPaperPlane,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
-import { calcPresenca, formatData } from "../../../utils/helpers";
+import { supabase } from "../../../lib/supabase";
+import { calcPresenca, formatData, erroFuncaoEdge } from "../../../utils/helpers";
 import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
+import { gerarTemplateHTMLCertificado, DEFAULT_MENSAGEM_CERTIFICADO } from "../../../lib/emailTemplate";
 
 function MiniBarra({ pct, minimo }) {
   const cls = pct >= minimo ? "" : pct >= minimo * 0.7 ? " warn" : " danger";
@@ -60,9 +63,219 @@ function encontrarParticipantePorArquivo(filename, participantes) {
   return parciais.length === 1 ? parciais[0] : null;
 }
 
+function CorField({ label, value, onChange }) {
+  const cor = value || "#0a1f40";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <input type="color" value={cor} onChange={e => onChange(e.target.value)}
+        style={{ width: 32, height: 32, padding: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", cursor: "pointer" }} />
+      <span style={{ fontSize: "0.72rem", color: "var(--text3)" }}>{label}</span>
+    </div>
+  );
+}
+
+const TEMPLATE_DEFAULTS_CERT = {
+  assunto: "", mensagem: DEFAULT_MENSAGEM_CERTIFICADO, bannerUrl: "",
+  corCabecalho: "#0a1f40", corRodape: "#0a1f40", corBotao: "#0a1f40", ctaTexto: "Ver certificado →",
+};
+
+// Aba "Enviar e-mail" — avisa por e-mail quem já está apto que o certificado
+// está disponível. Um e-mail por invocação da edge function (ver comentário
+// em enviar(), mesmo limite de recursos documentado nas outras telas de
+// envio em massa do projeto).
+function AbaEnviarCertificado({ event, participantes, atividades, presencas, turnos, presencasTurno, showToast }) {
+  const [template, setTemplate] = useState({ ...TEMPLATE_DEFAULTS_CERT, ...(event.certificado_email_template || {}) });
+  const [busca, setBusca] = useState("");
+  const [filtroOrgao, setFiltroOrgao] = useState("");
+  const [somenteAptos, setSomenteAptos] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  function set(k, v) { setTemplate(t => ({ ...t, [k]: v })); }
+
+  function pctPresenca(p) {
+    return calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno).pct;
+  }
+  function estaApto(p) {
+    return calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno).apto;
+  }
+
+  const aptos = participantes.filter(p => p.ativo !== false && estaApto(p));
+  const [selecionados, setSelecionados] = useState(() => new Set(aptos.map(p => p.id)));
+
+  const orgaos = [...new Set(participantes.map(p => p.instituicao).filter(Boolean))].sort();
+
+  const filtrados = participantes.filter(p => {
+    if (p.ativo === false) return false;
+    if (busca.trim() && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+    if (filtroOrgao && p.instituicao !== filtroOrgao) return false;
+    if (somenteAptos && !estaApto(p)) return false;
+    return true;
+  });
+
+  function toggleSel(id) {
+    setSelecionados(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+  function selecionarTodos() { setSelecionados(new Set(filtrados.map(p => p.id))); }
+  function limparSelecao() { setSelecionados(new Set()); }
+
+  async function salvarTemplate() {
+    setSalvando(true);
+    await atualizarEvento(event.id, { certificado_email_template: template });
+    setSalvando(false);
+    showToast("Modelo salvo!", "success");
+  }
+
+  const certificadoUrl = event.certificado_modo === "link" && event.certificado_link_url
+    ? event.certificado_link_url
+    : `${window.location.origin}/painel/certificado`;
+
+  async function enviar() {
+    const ids = [...selecionados];
+    if (!ids.length) { showToast("Selecione ao menos um participante.", "warn"); return; }
+    const semEmail = participantes.filter(p => ids.includes(p.id) && !p.email);
+    if (semEmail.length) { showToast(`${semEmail.length} selecionado(s) sem e-mail cadastrado — desmarque-os antes de enviar.`, "warn"); return; }
+    setEnviando(true);
+    try {
+      const destinatarios = participantes.filter(p => ids.includes(p.id)).map(p => ({ id: p.id, email: p.email }));
+
+      // Um e-mail por invocação, com pausa entre elas — mesmo lotes de 5
+      // estouram o limite de recursos da Edge Function (HTTP 546,
+      // "WORKER_LIMIT").
+      const TAMANHO_LOTE = 1;
+      const enviados = [];
+      const falhas = [];
+      for (let i = 0; i < destinatarios.length; i += TAMANHO_LOTE) {
+        const lote = destinatarios.slice(i, i + TAMANHO_LOTE);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const { data, error } = await supabase.functions.invoke("enviar-certificado", {
+            body: { destinatarios: lote, event, certificadoUrl, ...template },
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          });
+          if (error) throw new Error(await erroFuncaoEdge(error));
+          if (data?.error) throw new Error(data.error);
+          enviados.push(...(data?.sent || []));
+          falhas.push(...(data?.failed || []));
+        } catch (err) {
+          lote.forEach(d => falhas.push({ id: d.id, email: d.email, error: err.message || String(err) }));
+        }
+        if (i + TAMANHO_LOTE < destinatarios.length) await new Promise(r => setTimeout(r, 500));
+      }
+
+      registrarLog("certificado.email_enviado", "evento", event.id, event.nome, { enviados: enviados.length, falhas: falhas.length });
+      if (falhas.length) {
+        showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
+        console.warn("Falhas ao enviar aviso de certificado:", falhas);
+      } else {
+        showToast(`E-mail enviado para ${enviados.length} participante${enviados.length !== 1 ? "s" : ""}!`, "success");
+      }
+    } catch (err) {
+      showToast("Não foi possível enviar via SMTP (" + (err.message || err) + ").", "error");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  function htmlPreview() {
+    return gerarTemplateHTMLCertificado({
+      event: event || {}, bannerUrl: template.bannerUrl, certificadoUrl,
+      assunto: template.assunto, mensagem: template.mensagem, ctaTexto: template.ctaTexto,
+      corCabecalho: template.corCabecalho, corRodape: template.corRodape, corBotao: template.corBotao,
+    });
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+      <div>
+        <div style={{
+          fontSize: "0.82rem", color: "var(--text2)", background: "var(--surface2)",
+          border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "0.6rem 0.85rem", marginBottom: "1.25rem",
+        }}>
+          O botão do e-mail leva para {event.certificado_modo === "link" ? "o link externo configurado acima" : "a área de certificados do participante"}.
+        </div>
+        <div className="form-group">
+          <label className="form-label">Assunto</label>
+          <input className="form-input" placeholder={`Certificado disponível — ${event?.nome || "Evento"}`}
+            value={template.assunto} onChange={e => set("assunto", e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Mensagem</label>
+          <textarea className="form-input" rows={4} value={template.mensagem} onChange={e => set("mensagem", e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Texto do botão</label>
+          <input className="form-input" value={template.ctaTexto} onChange={e => set("ctaTexto", e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">URL do Banner (opcional)</label>
+          <input className="form-input" type="url" value={template.bannerUrl} onChange={e => set("bannerUrl", e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Cores</label>
+          <div style={{ display: "flex", gap: "1rem" }}>
+            <CorField label="Cabeçalho" value={template.corCabecalho} onChange={v => set("corCabecalho", v)} />
+            <CorField label="Botão" value={template.corBotao} onChange={v => set("corBotao", v)} />
+            <CorField label="Rodapé" value={template.corRodape} onChange={v => set("corRodape", v)} />
+          </div>
+        </div>
+        <button className="btn btn-sm btn-outline" onClick={salvarTemplate} disabled={salvando} style={{ marginBottom: "1.5rem" }}>
+          {salvando ? "Salvando…" : "Salvar modelo"}
+        </button>
+
+        <div className="table-wrap">
+          <div className="table-header" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+            <span className="table-title">Destinatários ({selecionados.size} selecionado{selecionados.size !== 1 ? "s" : ""})</span>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <select className="form-input" style={{ width: 160, marginBottom: 0 }} value={filtroOrgao} onChange={e => setFiltroOrgao(e.target.value)}>
+                <option value="">Todos os órgãos</option>
+                {orgaos.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <input className="search-input" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.5rem 1rem", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+            <button className="btn btn-sm btn-outline" onClick={selecionarTodos}>Selecionar todos</button>
+            <button className="btn btn-sm btn-outline" onClick={limparSelecao}>Limpar</button>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "var(--text2)", cursor: "pointer" }}>
+              <input type="checkbox" checked={somenteAptos} onChange={e => setSomenteAptos(e.target.checked)} />
+              Só aptos ({aptos.length})
+            </label>
+          </div>
+          <div style={{ maxHeight: 260, overflowY: "auto" }}>
+            {filtrados.map(p => (
+              <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 1rem", fontSize: "0.85rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }}>
+                <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSel(p.id)} />
+                <span style={{ flex: 1 }}>{p.nome}</span>
+                <span className={`badge badge-${estaApto(p) ? "success" : "warn"}`} style={{ fontSize: "0.68rem" }}>{pctPresenca(p)}%</span>
+                <span style={{ color: p.email ? "var(--text3)" : "var(--danger)", fontSize: "0.78rem" }}>{p.email || "sem e-mail"}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button className="btn btn-primary btn-block" style={{ marginTop: "1rem" }} onClick={enviar} disabled={enviando}>
+          <FontAwesomeIcon icon={faPaperPlane} style={{ marginRight: 6 }} />
+          {enviando ? "Enviando…" : `Enviar para ${selecionados.size} participante${selecionados.size !== 1 ? "s" : ""}`}
+        </button>
+      </div>
+
+      <div>
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+          <div style={{ background: "var(--surface2)", padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Preview do E-mail
+          </div>
+          <iframe title="preview-certificado" srcDoc={htmlPreview()} style={{ width: "100%", height: 600, border: 0, display: "block" }} sandbox="allow-same-origin" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Certificados() {
   const { event, setEvent, atividades, participantes, setParticipantes, presencas, turnos, presencasTurno, showToast } = useAdmin();
   const navigate = useNavigate();
+  const [aba, setAba] = useState("gestao");
   const [uploading, setUploading] = useState(null); // id do participante em upload
   const [linkUrl, setLinkUrl] = useState(event.certificado_link_url || "");
   const [linkMensagem, setLinkMensagem] = useState(event.certificado_link_mensagem || "");
@@ -304,6 +517,28 @@ export function Certificados() {
         </div>
       </div>
 
+      <div className="admin-subtabs" style={{ marginBottom: "1.5rem" }}>
+        {[["gestao", "Gestão", faCertificate], ["email", "Enviar e-mail", faPaperPlane]].map(([key, label, icon]) => (
+          <button key={key} onClick={() => setAba(key)}
+            style={{
+              padding: "0.6rem 1.25rem", fontSize: "0.88rem", fontWeight: aba === key ? 700 : 500,
+              color: aba === key ? "var(--navy)" : "var(--text2)", background: "none", border: "none",
+              borderBottom: aba === key ? "2.5px solid var(--navy)" : "2.5px solid transparent",
+              marginBottom: -2, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem",
+            }}>
+            <FontAwesomeIcon icon={icon} style={{ fontSize: "0.8rem" }} />{label}
+          </button>
+        ))}
+      </div>
+
+      {aba === "email" && (
+        <AbaEnviarCertificado
+          event={event} participantes={participantes} atividades={atividades}
+          presencas={presencas} turnos={turnos} presencasTurno={presencasTurno} showToast={showToast}
+        />
+      )}
+
+      {aba === "gestao" && <>
       <div style={{
         background: event.certificado_disponivel ? "var(--success-bg)" : "var(--surface2)",
         border: `1px solid ${event.certificado_disponivel ? "var(--success)" : "var(--border)"}`,
@@ -513,6 +748,7 @@ export function Certificados() {
           </tbody>
         </table>
       </div>
+      </>}
 
       {/* MODAL: upload em massa de certificados */}
       <Modal show={modalBulk} onClose={fecharModalBulk} title="Upload em massa de certificados" wide>
