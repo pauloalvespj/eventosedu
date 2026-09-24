@@ -79,6 +79,14 @@ export async function marcarEmailEnviado(ids) {
   return { error };
 }
 
+export async function marcarCertificadoEmailEnviado(ids) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ certificado_email_enviado_em: new Date().toISOString() })
+    .in("id", ids);
+  return { error };
+}
+
 // ── FOLLOWS ───────────────────────────────────────────────────
 
 export async function fetchFollows() {

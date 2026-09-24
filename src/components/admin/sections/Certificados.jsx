@@ -9,8 +9,8 @@ import {
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
 import { supabase } from "../../../lib/supabase";
-import { calcPresenca, formatData, erroFuncaoEdge } from "../../../utils/helpers";
-import { atualizarEvento, uploadCertificado, registrarLog } from "../../../lib/db";
+import { calcPresenca, formatData, formatDataHora, erroFuncaoEdge } from "../../../utils/helpers";
+import { atualizarEvento, uploadCertificado, registrarLog, marcarCertificadoEmailEnviado } from "../../../lib/db";
 import { gerarTemplateHTMLCertificado, DEFAULT_MENSAGEM_CERTIFICADO } from "../../../lib/emailTemplate";
 
 function MiniBarra({ pct, minimo }) {
@@ -83,11 +83,12 @@ const TEMPLATE_DEFAULTS_CERT = {
 // está disponível. Um e-mail por invocação da edge function (ver comentário
 // em enviar(), mesmo limite de recursos documentado nas outras telas de
 // envio em massa do projeto).
-function AbaEnviarCertificado({ event, participantes, atividades, presencas, turnos, presencasTurno, showToast }) {
+function AbaEnviarCertificado({ event, participantes, setParticipantes, atividades, presencas, turnos, presencasTurno, showToast }) {
   const [template, setTemplate] = useState({ ...TEMPLATE_DEFAULTS_CERT, ...(event.certificado_email_template || {}) });
   const [busca, setBusca] = useState("");
   const [filtroOrgao, setFiltroOrgao] = useState("");
   const [somenteAptos, setSomenteAptos] = useState(true);
+  const [ocultarEnviados, setOcultarEnviados] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [emailTeste, setEmailTeste] = useState("pauloalvespj@ufc.br");
@@ -112,6 +113,7 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
     if (busca.trim() && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
     if (filtroOrgao && p.instituicao !== filtroOrgao) return false;
     if (somenteAptos && !estaApto(p)) return false;
+    if (ocultarEnviados && p.certificado_email_enviado_em) return false;
     return true;
   });
 
@@ -188,6 +190,11 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
         if (i + TAMANHO_LOTE < destinatarios.length) await new Promise(r => setTimeout(r, 500));
       }
 
+      if (enviados.length) {
+        const agora = new Date().toISOString();
+        await marcarCertificadoEmailEnviado(enviados);
+        setParticipantes(prev => prev.map(p => enviados.includes(p.id) ? { ...p, certificado_email_enviado_em: agora } : p));
+      }
       registrarLog("certificado.email_enviado", "evento", event.id, event.nome, { enviados: enviados.length, falhas: falhas.length });
       if (falhas.length) {
         showToast(`${enviados.length} enviado(s), ${falhas.length} falharam. Veja o console.`, "warn");
@@ -277,6 +284,10 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
               <input type="checkbox" checked={somenteAptos} onChange={e => setSomenteAptos(e.target.checked)} />
               Só aptos ({aptos.length})
             </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "var(--text2)", cursor: "pointer" }}>
+              <input type="checkbox" checked={ocultarEnviados} onChange={e => setOcultarEnviados(e.target.checked)} />
+              Ocultar quem já recebeu
+            </label>
           </div>
           <div style={{ maxHeight: 260, overflowY: "auto" }}>
             {filtrados.map(p => (
@@ -284,6 +295,11 @@ function AbaEnviarCertificado({ event, participantes, atividades, presencas, tur
                 <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSel(p.id)} />
                 <span style={{ flex: 1 }}>{p.nome}</span>
                 <span className={`badge badge-${estaApto(p) ? "success" : "warn"}`} style={{ fontSize: "0.68rem" }}>{pctPresenca(p)}%</span>
+                {p.certificado_email_enviado_em && (
+                  <span className="badge badge-navy" style={{ fontSize: "0.68rem" }} title={`Enviado em ${formatDataHora(p.certificado_email_enviado_em)}`}>
+                    ✓ enviado
+                  </span>
+                )}
                 <span style={{ color: p.email ? "var(--text3)" : "var(--danger)", fontSize: "0.78rem" }}>{p.email || "sem e-mail"}</span>
               </label>
             ))}
@@ -569,7 +585,7 @@ export function Certificados() {
 
       {aba === "email" && (
         <AbaEnviarCertificado
-          event={event} participantes={participantes} atividades={atividades}
+          event={event} participantes={participantes} setParticipantes={setParticipantes} atividades={atividades}
           presencas={presencas} turnos={turnos} presencasTurno={presencasTurno} showToast={showToast}
         />
       )}
