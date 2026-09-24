@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faHourglassHalf, faFileCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { useUsuario } from "../UsuarioContext";
 
-// Tela do modo "certificado externo" (event.certificado_externo === true):
+// Tela do modo "certificado externo — upload" (event.certificado_modo === "upload"):
 // aqui o certificado não é gerado pela plataforma — é um arquivo que o admin
 // sobe manualmente (um a um ou em massa, ver Certificados.jsx no painel
 // admin) e fica em user.certificado_url. Enquanto não subiu, mostramos

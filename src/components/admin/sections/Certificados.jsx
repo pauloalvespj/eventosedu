@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDownload, faToggleOn, faToggleOff, faUpload, faEye, faFileArrowUp, faCertificate, faScroll,
-  faFileImport, faXmark, faCircleCheck, faCircleExclamation, faCloudArrowUp,
+  faFileImport, faXmark, faCircleCheck, faCircleExclamation, faCloudArrowUp, faLink, faFloppyDisk,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAdmin } from "./AdminContext";
 import { Modal } from "../../base/index";
@@ -64,6 +64,9 @@ export function Certificados() {
   const { event, setEvent, atividades, participantes, setParticipantes, presencas, turnos, presencasTurno, showToast } = useAdmin();
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(null); // id do participante em upload
+  const [linkUrl, setLinkUrl] = useState(event.certificado_link_url || "");
+  const [linkMensagem, setLinkMensagem] = useState(event.certificado_link_mensagem || "");
+  const [salvandoLink, setSalvandoLink] = useState(false);
   const [busca, setBusca] = useState("");
   const [filtroOrgao, setFiltroOrgao] = useState("");
   const [filtroFreq, setFiltroFreq] = useState(""); // id do turno ou da atividade selecionada
@@ -104,16 +107,37 @@ export function Certificados() {
     }
   }
 
-  async function toggleCertificadoExterno() {
-    const novo = !event.certificado_externo;
-    setEvent(prev => ({ ...prev, certificado_externo: novo }));
-    const { error } = await atualizarEvento(event.id, { certificado_externo: novo });
+  const MODOS = {
+    sistema: "Certificado do Sistema",
+    upload: "Certificado Externo (upload)",
+    link: "Link Externo",
+  };
+
+  async function setModoCertificado(modo) {
+    if (modo === event.certificado_modo) return;
+    const anterior = event.certificado_modo;
+    setEvent(prev => ({ ...prev, certificado_modo: modo }));
+    const { error } = await atualizarEvento(event.id, { certificado_modo: modo });
     if (error) {
-      setEvent(prev => ({ ...prev, certificado_externo: !novo }));
+      setEvent(prev => ({ ...prev, certificado_modo: anterior }));
       showToast("Erro ao salvar.", "error");
     } else {
-      registrarLog(novo ? "certificado.modo_externo_on" : "certificado.modo_externo_off", "evento", event.id, event.nome);
-      showToast(novo ? "Modo certificado externo ativado." : "Modo certificado do sistema ativado.", "success");
+      registrarLog("certificado.modo_alterado", "evento", event.id, event.nome, { de: anterior, para: modo });
+      showToast(`Modo "${MODOS[modo]}" ativado.`, "success");
+    }
+  }
+
+  async function salvarLinkExterno() {
+    setSalvandoLink(true);
+    const updates = { certificado_link_url: linkUrl.trim(), certificado_link_mensagem: linkMensagem };
+    const { error } = await atualizarEvento(event.id, updates);
+    setSalvandoLink(false);
+    if (error) {
+      showToast("Erro ao salvar.", "error");
+    } else {
+      setEvent(prev => ({ ...prev, ...updates }));
+      registrarLog("certificado.link_externo_atualizado", "evento", event.id, event.nome);
+      showToast("Mensagem e link salvos!", "success");
     }
   }
 
@@ -268,7 +292,7 @@ export function Certificados() {
             <FontAwesomeIcon icon={event.certificado_disponivel ? faToggleOn : faToggleOff} style={{ fontSize: "1.1rem" }} />
             {event.certificado_disponivel ? "Certificados liberados" : "Liberar certificados"}
           </button>
-          {event.certificado_externo && (
+          {event.certificado_modo === "upload" && (
             <button className="btn btn-outline" onClick={() => setModalBulk(true)} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <FontAwesomeIcon icon={faFileImport} />
               Upload em massa
@@ -310,42 +334,65 @@ export function Certificados() {
       </label>
 
       {/* Modo do certificado */}
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem" }}>
-        <button
-          onClick={() => event.certificado_externo && toggleCertificadoExterno()}
-          style={{
-            flex: 1, padding: "0.85rem 1.25rem", borderRadius: "var(--radius-sm)", cursor: "pointer",
-            border: `2px solid ${!event.certificado_externo ? "var(--navy)" : "var(--border)"}`,
-            background: !event.certificado_externo ? "var(--navy)" : "var(--surface2)",
-            color: !event.certificado_externo ? "#fff" : "var(--text2)",
-            display: "flex", alignItems: "center", gap: "0.75rem", transition: "all 0.15s",
-          }}
-        >
-          <FontAwesomeIcon icon={faCertificate} style={{ fontSize: "1.2rem", opacity: 0.85 }} />
-          <div style={{ textAlign: "left" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Certificado do Sistema</div>
-            <div style={{ fontSize: "0.75rem", opacity: 0.75, marginTop: 2 }}>Gerado automaticamente pela plataforma</div>
-          </div>
-          {!event.certificado_externo && <FontAwesomeIcon icon={faToggleOn} style={{ marginLeft: "auto", fontSize: "1.3rem" }} />}
-        </button>
-        <button
-          onClick={() => !event.certificado_externo && toggleCertificadoExterno()}
-          style={{
-            flex: 1, padding: "0.85rem 1.25rem", borderRadius: "var(--radius-sm)", cursor: "pointer",
-            border: `2px solid ${event.certificado_externo ? "var(--gold-on-dark)" : "var(--border)"}`,
-            background: event.certificado_externo ? "var(--gold-tint)" : "var(--surface2)",
-            color: event.certificado_externo ? "var(--navy)" : "var(--text2)",
-            display: "flex", alignItems: "center", gap: "0.75rem", transition: "all 0.15s",
-          }}
-        >
-          <FontAwesomeIcon icon={faFileArrowUp} style={{ fontSize: "1.2rem", opacity: 0.85 }} />
-          <div style={{ textAlign: "left" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Certificado Externo</div>
-            <div style={{ fontSize: "0.75rem", opacity: 0.75, marginTop: 2 }}>Upload manual por participante (PDF ou imagem)</div>
-          </div>
-          {event.certificado_externo && <FontAwesomeIcon icon={faToggleOn} style={{ marginLeft: "auto", fontSize: "1.3rem" }} />}
-        </button>
+      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+        {[
+          { modo: "sistema", icon: faCertificate, titulo: "Certificado do Sistema", desc: "Gerado automaticamente pela plataforma" },
+          { modo: "upload", icon: faFileArrowUp, titulo: "Certificado Externo (upload)", desc: "Upload manual por participante (PDF ou imagem)" },
+          { modo: "link", icon: faLink, titulo: "Link Externo", desc: "Mensagem + link para um sistema externo (ex.: PREX/UFC)" },
+        ].map(({ modo, icon, titulo, desc }) => {
+          const ativo = event.certificado_modo === modo;
+          return (
+            <button
+              key={modo}
+              onClick={() => setModoCertificado(modo)}
+              style={{
+                flex: "1 1 220px", padding: "0.85rem 1.25rem", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                border: `2px solid ${ativo ? "var(--navy)" : "var(--border)"}`,
+                background: ativo ? "var(--navy)" : "var(--surface2)",
+                color: ativo ? "#fff" : "var(--text2)",
+                display: "flex", alignItems: "center", gap: "0.75rem", transition: "all 0.15s",
+              }}
+            >
+              <FontAwesomeIcon icon={icon} style={{ fontSize: "1.2rem", opacity: 0.85 }} />
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{titulo}</div>
+                <div style={{ fontSize: "0.75rem", opacity: 0.75, marginTop: 2 }}>{desc}</div>
+              </div>
+              {ativo && <FontAwesomeIcon icon={faToggleOn} style={{ marginLeft: "auto", fontSize: "1.3rem" }} />}
+            </button>
+          );
+        })}
       </div>
+
+      {event.certificado_modo === "link" && (
+        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)" }}>
+          <h3 style={{ fontWeight: 700, color: "var(--navy)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
+            <FontAwesomeIcon icon={faLink} />
+            Mensagem e link exibidos aos participantes
+          </h3>
+          <label className="form-label">Mensagem</label>
+          <textarea
+            className="form-input"
+            rows={6}
+            placeholder="Ex.: Comunicamos que o seu certificado de participação já se encontra disponível..."
+            value={linkMensagem}
+            onChange={e => setLinkMensagem(e.target.value)}
+            style={{ resize: "vertical" }}
+          />
+          <label className="form-label">Link do certificado</label>
+          <input
+            className="form-input"
+            type="url"
+            placeholder="https://sistemasprex.ufc.br/certificados/app_Login/"
+            value={linkUrl}
+            onChange={e => setLinkUrl(e.target.value)}
+          />
+          <button className="btn btn-gold" disabled={salvandoLink} onClick={salvarLinkExterno} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FontAwesomeIcon icon={faFloppyDisk} />
+            {salvandoLink ? "Salvando…" : "Salvar"}
+          </button>
+        </div>
+      )}
 
       <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid var(--border)", display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>
         <div>
@@ -403,12 +450,12 @@ export function Certificados() {
             <tr>
               <th>Nome</th><th>CPF</th><th>Instituição</th><th>Cargo</th>
               <th>Frequência</th><th>Status</th>
-              {event.certificado_externo && <th style={{ width: 110 }}>Certificado</th>}
+              {(event.certificado_modo === "upload") && <th style={{ width: 110 }}>Certificado</th>}
             </tr>
           </thead>
           <tbody>
             {participantesFiltrados.length === 0 && (
-              <tr><td colSpan={event.certificado_externo ? 7 : 6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para os filtros atuais.</td></tr>
+              <tr><td colSpan={(event.certificado_modo === "upload") ? 7 : 6} style={{ textAlign: "center", color: "var(--text3)", padding: "2rem" }}>Nenhum participante encontrado para os filtros atuais.</td></tr>
             )}
             {participantesFiltrados.map(p => {
               const r = calcPresenca(p.id, atividades, presencas, event, turnos, presencasTurno);
@@ -425,7 +472,7 @@ export function Certificados() {
                       : <span style={{ fontSize: "0.78rem", color: "var(--text3)" }}>Não credenciado</span>}
                   </td>
                   <td><span className={`badge badge-${r.apto ? "success" : "danger"}`}>{r.apto ? "APTO" : "NÃO APTO"}</span></td>
-                  {event.certificado_externo && <td>
+                  {(event.certificado_modo === "upload") && <td>
                     <input
                       type="file"
                       accept=".pdf,image/*"

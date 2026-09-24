@@ -339,6 +339,10 @@ input,select,textarea{font-family:inherit}
 .admin-layout .btn-gold{background:var(--admin-sb-accent);border-color:var(--admin-sb-accent);color:#1a1a2e}
 .admin-layout .btn-gold:hover{background:var(--admin-sb-accent-lg);border-color:var(--admin-sb-accent-lg)}
 
+/* PARTICIPANTE — btn-gold vira azul aqui (--gold sobrescrito acima), então
+   o texto (que usa --navy-dark, também azul) fica ilegível sem isto */
+.part-layout .btn-gold{color:#fff}
+
 /* ADMIN */
 .admin-layout{display:flex;flex-direction:column;min-height:100vh;background:#F0F2F5}
 .admin-body{display:flex;flex:1;min-height:0}

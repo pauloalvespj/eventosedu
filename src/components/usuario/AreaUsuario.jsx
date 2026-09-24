@@ -23,6 +23,7 @@ import { Programacao } from "./sections/Programacao";
 import { Presencas } from "./sections/Presencas";
 import { Certificado } from "./sections/Certificado";
 import { MeusCertificados } from "./sections/MeusCertificados";
+import { CertificadoLinkExterno } from "./sections/CertificadoLinkExterno";
 import { CredencialQR } from "./sections/CredencialQR";
 import { MeusDados } from "./sections/MeusDados";
 import { Credenciamento } from "../admin/sections/Credenciamento";
@@ -80,8 +81,9 @@ function AvisosBanner() {
 // 2) liberado, mas exige pesquisa de satisfação e o participante ainda não
 //    respondeu (e está apto a responder — ver podeResponderPesquisa) → pede
 //    pra responder antes;
-// 3) liberado e sem pendência → mostra o certificado (gerado pela
-//    plataforma ou externo, conforme event.certificado_externo).
+// 3) liberado e sem pendência → mostra o certificado, conforme
+//    event.certificado_modo ("sistema" gerado pela plataforma, "upload"
+//    arquivo subido pelo admin, "link" link+mensagem de um sistema externo).
 function CertificadoTab() {
   const { event, respondeuPesquisa, podeResponderPesquisa } = useUsuario();
   const navigate = useNavigate();
@@ -99,24 +101,32 @@ function CertificadoTab() {
     );
   }
 
+  // Pesquisa de satisfação pendente não bloqueia mais o certificado — só
+  // mostra um convite (opcional) pra responder, com o certificado logo abaixo.
   const exigePesquisaPendente = event.pesquisa_ativa && event.certificado_exige_pesquisa && podeResponderPesquisa && !respondeuPesquisa;
-  if (exigePesquisaPendente) {
-    return (
-      <div>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.4rem", color: "var(--navy)", marginBottom: "1.5rem" }}>🏆 Meus Certificados</h2>
-        <div style={{ textAlign: "center", padding: "3rem", background: "var(--warn-bg)", borderRadius: "var(--radius)", border: "1px solid var(--warn)" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📋</div>
-          <p style={{ fontWeight: 700, color: "var(--warn)", marginBottom: "0.35rem" }}>Responda a pesquisa de satisfação</p>
-          <p style={{ fontSize: "0.85rem", color: "var(--text2)", marginBottom: "1.5rem" }}>
-            Para liberar seu certificado, a organização pede que você responda antes à pesquisa de satisfação do evento.
-          </p>
-          <button className="btn btn-gold" onClick={() => navigate("/painel/pesquisa")}>Responder pesquisa</button>
-        </div>
-      </div>
-    );
-  }
 
-  return event.certificado_externo ? <MeusCertificados /> : <Certificado />;
+  const conteudoCertificado = event.certificado_modo === "link" ? <CertificadoLinkExterno />
+    : event.certificado_modo === "upload" ? <MeusCertificados />
+    : <Certificado />;
+
+  return (
+    <div>
+      {exigePesquisaPendente && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap",
+          padding: "1rem 1.25rem", background: "var(--warn-bg)", border: "1px solid var(--warn)",
+          borderRadius: "var(--radius)", marginBottom: "1.5rem",
+        }}>
+          <div style={{ fontSize: "1.5rem" }}>📋</div>
+          <p style={{ flex: 1, minWidth: 200, fontSize: "0.85rem", color: "var(--text2)" }}>
+            A organização agradece se você responder à pesquisa de satisfação do evento.
+          </p>
+          <button className="btn btn-outline" onClick={() => navigate("/painel/pesquisa")}>Responder pesquisa</button>
+        </div>
+      )}
+      {conteudoCertificado}
+    </div>
+  );
 }
 
 function CredenciamentoTab() {
